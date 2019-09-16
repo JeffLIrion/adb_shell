@@ -1,0 +1,17 @@
+# Python files
+*.idea
+*.pyc
+**/__pycache__/
+adb_shell.egg-info
+
+# Build files
+build/
+dist/
+
+# Documentation
+docs/build/
+docs/html/
+
+# Coverage
+.coverage
+htmlcov/

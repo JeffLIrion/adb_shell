@@ -1,0 +1,3 @@
+Makefile eol=lf
+*.sh eol=lf
+*.ipynb eol=lf
