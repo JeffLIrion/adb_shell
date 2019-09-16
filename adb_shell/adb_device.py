@@ -59,8 +59,7 @@ class AdbDevice(object):
         msg = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::%s\0' % self._banner_bytes)
 
         # 4. Send the message using the handle (adb.adb_protocol.AdbMessage.Send)
-        self._handle.BulkWrite(msg.Pack(), timeout_ms)
-        self._handle.BulkWrite(msg.data, timeout_ms)
+        self._send(msg, timeout_ms)
 
         # 5. Read the response (adb.adb_protocol.AdbMessage.Read)
         # cmd, arg0, arg1, banner = cls.Read(usb, [b'CNXN', b'AUTH'])
@@ -77,6 +76,13 @@ class AdbDevice(object):
 
         """
         return None, None, None, None
+
+    def _send(self, msg, timeout_ms):
+        """TODO
+
+        """
+        self._handle.BulkWrite(msg.Pack(), timeout_ms)
+        self._handle.BulkWrite(msg.data, timeout_ms)
 
     def shell(self, cmd):
         """TODO
