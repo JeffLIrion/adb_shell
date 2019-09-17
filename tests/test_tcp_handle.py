@@ -1,7 +1,7 @@
 from mock import patch
 import unittest
 
-from adb_shell.adb_handle import TcpHandle
+from adb_shell.tcp_handle import TcpHandle
 
 
 class TestAdbHandle(unittest.TestCase):

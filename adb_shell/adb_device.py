@@ -4,8 +4,8 @@
 
 
 from . import constants
-from .adb_handle import TcpHandle
 from .adb_message import AdbMessage
+from .tcp_handle import TcpHandle
 
 
 class AdbDevice(object):
