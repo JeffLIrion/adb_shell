@@ -64,12 +64,13 @@ class TcpHandle(object):
     """
     def __init__(self, serial):
         if ':' in serial:
-            self.host, self.port =  serial.split(':')
+            self.host, self.port = serial.split(':')
         else:
             self.host = serial
             self.port = '5555'
 
         self.serial = '{}:{}'.format(self.host, self.port)
+        self._connection = None
 
     def connect(self, auth_timeout_ms=None):
         """TODO
@@ -80,7 +81,7 @@ class TcpHandle(object):
         if timeout:
             self._connection.setblocking(0)
 
-    def bulk_write(self, data, timeout=None):
+    def bulk_write(self, data, timeout_ms=None):
         """TODO
 
         Parameters
@@ -100,7 +101,7 @@ class TcpHandle(object):
         TcpTimeoutException
             Sending data timed out.  No data was sent.
 
-        """        
+        """
         timeout = constants.DEFAULT_TIMEOUT if timeout_ms is None else timeout_ms / 1000.
         _, writeable, _ = select.select([], [self._connection], [], timeout)
         if writeable:
@@ -131,12 +132,12 @@ class TcpHandle(object):
 
         """
         timeout = constants.DEFAULT_TIMEOUT if timeout_ms is None else timeout_ms / 1000.
-        readable, _, _ = select.select([self._connection], [], [], t)
+        readable, _, _ = select.select([self._connection], [], [], timeout)
         if readable:
             return self._connection.recv(numbytes)
-            
+
         msg = 'Reading from {} timed out ({} seconds)'.format(self.serial, timeout)
-        raise usb_exceptions.TcpTimeoutException(msg)
+        raise TcpTimeoutException(msg)
 
     def close(self, *args, **kwargs):
         """TODO

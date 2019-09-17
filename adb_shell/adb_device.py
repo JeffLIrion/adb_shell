@@ -3,6 +3,8 @@
 """
 
 
+import socket
+
 from . import constants
 from .adb_message import AdbMessage
 from .tcp_handle import TcpHandle
@@ -12,7 +14,7 @@ class AdbDevice(object):
     """TODO.
 
     """
-    
+
     def __init__(self, serial, banner=None):
         self._available = False
 
@@ -21,7 +23,7 @@ class AdbDevice(object):
         else:
             try:
                 self._banner = socket.gethostname()
-            except:
+            except:  # pylint: disable=bare-except
                 self._banner = 'unknown'
 
         self._banner_bytes = bytearray(self._banner, 'utf-8')
@@ -66,7 +68,7 @@ class AdbDevice(object):
         cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN])
 
         # 6. If necessary, authenticate (adb.adb_protocol.AdbMessage.Connect)
-        
+
         self._available = True
 
         return self._available
