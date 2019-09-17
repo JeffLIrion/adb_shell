@@ -4,7 +4,7 @@
 
 
 from . import constants
-from .adb_handle import TcpHandle, UsbHandle
+from .adb_handle import TcpHandle
 from .adb_message import AdbMessage
 
 
