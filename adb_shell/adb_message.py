@@ -19,7 +19,7 @@ class AdbMessage(object):
         self.arg1 = arg1
         self.data = data
 
-    def Pack(self):
+    def pack(self):
         """Returns this message in an over-the-wire format.
 
         Returns

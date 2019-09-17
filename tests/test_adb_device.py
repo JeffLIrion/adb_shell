@@ -4,8 +4,10 @@ import unittest
 
 from adb_shell.adb_device import AdbDevice
 
+from . import patchers
 
-'''class TestAdbDevice(unittest.TestCase):
+
+class TestAdbDevice(unittest.TestCase):
     def setUp(self):
         self.device = AdbDevice('IP:PORT')
 
@@ -16,9 +18,10 @@ from adb_shell.adb_device import AdbDevice
         self.assertFalse(self.device.available)
 
     def test_connect(self):
-        self.assertTrue(self.device.connect())
+        with patchers.patch_tcp_handle:
+            self.assertTrue(self.device.connect())
         self.assertTrue(self.device.available)
 
     def test_close(self):
         self.assertFalse(self.device.close())
-        self.assertFalse(self.device.available)'''
+        self.assertFalse(self.device.available)

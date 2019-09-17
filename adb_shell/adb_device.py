@@ -16,8 +16,6 @@ class AdbDevice(object):
     """
 
     def __init__(self, serial, banner=None):
-        self._available = False
-
         if banner and isinstance(banner, str):
             self._banner = banner
         else:
@@ -28,8 +26,10 @@ class AdbDevice(object):
 
         self._banner_bytes = bytearray(self._banner, 'utf-8')
 
-        self._handle = None
         self._serial = serial
+
+        self._handle = None
+        self._available = False
 
     @property
     def available(self):
@@ -51,9 +51,11 @@ class AdbDevice(object):
         """
         # 1. Create a TCP / USB handle (adb.adb_commands.AdbCommands.ConnectDevice)
         if ':' in self._serial:
-            self._handle = TcpHandle(self._serial, timeout_ms=timeout_ms)
+            self._handle = TcpHandle(self._serial)
         #else:
         #    self._handle = UsbHandle.FindAndOpen(DeviceIsAvailable, port_path=port_path, serial=serial, timeout_ms=default_timeout_ms)
+
+        self._handle.connect(auth_timeout_ms)
 
         # 2. Use the handle to connect (adb.adb_commands.AdbCommands._Connect)
 
@@ -83,7 +85,7 @@ class AdbDevice(object):
         """TODO
 
         """
-        self._handle.bulk_write(msg.Pack(), timeout_ms)
+        self._handle.bulk_write(msg.pack(), timeout_ms)
         self._handle.bulk_write(msg.data, timeout_ms)
 
     def shell(self, cmd):

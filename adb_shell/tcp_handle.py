@@ -81,35 +81,6 @@ class TcpHandle(object):
         if timeout:
             self._connection.setblocking(0)
 
-    def bulk_write(self, data, timeout_ms=None):
-        """TODO
-
-        Parameters
-        ----------
-        data : TODO
-            TODO
-        timeout : TODO, None
-            TODO
-
-        Returns
-        -------
-        TODO
-            TODO
-
-        Raises
-        ------
-        TcpTimeoutException
-            Sending data timed out.  No data was sent.
-
-        """
-        timeout = constants.DEFAULT_TIMEOUT if timeout_ms is None else timeout_ms / 1000.
-        _, writeable, _ = select.select([], [self._connection], [], timeout)
-        if writeable:
-            return self._connection.send(data)
-
-        msg = 'Sending data to {} timed out after {} seconds. No data was sent.'.format(self.serial, timeout)
-        raise TcpTimeoutException(msg)
-
     def bulk_read(self, numbytes, timeout_ms=None):
         """TODO
 
@@ -139,8 +110,37 @@ class TcpHandle(object):
         msg = 'Reading from {} timed out ({} seconds)'.format(self.serial, timeout)
         raise TcpTimeoutException(msg)
 
-    def close(self, *args, **kwargs):
+    def bulk_write(self, data, timeout_ms=None):
+        """TODO
+
+        Parameters
+        ----------
+        data : TODO
+            TODO
+        timeout : TODO, None
+            TODO
+
+        Returns
+        -------
+        TODO
+            TODO
+
+        Raises
+        ------
+        TcpTimeoutException
+            Sending data timed out.  No data was sent.
+
+        """
+        timeout = constants.DEFAULT_TIMEOUT if timeout_ms is None else timeout_ms / 1000.
+        _, writeable, _ = select.select([], [self._connection], [], timeout)
+        if writeable:
+            return self._connection.send(data)
+
+        msg = 'Sending data to {} timed out after {} seconds. No data was sent.'.format(self.serial, timeout)
+        raise TcpTimeoutException(msg)
+
+    def close(self):
         """TODO
 
         """
-        pass
+        self._connection.close()
