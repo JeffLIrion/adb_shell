@@ -33,7 +33,7 @@ class TcpTimeoutException(Exception):
 
     """
     def __init__(self, msg):
-        super(Exception, self).__init__(msg)
+        super(TcpTimeoutException, self).__init__(msg)
 
 
 class TcpHandle(object):
