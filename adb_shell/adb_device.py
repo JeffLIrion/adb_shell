@@ -81,8 +81,8 @@ class AdbDevice(object):
         """TODO
 
         """
-        self._handle.BulkWrite(msg.Pack(), timeout_ms)
-        self._handle.BulkWrite(msg.data, timeout_ms)
+        self._handle.bulk_write(msg.Pack(), timeout_ms)
+        self._handle.bulk_write(msg.data, timeout_ms)
 
     def shell(self, cmd):
         """TODO

@@ -16,3 +16,9 @@ class TestAdbHandle(unittest.TestCase):
 
         """
         self.assertTrue(True)
+
+    def test_connect_success(self):
+        """TODO
+
+        """
+        self.assertTrue(self.handle.connect())
