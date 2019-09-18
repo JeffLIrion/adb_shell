@@ -85,8 +85,6 @@ class AdbDevice(object):
         """TODO
 
         """
-        # self._handle, service=b'shell', command=command, timeout_ms=timeout_ms
-        # return ''.join(cls.StreamingCommand(usb, service, command, timeout_ms))
         return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s))
 
     def _okay(self, local_id, remote_id, timeout_s):
@@ -209,7 +207,7 @@ class AdbDevice(object):
         if data_length > 0:
             data = bytearray()
             while data_length > 0:
-                temp = self._bulk_read(data_length, timeout_s)
+                temp = self._handle.bulk_read(data_length, timeout_s)
                 if len(temp) != data_length:
                     _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d".format(data_length, len(temp)))
                 data += temp
@@ -224,8 +222,8 @@ class AdbDevice(object):
 
         return command, arg0, arg1, bytes(data)
 
-    def _read_until(self, local_id, remote_id, expected_cmds):
-        """Read a packet, Ack any write packets.
+    def _read_until(self, local_id, remote_id, expected_cmds, timeout_s):
+        """Read a packet, acknowledge any write packets.
 
         .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntil.CALL_GRAPH.svg
 
@@ -259,14 +257,14 @@ class AdbDevice(object):
         if remote_id2 not in (0, remote_id):
             raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
 
-        # Ack write packets.
+        # Acknowledge write packets
         if cmd == constants.WRTE:
             self._okay(timeout_s)
 
         return cmd, data
 
-    def _read_until_close(self, local_id, remote_id):
-        """Yield packets until a ``b'CLSE'`` packet is received.
+    def _read_until_close(self, local_id, remote_id, timeout_s):
+        """Yield packets until a :const:`~adb_shell.constants.CLSE` packet is received.
 
         .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntilClose.CALL_GRAPH.svg
 
@@ -282,7 +280,7 @@ class AdbDevice(object):
 
             if cmd == constants.CLSE:
                 msg = AdbMessage(constants.CLSE, arg0=local_id, arg1=remote_id)
-                self._send(msg)
+                self._send(msg, timeout_s)
                 break
 
             if cmd != constants.WRTE:
