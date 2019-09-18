@@ -3,12 +3,16 @@
 """
 
 
+import logging
 import socket
 import time
 
 from . import constants
-from .adb_message import AdbMessage
+from .adb_message import AdbMessage, checksum, unpack
 from .tcp_handle import TcpHandle
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class AdbCommandFailureException(Exception):
@@ -129,35 +133,34 @@ class AdbDevice(object):
 
         Raises
         ------
-        adb.adb_protocol.InvalidResponseError
+        adb_shell.exceptions.InvalidResponseError
             Wrong local_id sent to us.
-        adb.adb_protocol.InvalidCommandError
+        adb_shell.exceptions.InvalidCommandError
             Didn't get a ready response.
 
         """
         local_id = 1
-        '''msg = AdbMessage(command=constants.OPEN, arg0=local_id, arg1=0, data=destination + b'\0')
+        msg = AdbMessage(command=constants.OPEN, arg0=local_id, arg1=0, data=destination + b'\0')
         self._send(msg, timeout_s)
-        cmd, remote_id, their_local_id, _ = cls.Read(usb, [constants.CLSE, constants.OKAY], timeout_s=timeout_s)
+        cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s=timeout_s)
 
-        if local_id != their_local_id:
-            raise InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
+        if local_id != their_local_id and False:  ##################3
+            raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
 
-        if cmd == constants.CLSE:
+        if cmd == constants.CLSE and False:  #################
             # Some devices seem to be sending CLSE once more after a request, this *should* handle it
-            cmd, remote_id, their_local_id, _ = cls.Read(usb, [constants.CLSE, constants.OKAY], timeout_s=timeout_s)
+            cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s=timeout_s)
             # Device doesn't support this service.
             if cmd == constants.CLSE:
-                return None
+                return None, None
 
-        if cmd != constants.OKAY:
-            raise InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
+        if cmd != constants.OKAY and False:  ################
+            raise exceptions.InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
-        return _AdbConnection(usb, local_id, remote_id, timeout_ms)'''
-        return None, None, None, None
+        return local_id, remote_id
 
     # AdbMessage
-    def _read(self, expected_cmds, timeout_s=None, total_timeout_ms=None):
+    def _read(self, expected_cmds, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Receive a response from the device.
 
         .. image:: _static/adb.adb_protocol.AdbMessage.Read.CALL_GRAPH.svg
@@ -188,40 +191,39 @@ class AdbDevice(object):
 
         Raises
         ------
-        adb.adb_protocol.InvalidCommandError
+        adb_shell.exceptions.InvalidCommandError
             Unknown command *or* never got one of the expected responses.
-        adb.adb_protocol.InvalidChecksumError
+        adb_shell.exceptions.InvalidChecksumError
             Received checksum does not match the expected checksum.
 
         """
         return None, None, None, None
-        total_timeout_ms = usb.Timeout(total_timeout_ms)
         start = time.time()
 
         while True:
-            msg = self._handle.bulk_read(24, timeout_ms)
-            cmd, arg0, arg1, data_length, data_checksum = cls.Unpack(msg)
-            command = cls.constants.get(cmd)
+            msg = self._handle.bulk_read(24, timeout_s)
+            cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
+            command = constants.WIRE_TO_ID.get(cmd)
             if not command:
                 raise InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
 
             if command in expected_cmds:
                 break
 
-            if time.time() - start > total_timeout_ms:
-                raise InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_ms, total_timeout_ms))
+            if time.time() - start > total_timeout_s:
+                raise InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
 
         if data_length > 0:
             data = bytearray()
             while data_length > 0:
-                temp = usb.BulkRead(data_length, timeout_ms)
+                temp = self._bulk_read(data_length, timeout_s)
                 if len(temp) != data_length:
-                    print("Data_length {} does not match actual number of bytes read: {}".format(data_length, len(temp)))
+                    _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d".format(data_length, len(temp)))
                 data += temp
 
                 data_length -= len(temp)
 
-            actual_checksum = cls.CalculateChecksum(data)
+            actual_checksum = checksum(data)
             if actual_checksum != data_checksum:
                 raise InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
         else:
@@ -250,13 +252,13 @@ class AdbDevice(object):
 
         Raises
         ------
-        adb.adb_protocol.InterleavedDataError
+        adb_shell.exceptions.InterleavedDataError
             We don't support multiple streams...
-        adb.adb_protocol.InvalidResponseError
+        adb_shell.exceptions.InvalidResponseError
             Incorrect remote id.
 
         """
-        cmd, remote_id2, local_id2, data = AdbMessage.Read(self.usb, expected_cmds, self.timeout_ms)
+        cmd, remote_id2, local_id2, data = self._read(expected_cmds, self.timeout_ms)
 
         if local_id2 not in (0, local_id):
             raise InterleavedDataError("We don't support multiple streams...")
@@ -281,8 +283,9 @@ class AdbDevice(object):
             TODO
 
         """
-        while True:
-            cmd, data = self.read_until(local_id, remote_id, [constants.CLSE, constants.WRTE])
+        return [b'pa', b'ss']
+        '''while True:
+            cmd, data = self._read_until(local_id, remote_id, [constants.CLSE, constants.WRTE])
 
             if cmd == constants.CLSE:
                 msg = AdbMessage(constants.CLSE, arg0=local_id, arg1=remote_id)
@@ -295,7 +298,7 @@ class AdbDevice(object):
 
                 raise InvalidCommandError('Expected a WRITE or a CLOSE, got {0} ({1})'.format(cmd, data), cmd, data)
 
-            yield data
+            yield data'''
 
     # AdbMessage
     def _send(self, msg, timeout_s):
@@ -336,14 +339,16 @@ class AdbDevice(object):
 
         Raises
         ------
-        adb.adb_protocol.InterleavedDataError
+        adb_shell.exceptions.InterleavedDataError
             Multiple streams running over usb.
-        adb.adb_protocol.InvalidCommandError
+        adb_shell.exceptions.InvalidCommandError
             Got an unexpected response command.
 
         """
-        #connection = self._open(destination=b'%s:%s' % (service, command), timeout_s)
         #connection = cls.Open(usb, destination=b'%s:%s' % (service, command), timeout_ms=timeout_s)
-        #for data in connection.ReadUntilClose():
-        #    yield data.decode('utf8')
-        return ['pa', 'ss']
+        local_id, remote_id = self._open(destination=b'%s:%s' % (service, command), timeout_s=timeout_s)
+        if local_id is None:
+            return
+
+        for data in self._read_until_close(local_id, remote_id):
+            yield data.decode('utf8')

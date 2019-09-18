@@ -49,5 +49,8 @@ DEFAULT_TIMEOUT_MS = 9000
 #: Default timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read` and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write`
 DEFAULT_TIMEOUT_S = DEFAULT_TIMEOUT_MS / 1000.
 
-#: Default authentication timeout for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
+#: Default authentication timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
 DEFAULT_AUTH_TIMEOUT_S = 10.
+
+#: Default total timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice._read`
+DEFAULT_TOTAL_TIMEOUT_S = 10.
