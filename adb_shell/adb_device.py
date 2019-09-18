@@ -8,19 +8,12 @@ import socket
 import time
 
 from . import constants
+from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .tcp_handle import TcpHandle
 
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class AdbCommandFailureException(Exception):
-    """TODO
-
-    """
-    def __init__(self, msg):
-        super(TcpTimeoutException, self).__init__(msg)
 
 
 class AdbDevice(object):
@@ -205,13 +198,13 @@ class AdbDevice(object):
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
             if not command:
-                raise InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
+                raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
 
             if command in expected_cmds:
                 break
 
             if time.time() - start > total_timeout_s:
-                raise InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
 
         if data_length > 0:
             data = bytearray()
@@ -225,7 +218,7 @@ class AdbDevice(object):
 
             actual_checksum = checksum(data)
             if actual_checksum != data_checksum:
-                raise InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
         else:
             data = b''
 
@@ -261,10 +254,10 @@ class AdbDevice(object):
         cmd, remote_id2, local_id2, data = self._read(expected_cmds, self.timeout_ms)
 
         if local_id2 not in (0, local_id):
-            raise InterleavedDataError("We don't support multiple streams...")
+            raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
         if remote_id2 not in (0, remote_id):
-            raise InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
+            raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
 
         # Ack write packets.
         if cmd == constants.WRTE:
@@ -294,9 +287,9 @@ class AdbDevice(object):
 
             if cmd != constants.WRTE:
                 if cmd == constants.FAIL:
-                    raise AdbCommandFailureException('Command failed.', data)
+                    raise exceptions.AdbCommandFailureException('Command failed.', data)
 
-                raise InvalidCommandError('Expected a WRITE or a CLOSE, got {0} ({1})'.format(cmd, data), cmd, data)
+                raise exceptions.InvalidCommandError('Expected a WRITE or a CLOSE, got {0} ({1})'.format(cmd, data), cmd, data)
 
             yield data'''
 
