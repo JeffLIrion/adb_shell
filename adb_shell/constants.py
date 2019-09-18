@@ -43,8 +43,11 @@ WIRE_TO_ID = {wire: cmd_id for cmd_id, wire in ID_TO_WIRE.items()}
 #: An ADB message is 6 words in little-endian.
 MESSAGE_FORMAT = b'<6I'
 
-#: Default timeout for :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read` and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write`
-DEFAULT_TIMEOUT = 9.
+# Default timeout (in ms) for :meth:`adb_shell.adb_device.AdbDevice.shell`
+DEFAULT_TIMEOUT_MS = 9000
+
+#: Default timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read` and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write`
+DEFAULT_TIMEOUT_S = DEFAULT_TIMEOUT_MS / 1000.
 
 #: Default authentication timeout for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
-DEFAULT_AUTH_TIMEOUT = 10.
+DEFAULT_AUTH_TIMEOUT_S = 10.

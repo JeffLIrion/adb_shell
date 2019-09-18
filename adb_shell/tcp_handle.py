@@ -72,23 +72,23 @@ class TcpHandle(object):
         self.serial = '{}:{}'.format(self.host, self.port)
         self._connection = None
 
-    def connect(self, auth_timeout_ms=None):
+    def connect(self, auth_timeout_s=None):
         """TODO
 
         """
-        timeout = constants.DEFAULT_AUTH_TIMEOUT if auth_timeout_ms is None else auth_timeout_ms / 1000.
+        timeout = constants.DEFAULT_AUTH_TIMEOUT_S if auth_timeout_s is None else auth_timeout_s
         self._connection = socket.create_connection((self.host, self.port), timeout=timeout)
         if timeout:
             self._connection.setblocking(0)
 
-    def bulk_read(self, numbytes, timeout_ms=None):
+    def bulk_read(self, numbytes, timeout_s=None):
         """TODO
 
         Parameters
         ----------
         numbytes : int
             TODO
-        timeout_ms : TODO, None
+        timeout_s : TODO, None
             TODO
 
         Returns
@@ -102,7 +102,7 @@ class TcpHandle(object):
             Reading timed out.
 
         """
-        timeout = constants.DEFAULT_TIMEOUT if timeout_ms is None else timeout_ms / 1000.
+        timeout = constants.DEFAULT_TIMEOUT_S if timeout_ms is None else timeout_s
         readable, _, _ = select.select([self._connection], [], [], timeout)
         if readable:
             return self._connection.recv(numbytes)
@@ -110,14 +110,14 @@ class TcpHandle(object):
         msg = 'Reading from {} timed out ({} seconds)'.format(self.serial, timeout)
         raise TcpTimeoutException(msg)
 
-    def bulk_write(self, data, timeout_ms=None):
+    def bulk_write(self, data, timeout_s=None):
         """TODO
 
         Parameters
         ----------
         data : TODO
             TODO
-        timeout : TODO, None
+        timeout_s : TODO, None
             TODO
 
         Returns
@@ -131,7 +131,7 @@ class TcpHandle(object):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = constants.DEFAULT_TIMEOUT if timeout_ms is None else timeout_ms / 1000.
+        timeout = constants.DEFAULT_TIMEOUT_S if timeout_s is None else timeout_s
         _, writeable, _ = select.select([], [self._connection], [], timeout)
         if writeable:
             return self._connection.send(data)
