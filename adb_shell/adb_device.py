@@ -136,21 +136,21 @@ class AdbDevice(object):
 
         """
         local_id = 1
-        '''msg = AdbMessage(command=b'OPEN', arg0=local_id, arg1=0, data=destination + b'\0')
+        '''msg = AdbMessage(command=constants.OPEN, arg0=local_id, arg1=0, data=destination + b'\0')
         self._send(msg, timeout_s)
-        cmd, remote_id, their_local_id, _ = cls.Read(usb, [b'CLSE', b'OKAY'], timeout_ms=timeout_ms)
+        cmd, remote_id, their_local_id, _ = cls.Read(usb, [constants.CLSE, constants.OKAY], timeout_s=timeout_s)
 
         if local_id != their_local_id:
             raise InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
 
-        if cmd == b'CLSE':
+        if cmd == constants.CLSE:
             # Some devices seem to be sending CLSE once more after a request, this *should* handle it
-            cmd, remote_id, their_local_id, _ = cls.Read(usb, [b'CLSE', b'OKAY'], timeout_ms=timeout_ms)
+            cmd, remote_id, their_local_id, _ = cls.Read(usb, [constants.CLSE, constants.OKAY], timeout_s=timeout_s)
             # Device doesn't support this service.
-            if cmd == b'CLSE':
+            if cmd == constants.CLSE:
                 return None
 
-        if cmd != b'OKAY':
+        if cmd != constants.OKAY:
             raise InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
         return _AdbConnection(usb, local_id, remote_id, timeout_ms)'''

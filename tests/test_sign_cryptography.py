@@ -2,15 +2,15 @@ from mock import patch
 import os
 import unittest
 
-from adb_shell.keygen import keygen
-from adb_shell.sign_cryptography import CryptographySigner
+from adb_shell.auth.keygen import keygen
+from adb_shell.auth.sign_cryptography import CryptographySigner
 
 from .keygen_stub import open_priv_pub
 
 
 class TestCryptographySigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.sign_cryptography.open', open_priv_pub), patch('adb_shell.keygen.open', open_priv_pub):
+        with patch('adb_shell.auth.sign_cryptography.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             self.signer = CryptographySigner('tests/adbkey')
 

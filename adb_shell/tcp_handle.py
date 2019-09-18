@@ -18,22 +18,10 @@ import select
 import socket
 
 from . import constants
+from .exceptions import TcpTimeoutException
 
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class TcpTimeoutException(Exception):
-    """TCP connection timed read/write operation exceeded the allowed time.
-
-    Parameters
-    ----------
-    msg : str
-        TODO
-
-    """
-    def __init__(self, msg):
-        super(TcpTimeoutException, self).__init__(msg)
 
 
 class TcpHandle(object):

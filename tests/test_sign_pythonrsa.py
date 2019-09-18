@@ -2,15 +2,15 @@ from mock import patch
 import os
 import unittest
 
-from adb_shell.keygen import keygen
-from adb_shell.sign_pythonrsa import PythonRSASigner
+from adb_shell.auth.keygen import keygen
+from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from .keygen_stub import open_priv_pub
 
 
 class TestPythonRSASigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.keygen.open', open_priv_pub):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
