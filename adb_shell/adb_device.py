@@ -11,6 +11,14 @@ from .adb_message import AdbMessage
 from .tcp_handle import TcpHandle
 
 
+class AdbCommandFailureException(Exception):
+    """TODO
+
+    """
+    def __init__(self, msg):
+        super(TcpTimeoutException, self).__init__(msg)
+
+
 class AdbDevice(object):
     """TODO.
 
@@ -84,8 +92,19 @@ class AdbDevice(object):
         # return ''.join(cls.StreamingCommand(usb, service, command, timeout_ms))
         return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s))
 
+    def _okay(self, local_id, remote_id, timeout_s):
+        """TODO
+
+        .. image:: _static/adb.adb_protocol._AdbConnection.Okay.CALL_GRAPH.svg
+
+        .. image:: _static/adb.adb_protocol._AdbConnection.Okay.CALLER_GRAPH.svg
+
+        """
+        msg = AdbMessage(constants.OKAY, arg0=local_id, arg1=remote_id)
+        self._send(msg, timeout_s)
+
     # AdbMessage
-    def _open(cls, usb, destination, timeout_ms=None):
+    def _open(cls, usb, destination, timeout_s=None):
         """Opens a new connection to the device via an ``OPEN`` message.
 
         Not the same as the posix ``open`` or any other google3 Open methods.
@@ -208,7 +227,7 @@ class AdbDevice(object):
 
         return command, arg0, arg1, bytes(data)
 
-    def _read_until(self, *expected_cmds):
+    def _read_until(self, local_id, remote_id, expected_cmds):
         """Read a packet, Ack any write packets.
 
         .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntil.CALL_GRAPH.svg
@@ -235,21 +254,21 @@ class AdbDevice(object):
             Incorrect remote id.
 
         """
-        cmd, remote_id, local_id, data = AdbMessage.Read(self.usb, expected_cmds, self.timeout_ms)
+        cmd, remote_id2, local_id2, data = AdbMessage.Read(self.usb, expected_cmds, self.timeout_ms)
 
-        if local_id not in (0, self.local_id):
+        if local_id2 not in (0, local_id):
             raise InterleavedDataError("We don't support multiple streams...")
 
-        if remote_id not in (0, self.remote_id):
-            raise InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(self.remote_id, remote_id))
+        if remote_id2 not in (0, remote_id):
+            raise InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
 
         # Ack write packets.
-        if cmd == b'WRTE':
-            self.Okay()
+        if cmd == constants.WRTE:
+            self._okay(timeout_s)
 
         return cmd, data
 
-    def _read_until_close(self):
+    def _read_until_close(self, local_id, remote_id):
         """Yield packets until a ``b'CLSE'`` packet is received.
 
         .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntilClose.CALL_GRAPH.svg
@@ -261,27 +280,28 @@ class AdbDevice(object):
 
         """
         while True:
-            cmd, data = self.ReadUntil(b'CLSE', b'WRTE')
+            cmd, data = self.read_until(local_id, remote_id, [constants.CLSE, constants.WRTE])
 
-            if cmd == b'CLSE':
-                self._Send(b'CLSE', arg0=self.local_id, arg1=self.remote_id)
+            if cmd == constants.CLSE:
+                msg = AdbMessage(constants.CLSE, arg0=local_id, arg1=remote_id)
+                self._send(msg)
                 break
 
-            if cmd != b'WRTE':
-                if cmd == b'FAIL':
-                    raise usb_exceptions.AdbCommandFailureException('Command failed.', data)
+            if cmd != constants.WRTE:
+                if cmd == constants.FAIL:
+                    raise AdbCommandFailureException('Command failed.', data)
 
                 raise InvalidCommandError('Expected a WRITE or a CLOSE, got {0} ({1})'.format(cmd, data), cmd, data)
 
             yield data
 
     # AdbMessage
-    def _send(self, msg, timeout_ms):
+    def _send(self, msg, timeout_s):
         """TODO
 
         """
-        self._handle.bulk_write(msg.pack(), timeout_ms)
-        self._handle.bulk_write(msg.data, timeout_ms)
+        self._handle.bulk_write(msg.pack(), timeout_s)
+        self._handle.bulk_write(msg.data, timeout_s)
 
     # AdbMessage
     def _streaming_command(self, service, command, timeout_s):
@@ -319,6 +339,6 @@ class AdbDevice(object):
             Got an unexpected response command.
 
         """
-        connection = cls.Open(usb, destination=b'%s:%s' % (service, command), timeout_ms=timeout_ms)
+        connection = cls.Open(usb, destination=b'%s:%s' % (service, command), timeout_ms=timeout_s)
         for data in connection.ReadUntilClose():
             yield data.decode('utf8')
