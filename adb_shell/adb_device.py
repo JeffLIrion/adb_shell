@@ -4,6 +4,7 @@
 
 
 import socket
+import time
 
 from . import constants
 from .adb_message import AdbMessage
@@ -136,7 +137,7 @@ class AdbDevice(object):
         return _AdbConnection(usb, local_id, remote_id, timeout_ms)        
 
     # AdbMessage
-    def _read(cls, usb, expected_cmds, timeout_ms=None, total_timeout_ms=None):
+    def _read(self, expected_cmds, timeout_ms=None, total_timeout_ms=None):
         """Receive a response from the device.
 
         .. image:: _static/adb.adb_protocol.AdbMessage.Read.CALL_GRAPH.svg
@@ -177,7 +178,7 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            msg = usb.BulkRead(24, timeout_ms)
+            msg = self._handle.bulk_read(24, timeout_ms)
             cmd, arg0, arg1, data_length, data_checksum = cls.Unpack(msg)
             command = cls.constants.get(cmd)
             if not command:
@@ -207,7 +208,7 @@ class AdbDevice(object):
 
         return command, arg0, arg1, bytes(data)
 
-    def read_until(self, *expected_cmds):
+    def _read_until(self, *expected_cmds):
         """Read a packet, Ack any write packets.
 
         .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntil.CALL_GRAPH.svg
@@ -248,7 +249,7 @@ class AdbDevice(object):
 
         return cmd, data
 
-    def read_until_close(self):
+    def _read_until_close(self):
         """Yield packets until a ``b'CLSE'`` packet is received.
 
         .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntilClose.CALL_GRAPH.svg
