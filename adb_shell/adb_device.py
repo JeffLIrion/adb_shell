@@ -104,7 +104,7 @@ class AdbDevice(object):
         self._send(msg, timeout_s)
 
     # AdbMessage
-    def _open(cls, usb, destination, timeout_s=None):
+    def _open(self, destination, timeout_s):
         """Opens a new connection to the device via an ``OPEN`` message.
 
         Not the same as the posix ``open`` or any other google3 Open methods.
@@ -136,8 +136,8 @@ class AdbDevice(object):
 
         """
         local_id = 1
-        msg = cls(command=b'OPEN', arg0=local_id, arg1=0, data=destination + b'\0')
-        msg.Send(usb, timeout_ms)
+        '''msg = AdbMessage(command=b'OPEN', arg0=local_id, arg1=0, data=destination + b'\0')
+        self._send(msg, timeout_s)
         cmd, remote_id, their_local_id, _ = cls.Read(usb, [b'CLSE', b'OKAY'], timeout_ms=timeout_ms)
 
         if local_id != their_local_id:
@@ -153,10 +153,11 @@ class AdbDevice(object):
         if cmd != b'OKAY':
             raise InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
-        return _AdbConnection(usb, local_id, remote_id, timeout_ms)        
+        return _AdbConnection(usb, local_id, remote_id, timeout_ms)'''
+        return None, None, None, None
 
     # AdbMessage
-    def _read(self, expected_cmds, timeout_ms=None, total_timeout_ms=None):
+    def _read(self, expected_cmds, timeout_s=None, total_timeout_ms=None):
         """Receive a response from the device.
 
         .. image:: _static/adb.adb_protocol.AdbMessage.Read.CALL_GRAPH.svg
@@ -193,6 +194,7 @@ class AdbDevice(object):
             Received checksum does not match the expected checksum.
 
         """
+        return None, None, None, None
         total_timeout_ms = usb.Timeout(total_timeout_ms)
         start = time.time()
 
@@ -300,6 +302,7 @@ class AdbDevice(object):
         """TODO
 
         """
+        return
         self._handle.bulk_write(msg.pack(), timeout_s)
         self._handle.bulk_write(msg.data, timeout_s)
 
@@ -339,6 +342,8 @@ class AdbDevice(object):
             Got an unexpected response command.
 
         """
-        connection = cls.Open(usb, destination=b'%s:%s' % (service, command), timeout_ms=timeout_s)
-        for data in connection.ReadUntilClose():
-            yield data.decode('utf8')
+        #connection = self._open(destination=b'%s:%s' % (service, command), timeout_s)
+        #connection = cls.Open(usb, destination=b'%s:%s' % (service, command), timeout_ms=timeout_s)
+        #for data in connection.ReadUntilClose():
+        #    yield data.decode('utf8')
+        return ['pa', 'ss']

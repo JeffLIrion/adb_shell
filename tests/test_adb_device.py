@@ -25,3 +25,9 @@ class TestAdbDevice(unittest.TestCase):
     def test_close(self):
         self.assertFalse(self.device.close())
         self.assertFalse(self.device.available)
+
+    def test_shell(self):
+        with patchers.patch_tcp_handle:
+            self.assertTrue(self.device.connect())
+
+        self.assertEqual(self.device.shell('TEST'), 'pass')

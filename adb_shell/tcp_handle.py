@@ -47,7 +47,7 @@ class TcpHandle(object):
     ----------
     serial : str, bytes, bytearray
         Android device serial of the form "host" or "host:port". (Host may be an IP address or a host name.)
-    timeout_ms : TODO, None
+    timeout_s : TODO, None
         TODO
 
     Attributes
@@ -102,7 +102,7 @@ class TcpHandle(object):
             Reading timed out.
 
         """
-        timeout = constants.DEFAULT_TIMEOUT_S if timeout_ms is None else timeout_s
+        timeout = constants.DEFAULT_TIMEOUT_S if timeout_s is None else timeout_s
         readable, _, _ = select.select([self._connection], [], [], timeout)
         if readable:
             return self._connection.recv(numbytes)
