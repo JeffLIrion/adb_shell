@@ -45,8 +45,6 @@ class _Accum(object):
     need to slap a signature on top of already hashed message.  Introduce a "fake"
     hashing algo for this.
 
-    .. image:: _static/adb.sign_pythonrsa._Accum.CALL_GRAPH.svg
-
     Attributes
     ----------
     _buf : bytes
@@ -123,8 +121,6 @@ def _load_rsa_private_key(pem):
 
 class PythonRSASigner(object):
     """Implements :class:`adb_protocol.AuthSigner` using http://stuvel.eu/rsa.
-
-    .. image:: _static/adb.sign_pythonrsa.PythonRSASigner.CALL_GRAPH.svg
 
     Parameters
     ----------

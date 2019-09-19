@@ -45,8 +45,6 @@ def checksum(data):
 def unpack(message):
     """TODO
 
-    .. image:: _static/adb.adb_protocol.AdbMessage.Unpack.CALLER_GRAPH.svg
-
     Parameters
     ----------
     message : TODO

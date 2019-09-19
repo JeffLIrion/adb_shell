@@ -1,4 +1,4 @@
-python\_package
-===============
+adb\_shell
+==========
 
-This is a starting point for creating a Python package with unit tests, documentation, and linting specifications.
+This Python package implements ADB shell functionality.  It originated from `python-adb <https://github.com/google/python-adb>`_.

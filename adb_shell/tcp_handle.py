@@ -29,8 +29,6 @@ class TcpHandle(object):
 
     Provides same interface as `UsbHandle`.
 
-    .. image:: _static/adb.common.TcpHandle.__init__.CALLER_GRAPH.svg
-
     Parameters
     ----------
     serial : str, bytes, bytearray

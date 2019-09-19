@@ -121,10 +121,6 @@ class AdbDevice(object):
     def _okay(self, local_id, remote_id, timeout_s):
         """TODO
 
-        .. image:: _static/adb.adb_protocol._AdbConnection.Okay.CALL_GRAPH.svg
-
-        .. image:: _static/adb.adb_protocol._AdbConnection.Okay.CALLER_GRAPH.svg
-
         """
         msg = AdbMessage(constants.OKAY, arg0=local_id, arg1=remote_id)
         self._send(msg, timeout_s)
@@ -134,10 +130,6 @@ class AdbDevice(object):
         """Opens a new connection to the device via an ``OPEN`` message.
 
         Not the same as the posix ``open`` or any other google3 Open methods.
-
-        .. image:: _static/adb.adb_protocol.AdbMessage.Open.CALL_GRAPH.svg
-
-        .. image:: _static/adb.adb_protocol.AdbMessage.Open.CALLER_GRAPH.svg
 
         Parameters
         ----------
@@ -184,10 +176,6 @@ class AdbDevice(object):
     # AdbMessage
     def _read(self, expected_cmds, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Receive a response from the device.
-
-        .. image:: _static/adb.adb_protocol.AdbMessage.Read.CALL_GRAPH.svg
-
-        .. image:: _static/adb.adb_protocol.AdbMessage.Read.CALLER_GRAPH.svg
 
         Parameters
         ----------
@@ -255,10 +243,6 @@ class AdbDevice(object):
     def _read_until(self, local_id, remote_id, expected_cmds, timeout_s):
         """Read a packet, acknowledge any write packets.
 
-        .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntil.CALL_GRAPH.svg
-
-        .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntil.CALLER_GRAPH.svg
-
         Parameters
         ----------
         *expected_cmds : TODO
@@ -295,8 +279,6 @@ class AdbDevice(object):
 
     def _read_until_close(self, local_id, remote_id, timeout_s):
         """Yield packets until a :const:`~adb_shell.constants.CLSE` packet is received.
-
-        .. image:: _static/adb.adb_protocol._AdbConnection.ReadUntilClose.CALL_GRAPH.svg
 
         Yields
         ------
@@ -335,10 +317,6 @@ class AdbDevice(object):
         Sends ``service:command`` in a new connection, reading the data for the
         response. All the data is held in memory, large responses will be slow and
         can fill up memory.
-
-        .. image:: _static/adb.adb_protocol.AdbMessage.StreamingCommand.CALL_GRAPH.svg
-
-        .. image:: _static/adb.adb_protocol.AdbMessage.StreamingCommand.CALLER_GRAPH.svg
 
         Parameters
         ----------

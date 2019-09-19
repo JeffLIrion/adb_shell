@@ -37,8 +37,6 @@ class CryptographySigner(object):
 
     .. warning:: This is currently broken!
 
-    .. image:: _static/adb.sign_cryptography.CryptographySigner.CALL_GRAPH.svg
-
     Parameters
     ----------
     rsa_key_path : str

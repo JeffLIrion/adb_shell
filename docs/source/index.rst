@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-python\_package Documentation
-=============================
+adb\_shell Documentation
+========================
 
 .. toctree::
    :hidden:

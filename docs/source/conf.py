@@ -112,7 +112,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'PythonPackagedoc'
+htmlhelp_basename = 'AdbShellDoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -139,7 +139,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'PythonPackage.tex', 'Python Package Documentation',
+    (master_doc, 'AdbShell.tex', 'ADB Shell Documentation',
      'Jeff Irion', 'manual'),
 ]
 
@@ -149,7 +149,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'adb_shell', 'Python Package Documentation',
+    (master_doc, 'adb_shell', 'ADB Shell Documentation',
      [author], 1)
 ]
 
@@ -160,8 +160,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'PythonPackage', 'Python Package Documentation',
-     author, 'PythonPackage', 'One line description of project.',
+    (master_doc, 'AdbShell', 'ADB Shell Documentation',
+     author, 'AdbShell', 'One line description of project.',
      'Miscellaneous'),
 ]
 

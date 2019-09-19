@@ -32,8 +32,6 @@ from Crypto.Signature import pkcs1_15
 class PycryptodomeAuthSigner(object):
     """TODO
 
-    .. image:: _static/adb.sign_pycryptodome.PycryptodomeAuthSigner.CALL_GRAPH.svg
-
     Parameters
     ----------
     rsa_key_path : str, None
