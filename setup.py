@@ -7,9 +7,10 @@ setup(
     author='Jeff Irion',
     author_email='jefflirion@users.noreply.github.com',
     packages=['adb_shell'],
-    install_requires=['cryptography', 'libusb1>=1.0.16', 'rsa'],
+    install_requires=['cryptography', 'rsa'],
     tests_require=['pycryptodome'],
     classifiers=['Operating System :: OS Independent',
-                 'Programming Language :: Python :: 3'],
+                 'Programming Language :: Python :: 3',
+                 'Programming Language :: Python :: 2'],
     test_suite='tests'
 )
