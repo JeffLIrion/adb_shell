@@ -41,7 +41,6 @@ def checksum(data):
     return total & 0xFFFFFFFF
 
 
-
 def unpack(message):
     """TODO
 

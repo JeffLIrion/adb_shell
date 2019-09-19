@@ -27,7 +27,7 @@ class AdbDevice(object):
         else:
             try:
                 self._banner = socket.gethostname()
-            except:  # pylint: disable=bare-except
+            except:  # pylint: disable=bare-except, # noqa: E722
                 self._banner = 'unknown'
 
         self._banner_bytes = bytearray(self._banner, 'utf-8')
@@ -58,8 +58,8 @@ class AdbDevice(object):
         # 1. Create a TCP / USB handle (adb.adb_commands.AdbCommands.ConnectDevice)
         if ':' in self._serial:
             self._handle = TcpHandle(self._serial)
-        #else:
-        #    self._handle = UsbHandle.FindAndOpen(DeviceIsAvailable, port_path=port_path, serial=serial, timeout_ms=default_timeout_ms)
+        # else:
+        #     self._handle = UsbHandle.FindAndOpen(DeviceIsAvailable, port_path=port_path, serial=serial, timeout_ms=default_timeout_ms)
 
         self._handle.connect(auth_timeout_s)
 
@@ -76,6 +76,7 @@ class AdbDevice(object):
         cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN])
 
         # 6. If necessary, authenticate (adb.adb_protocol.AdbMessage.Connect)
+        rsa_keys = []
         if cmd == constants.AUTH:
             if not rsa_keys:
                 raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
@@ -83,7 +84,7 @@ class AdbDevice(object):
             # Loop through our keys, signing the last 'banner' or token.
             for rsa_key in rsa_keys:
                 if arg0 != constants.AUTH_TOKEN:
-                    raise InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
+                    raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
 
                 # Do not mangle the banner property here by converting it to a string
                 signed_token = rsa_key.Sign(banner)
@@ -96,17 +97,18 @@ class AdbDevice(object):
             # None of the keys worked, so send a public key.
             msg = AdbMessage(command=constants.AUTH, arg0=constants.AUTH_RSAPUBLICKEY, arg1=0, data=rsa_keys[0].GetPublicKey() + b'\0')
             self._send(msg, timeout_s)
-            try:
-                cmd, arg0, unused_arg1, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
-            except exceptions.ReadFailedError as e:
-                if e.usb_error.value == -7:  # Timeout.
-                    raise usb_exceptions.DeviceAuthError('Accept auth key on device, then retry.')
+            cmd, arg0, unused_arg1, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
+            # try:
+            #     cmd, arg0, unused_arg1, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
+            # except exceptions.ReadFailedError as e:
+            #     if e.usb_error.value == -7:  # Timeout.
+            #         raise exceptions.DeviceAuthError('Accept auth key on device, then retry.')
 
-                raise
+            #     raise
 
             # This didn't time-out, so we got a CNXN response.
             return banner
-        #return banner
+        # return banner
 
         self._available = True
 
@@ -158,17 +160,17 @@ class AdbDevice(object):
         self._send(msg, timeout_s)
         cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s=timeout_s)
 
-        if local_id != their_local_id and True:  ##################3
+        if local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
 
-        if cmd == constants.CLSE and True:  #################
+        if cmd == constants.CLSE:
             # Some devices seem to be sending CLSE once more after a request, this *should* handle it
             cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s=timeout_s)
             # Device doesn't support this service.
             if cmd == constants.CLSE:
                 return None, None
 
-        if cmd != constants.OKAY and True:  ################
+        if cmd != constants.OKAY:
             raise exceptions.InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
         return local_id, remote_id
@@ -227,7 +229,7 @@ class AdbDevice(object):
             while data_length > 0:
                 temp = self._handle.bulk_read(data_length, timeout_s)
                 if len(temp) != data_length:
-                    _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d".format(data_length, len(temp)))
+                    _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d", data_length, len(temp))
                 data += temp
 
                 data_length -= len(temp)
@@ -273,7 +275,7 @@ class AdbDevice(object):
 
         # Acknowledge write packets
         if cmd == constants.WRTE:
-            self._okay(timeout_s)
+            self._okay(local_id, remote_id, timeout_s)
 
         return cmd, data
 
@@ -296,7 +298,8 @@ class AdbDevice(object):
 
             if cmd != constants.WRTE:
                 if cmd == constants.FAIL:
-                    raise exceptions.AdbCommandFailureException('Command failed.', data)
+                    # raise exceptions.AdbCommandFailureException('Command failed.', data)
+                    raise exceptions.AdbCommandFailureException('Command failed.')
 
                 raise exceptions.InvalidCommandError('Expected a WRITE or a CLOSE, got {0} ({1})'.format(cmd, data), cmd, data)
 
@@ -342,7 +345,6 @@ class AdbDevice(object):
             Got an unexpected response command.
 
         """
-        #connection = cls.Open(usb, destination=b'%s:%s' % (service, command), timeout_ms=timeout_s)
         local_id, remote_id = self._open(destination=b'%s:%s' % (service, command), timeout_s=timeout_s)
         if local_id is None or remote_id is None and False:
             return

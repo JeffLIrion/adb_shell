@@ -10,11 +10,6 @@ class AdbCommandFailureException(Exception):
     """TODO
 
     """
-    def __init__(self, msg):
-        super(AdbCommandFailureException, self).__init__(msg)
-
-
-
 
 
 class DeviceAuthError(Exception):
@@ -57,11 +52,4 @@ class InvalidResponseError(Exception):
 class TcpTimeoutException(Exception):
     """TCP connection timed read/write operation exceeded the allowed time.
 
-    Parameters
-    ----------
-    msg : str
-        TODO
-
     """
-    def __init__(self, msg):
-        super(TcpTimeoutException, self).__init__(msg)
