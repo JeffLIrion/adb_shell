@@ -27,7 +27,7 @@ class AdbDevice(object):
         else:
             try:
                 self._banner = socket.gethostname()
-            except:  # pylint: disable=bare-except # noqa: E722
+            except:  # noqa pylint: disable=bare-except
                 self._banner = 'unknown'
 
         self._banner_bytes = bytearray(self._banner, 'utf-8')

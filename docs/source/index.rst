@@ -14,7 +14,7 @@ adb\_shell Documentation
 
 
 .. include:: ../../README.rst
-   :start-line: 3
+   :start-line: 10
 
 
 Indices and tables
