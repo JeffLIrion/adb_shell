@@ -33,11 +33,12 @@ class FakeSocket(object):
 
 
 class FakeTcpHandle(TcpHandle):
-    def connect(self, auth_timeout_s=None):
-        """TODO
+    def close(self):
+        self._connection = None
 
-        """
+    def connect(self, auth_timeout_s=None):
         #self._connection = FakeSocket()
+        self._connection = True
         self.bulk_read_list = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 
     def bulk_read(self, numbytes, timeout_s=None):
