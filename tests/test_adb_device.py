@@ -11,7 +11,8 @@ from . import patchers
 
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
-        self.device = AdbDevice('IP:5555')
+        with patchers.patch_tcp_handle:
+            self.device = AdbDevice('IP:5555')
 
     def test_init(self):
         self.assertTrue(True)
@@ -20,12 +21,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertFalse(self.device.available)
 
     def test_connect(self):
-        # Provide the `bulk_read` return values
-        #msg1 = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::%s\0' % self.device._banner_bytes)
-        #self._handle.bulk_read_list = [unpack(msg1), msg1.data]
-
-        with patchers.patch_tcp_handle:
-            self.assertTrue(self.device.connect())
+        self.assertTrue(self.device.connect())
         self.assertTrue(self.device.available)
 
     def test_close(self):
@@ -33,12 +29,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertFalse(self.device.available)
 
     def test_shell(self):
-        # Provide the `bulk_read` return values
-        #msg1 = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::%s\0' % self.device._banner_bytes)
-        #self._handle.bulk_read_list = [unpack(msg1), msg1.data]
-
-        with patchers.patch_tcp_handle:
-            self.assertTrue(self.device.connect())
+        self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'%s:%s' % (b'shell', 'TEST1234567890123'.encode('utf-8')) + b'\0')
