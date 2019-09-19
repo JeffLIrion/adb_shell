@@ -28,6 +28,9 @@ class FakeSocket(object):
     def setblocking(self, *args, **kwargs):
         pass
 
+    def shutdown(self, how):
+        pass
+
 
 class FakeTcpHandle(TcpHandle):
     def connect(self, auth_timeout_s=None):

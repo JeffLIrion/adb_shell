@@ -130,4 +130,6 @@ class TcpHandle(object):
         """TODO
 
         """
+        self._connection.shutdown(socket.SHUT_RDWR)
         self._connection.close()
+        self._connection = None
