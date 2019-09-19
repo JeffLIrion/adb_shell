@@ -14,6 +14,20 @@ class AdbCommandFailureException(Exception):
         super(AdbCommandFailureException, self).__init__(msg)
 
 
+
+
+
+class DeviceAuthError(Exception):
+    """Device authentication failed.
+
+    .. image:: _static/adb.usb_exceptions.DeviceAuthError.CALL_GRAPH.svg
+
+    """
+    def __init__(self, message, *args):
+        message %= args
+        super(DeviceAuthError, self).__init__(message, *args)
+
+
 class InterleavedDataError(Exception):
     """We only support command sent serially.
 

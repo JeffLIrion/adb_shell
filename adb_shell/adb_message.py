@@ -76,7 +76,7 @@ def unpack(message):
     try:
         cmd, arg0, arg1, data_length, data_checksum, unused_magic = struct.unpack(constants.MESSAGE_FORMAT, message)
     except struct.error as e:
-        raise ValueError('Unable to unpack ADB command.', constants.MESSAGE_FORMAT, message, e)
+        raise ValueError('Unable to unpack ADB command. ({})'.format(len(message)), constants.MESSAGE_FORMAT, message, e)
 
     return cmd, arg0, arg1, data_length, data_checksum
 

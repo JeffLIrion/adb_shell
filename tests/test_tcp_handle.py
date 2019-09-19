@@ -11,7 +11,7 @@ class TestAdbHandle(unittest.TestCase):
         """Create a ``TcpHandle`` and connect to a TCP service.
 
         """
-        self.handle = TcpHandle('IP:PORT')
+        self.handle = TcpHandle('IP:5555')
         with patchers.patch_create_connection:
             self.handle.connect()
 
@@ -23,8 +23,12 @@ class TestAdbHandle(unittest.TestCase):
         """TODO
 
         """
-        with patchers.patch_recv(b'TEST'), patchers.patch_select_success:
-            self.assertEqual(self.handle.bulk_read(1234), b'TEST')
+        # Provide the `recv` return values
+        self.handle._connection.recv_list = [b'TEST1', b'TEST2']
+
+        with patchers.patch_select_success:
+            self.assertEqual(self.handle.bulk_read(1234), b'TEST1')
+            self.assertEqual(self.handle.bulk_read(5678), b'TEST2')
 
         with patchers.patch_select_fail:
             with self.assertRaises(TcpTimeoutException):

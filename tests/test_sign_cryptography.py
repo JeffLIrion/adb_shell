@@ -23,7 +23,7 @@ class TestCryptographySigner(unittest.TestCase):
     def test_get_public_key(self):
         """Test that the ``GetPublicKey`` method works correctly."""
         with patch('{}.open'.format(__name__), open_priv_pub):
-            with open('tests/adbkey.pub') as f:
+            with open('tests/adbkey.pub', 'rb') as f:
                 pub = f.read()
 
             self.assertEqual(pub, self.signer.GetPublicKey())

@@ -3,6 +3,9 @@
 """
 
 
+import struct
+
+
 #: From adb.h
 CLASS = 0xFF
 
@@ -30,6 +33,7 @@ AUTH_RSAPUBLICKEY = 3
 AUTH = b'AUTH'
 CLSE = b'CLSE'
 CNXN = b'CNXN'
+FAIL = b'FAIL'
 OKAY = b'OKAY'
 OPEN = b'OPEN'
 SYNC = b'SYNC'
@@ -42,6 +46,9 @@ WIRE_TO_ID = {wire: cmd_id for cmd_id, wire in ID_TO_WIRE.items()}
 
 #: An ADB message is 6 words in little-endian.
 MESSAGE_FORMAT = b'<6I'
+
+#: The size of an ADB message
+MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
 # Default timeout (in ms) for :meth:`adb_shell.adb_device.AdbDevice.shell`
 DEFAULT_TIMEOUT_MS = 9000

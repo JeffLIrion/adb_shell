@@ -52,10 +52,11 @@ class TcpHandle(object):
     """
     def __init__(self, serial):
         if ':' in serial:
-            self.host, self.port = serial.split(':')
+            self.host, port = serial.split(':')
+            self.port = int(port)
         else:
             self.host = serial
-            self.port = '5555'
+            self.port = 5555
 
         self.serial = '{}:{}'.format(self.host, self.port)
         self._connection = None
