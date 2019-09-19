@@ -109,9 +109,7 @@ class AdbDevice(object):
             return banner
         # return banner
 
-        self._available = True
-
-        return self._available
+        return self.available
 
     def shell(self, command, timeout_s=constants.DEFAULT_TIMEOUT_S):
         """TODO
