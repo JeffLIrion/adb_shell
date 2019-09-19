@@ -59,6 +59,22 @@ class TcpHandle(object):
         self.serial = '{}:{}'.format(self.host, self.port)
         self._connection = None
 
+    @property
+    def available(self):
+        """TODO
+
+        """
+        return bool(self._connection)
+
+    def close(self):
+        """TODO
+
+        """
+        if self._connection:
+            self._connection.shutdown(socket.SHUT_RDWR)
+            self._connection.close()
+            self._connection = None
+
     def connect(self, auth_timeout_s=None):
         """TODO
 
@@ -125,11 +141,3 @@ class TcpHandle(object):
 
         msg = 'Sending data to {} timed out after {} seconds. No data was sent.'.format(self.serial, timeout)
         raise TcpTimeoutException(msg)
-
-    def close(self):
-        """TODO
-
-        """
-        self._connection.shutdown(socket.SHUT_RDWR)
-        self._connection.close()
-        self._connection = None
