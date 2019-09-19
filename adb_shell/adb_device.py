@@ -34,33 +34,32 @@ class AdbDevice(object):
 
         self._serial = serial
 
-        self._handle = None
-        self._available = False
+        self._handle = TcpHandle(self._serial)
 
     @property
     def available(self):
         """TODO
 
         """
-        return self._available
+        return self._handle.available
 
     def close(self):
         """TODO
 
         """
-        self._available = False
-        return self._available
+        self._handle.close()
 
     def connect(self, timeout_s=constants.DEFAULT_TIMEOUT_S, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S):
         """TODO
 
         """
         # 1. Create a TCP / USB handle (adb.adb_commands.AdbCommands.ConnectDevice)
-        if ':' in self._serial:
-            self._handle = TcpHandle(self._serial)
+        # if ':' in self._serial:
+        #     self._handle = TcpHandle(self._serial)
         # else:
         #     self._handle = UsbHandle.FindAndOpen(DeviceIsAvailable, port_path=port_path, serial=serial, timeout_ms=default_timeout_ms)
 
+        self._handle.close()
         self._handle.connect(auth_timeout_s)
 
         # 2. Use the handle to connect (adb.adb_commands.AdbCommands._Connect)
