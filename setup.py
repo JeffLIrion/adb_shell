@@ -6,7 +6,7 @@ setup(
     description='ADB shell functionality',
     author='Jeff Irion',
     author_email='jefflirion@users.noreply.github.com',
-    packages=['adb_shell'],
+    packages=['adb_shell', 'adb_shell.auth'],
     install_requires=['cryptography', 'rsa'],
     tests_require=['pycryptodome'],
     classifiers=['Operating System :: OS Independent',

@@ -49,7 +49,7 @@ class AdbDevice(object):
         """
         self._handle.close()
 
-    def connect(self, timeout_s=constants.DEFAULT_TIMEOUT_S, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S):
+    def connect(self, rsa_keys=None, timeout_s=constants.DEFAULT_TIMEOUT_S, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S):
         """TODO
 
         """
@@ -59,10 +59,9 @@ class AdbDevice(object):
         # else:
         #     self._handle = UsbHandle.FindAndOpen(DeviceIsAvailable, port_path=port_path, serial=serial, timeout_ms=default_timeout_ms)
 
+        # 2. Use the handle to connect (adb.adb_commands.AdbCommands._Connect)
         self._handle.close()
         self._handle.connect(auth_timeout_s)
-
-        # 2. Use the handle to connect (adb.adb_commands.AdbCommands._Connect)
 
         # 3. Create an ADB message (adb.adb_protocol.AdbMessage.Connect)
         msg = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::%s\0' % self._banner_bytes)
@@ -75,7 +74,6 @@ class AdbDevice(object):
         cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN])
 
         # 6. If necessary, authenticate (adb.adb_protocol.AdbMessage.Connect)
-        rsa_keys = []
         if cmd == constants.AUTH:
             if not rsa_keys:
                 raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
@@ -106,7 +104,7 @@ class AdbDevice(object):
             #     raise
 
             # This didn't time-out, so we got a CNXN response.
-            return banner
+            # return banner
         # return banner
 
         return self.available

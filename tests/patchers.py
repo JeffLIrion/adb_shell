@@ -8,8 +8,9 @@ from adb_shell.adb_message import AdbMessage, unpack
 from adb_shell.tcp_handle import TcpHandle
 
 
-#MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::%s\0' % 'unknown'.encode('utf-8'))
 MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::unknown1234567890\0')
+
+BULK_READ_LIST0 = [b'CNXN\x00\x00\x00\x00\x00\x00\x00\x00\t\x00\x00\x00\xe4\x02\x00\x00\xbc\xb1\xa7\xb1', bytearray(b'device::\x00')]
 
 
 class FakeSocket(object):
@@ -39,10 +40,14 @@ class FakeTcpHandle(TcpHandle):
     def connect(self, auth_timeout_s=None):
         #self._connection = FakeSocket()
         self._connection = True
+        #self.bulk_read_list = BULK_READ_LIST0
         self.bulk_read_list = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 
     def bulk_read(self, numbytes, timeout_s=None):
-        return self.bulk_read_list.pop(0)
+        x = self.bulk_read_list.pop(0)
+        print(x)
+        #print('{} = {}'.format(x, unpack(x)))
+        return x
 
     def bulk_write(self, data, timeout_s=None):
         return len(data)

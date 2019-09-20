@@ -1,4 +1,4 @@
-"""This is the starting point for a Python package.
+"""ADB shell functionality.
 
 """
 
