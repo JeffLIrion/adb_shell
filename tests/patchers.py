@@ -39,10 +39,7 @@ class FakeTcpHandle(TcpHandle):
         self.bulk_read_list = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 
     def bulk_read(self, numbytes, timeout_s=None):
-        x = self.bulk_read_list.pop(0)
-        print(x)
-        #print('{} = {}'.format(x, unpack(x)))
-        return x
+        return self.bulk_read_list.pop(0)
 
     def bulk_write(self, data, timeout_s=None):
         return len(data)
