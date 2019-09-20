@@ -7,7 +7,7 @@ setup(
     author='Jeff Irion',
     author_email='jefflirion@users.noreply.github.com',
     packages=['adb_shell', 'adb_shell.auth'],
-    install_requires=['cryptography', 'rsa'],
+    install_requires=['cryptography', 'pyasn1', 'rsa'],
     tests_require=['pycryptodome'],
     classifiers=['Operating System :: OS Independent',
                  'Programming Language :: Python :: 3',
