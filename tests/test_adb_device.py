@@ -9,6 +9,7 @@ from adb_shell.adb_message import AdbMessage, unpack
 from . import patchers
 
 
+
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
         with patchers.patch_tcp_handle:
@@ -38,3 +39,16 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle.bulk_read_list = [msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.data]
 
         self.assertEqual(self.device.shell('TEST'), '')
+
+
+class TestAdbDeviceWithBanner(TestAdbDevice):
+    def setUp(self):
+        with patchers.patch_tcp_handle:
+            self.device = AdbDevice('IP:5555', 'banner')
+
+
+class TestAdbDeviceBannerError(TestAdbDevice):
+    def setUp(self):
+        with patch('socket.gethostname', side_effect=Exception):
+            with patchers.patch_tcp_handle:
+                self.device = AdbDevice('IP:5555')

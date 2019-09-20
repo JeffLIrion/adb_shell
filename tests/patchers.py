@@ -1,6 +1,3 @@
-#import select
-#import socket
-
 from mock import patch
 
 from adb_shell import constants
@@ -38,9 +35,7 @@ class FakeTcpHandle(TcpHandle):
         self._connection = None
 
     def connect(self, auth_timeout_s=None):
-        #self._connection = FakeSocket()
         self._connection = True
-        #self.bulk_read_list = BULK_READ_LIST0
         self.bulk_read_list = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 
     def bulk_read(self, numbytes, timeout_s=None):
@@ -65,9 +60,3 @@ patch_select_fail = patch('select.select', return_value=(False, False, False))
 
 # `TcpHandle` patches
 patch_tcp_handle = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
-
-#def patch_bulk_read(response):
-#    def _bulk_read(self, numbytes, timeout_s=None):
-#        return response
-#
-#    return patch('{}.FakeTcpHandle.bulk_read'.format(__name__), _bulk_read)

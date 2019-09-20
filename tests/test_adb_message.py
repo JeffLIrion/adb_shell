@@ -7,10 +7,6 @@ from adb_shell.adb_device import AdbDevice
 from adb_shell.adb_message import AdbMessage, checksum, unpack
 
 
-def unpack_exception(fmt, message):
-    raise struct.error
-
-
 class TestAdbMessage(unittest.TestCase):
     def test_checksum_bytearray(self):
         cs = checksum(bytearray('TEST', 'utf-8'))
