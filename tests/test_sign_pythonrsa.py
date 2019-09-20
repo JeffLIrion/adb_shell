@@ -2,10 +2,20 @@ from mock import patch
 import os
 import unittest
 
+from pyasn1.type import univ
+
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from .keygen_stub import open_priv_pub
+
+
+def decode_error(der):
+    return [None, [None]], None
+
+
+def decode_exception(der):
+    raise IndexError
 
 
 class TestPythonRSASigner(unittest.TestCase):
@@ -26,3 +36,20 @@ class TestPythonRSASigner(unittest.TestCase):
                 pub = f.read()
 
             self.assertEqual(pub, self.signer.GetPublicKey())
+
+
+class TestPythonRSASignerExceptions(unittest.TestCase):
+    def test_value_error(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            with patch('adb_shell.auth.sign_pythonrsa.decoder.decode', decode_error):
+                with self.assertRaises(ValueError):
+                    keygen('tests/adbkey')
+                    self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+    def test_index_error(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            with patch('adb_shell.auth.sign_pythonrsa.decoder.decode', decode_exception):
+                with self.assertRaises(ValueError):
+                    keygen('tests/adbkey')
+                    self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+                
