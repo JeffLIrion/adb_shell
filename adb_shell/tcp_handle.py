@@ -13,15 +13,11 @@
 """
 
 
-import logging
 import select
 import socket
 
 from . import constants
 from .exceptions import TcpTimeoutException
-
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class TcpHandle(object):
