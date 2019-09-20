@@ -11,6 +11,7 @@ from . import patchers
 
 
 logging.getLogger('adb_shell.adb_device').setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG)
 
 
 class TestAdbDevice(unittest.TestCase):
