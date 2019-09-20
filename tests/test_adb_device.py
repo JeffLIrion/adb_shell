@@ -1,5 +1,7 @@
+import logging
 from mock import patch
 import os
+import sys
 import unittest
 
 from adb_shell import constants
@@ -8,6 +10,11 @@ from adb_shell.adb_message import AdbMessage, unpack
 
 from . import patchers
 
+
+# https://stackoverflow.com/a/7483862
+_LOGGER = logging.getLogger('adb_shell.adb_device')
+_LOGGER.setLevel(logging.DEBUG)
+_LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
 
 class TestAdbDevice(unittest.TestCase):
