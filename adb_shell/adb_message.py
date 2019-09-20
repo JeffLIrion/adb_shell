@@ -29,7 +29,7 @@ def checksum(data):
     elif isinstance(data, bytes):
         if data and isinstance(data[0], bytes):
             # Python 2 bytes (str) index as single-character strings.
-            total = sum(map(ord, data))
+            total = sum(map(ord, data))  # pragma: no cover
         else:
             # Python 3 bytes index as numbers (and PY2 empty strings sum() to 0)
             total = sum(data)
