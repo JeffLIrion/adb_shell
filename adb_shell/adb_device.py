@@ -208,6 +208,7 @@ class AdbDevice(object):
 
         while True:
             msg = self._handle.bulk_read(constants.MESSAGE_SIZE, timeout_s)
+            _LOGGER.debug("bulk_read(%d): %b", constants.MESSAGE_SIZE, msg)
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
             if not command:
@@ -223,6 +224,7 @@ class AdbDevice(object):
             data = bytearray()
             while data_length > 0:
                 temp = self._handle.bulk_read(data_length, timeout_s)
+                _LOGGER.debug("bulk_read(%d): %b", data_length, temp)
                 if len(temp) != data_length:
                     _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d", data_length, len(temp))
                 data += temp
@@ -305,7 +307,9 @@ class AdbDevice(object):
         """TODO
 
         """
+        _LOGGER.debug("bulk_write: %b", msg.pack())
         self._handle.bulk_write(msg.pack(), timeout_s)
+        _LOGGER.debug("bulk_write: %b", msg.data)
         self._handle.bulk_write(msg.data, timeout_s)
 
     # AdbMessage
