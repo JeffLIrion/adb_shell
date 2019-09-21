@@ -93,7 +93,7 @@ class TcpHandle(object):
         numbytes : int
             TODO
         timeout_s : int, None
-            TODO
+            When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
         -------
@@ -122,7 +122,7 @@ class TcpHandle(object):
         data : TODO
             TODO
         timeout_s : TODO, None
-            TODO
+            When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
         -------
