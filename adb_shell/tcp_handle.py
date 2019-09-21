@@ -1,14 +1,12 @@
-"""TODO
+"""A class for creating a socket connection with the device and sending and receiving data.
 
 * :class:`TcpHandle`
 
-    * :meth:`TcpHandle._connect`
-    * :meth:`TcpHandle.BulkRead`
-    * :meth:`TcpHandle.BulkWrite`
-    * :meth:`TcpHandle.Close`
-    * :meth:`TcpHandle.serial_number`
-    * :meth:`TcpHandle.Timeout`
-    * :meth:`TcpHandle.TimeoutSeconds`
+    * :attr:`TcpHandle.available`
+    * :attr:`TcpHandle.bulk_read`
+    * :attr:`TcpHandle.bulk_write`
+    * :meth:`TcpHandle.close`
+    * :meth:`TcpHandle.connect`
 
 """
 
@@ -23,23 +21,20 @@ from .exceptions import TcpTimeoutException
 class TcpHandle(object):
     """TCP connection object.
 
-    Provides same interface as `UsbHandle`.
-
     Parameters
     ----------
     serial : str, bytes, bytearray
-        Android device serial of the form "host" or "host:port". (Host may be an IP address or a host name.)
-    timeout_s : TODO, None
+        Android device serial of the form "host" or "host:port".  (Host may be an IP address or a host name.)
         TODO
 
     Attributes
     ----------
-    _connection : TODO, None
-        TODO
+    _connection : socket.socket, None
+        A socket connection to the device
     host : str
-        TODO
+        The address of the device
     port : str
-        TODO
+        The device port to which we are connecting (default is 5555)
     serial_number : str
         ``<host>:<port>``
 
@@ -57,13 +52,18 @@ class TcpHandle(object):
 
     @property
     def available(self):
-        """TODO
+        """Whether the socket connection has been created.
+
+        Returns
+        -------
+        bool
+            Whether the connection has been created
 
         """
         return bool(self._connection)
 
     def close(self):
-        """TODO
+        """Close the socket connection.
 
         """
         if self._connection:
@@ -72,7 +72,12 @@ class TcpHandle(object):
             self._connection = None
 
     def connect(self, auth_timeout_s=None):
-        """TODO
+        """Create a socket connection to the device.
+
+        Parameters
+        ----------
+        auth_timeout_s : TODO
+            TODO
 
         """
         timeout = constants.DEFAULT_AUTH_TIMEOUT_S if auth_timeout_s is None else auth_timeout_s
@@ -87,13 +92,13 @@ class TcpHandle(object):
         ----------
         numbytes : int
             TODO
-        timeout_s : TODO, None
+        timeout_s : int, None
             TODO
 
         Returns
         -------
-        TODO
-            TODO
+        bytes
+            The received data
 
         Raises
         ------
@@ -121,8 +126,8 @@ class TcpHandle(object):
 
         Returns
         -------
-        TODO
-            TODO
+        int
+            The number of bytes sent
 
         Raises
         ------
