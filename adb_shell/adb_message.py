@@ -1,5 +1,15 @@
 """Functions and an :class:`AdbMessage` class for packing and unpacking ADB messages.
 
+.. rubric:: Contents
+
+* :class:`AdbMessage`
+
+    * :attr:`AdbMessage.checksum`
+    * :meth:`AdbMessage.pack`
+
+* :func:`checksum`
+* :func:`unpack`
+
 """
 
 

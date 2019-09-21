@@ -87,7 +87,22 @@ class AdbDevice(object):
         self._handle.close()
 
     def connect(self, rsa_keys=None, timeout_s=constants.DEFAULT_TIMEOUT_S, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
-        """TODO
+        """Establish an ADB connection to the device.
+
+        1. Use the handle to establish a socket connection
+        2. Send a ``b'CNXN'`` message
+        3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
+        4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
+        5. If no ``rsa_keys`` are provided, raise an exception
+        6. Loop through our keys, signing the last ``banner`` that we received
+
+            1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
+            2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
+            3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
+            4. If ``cmd`` is ``b'CNXN'``, return ``banner``
+
+        7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
+
 
         Parameters
         ----------
@@ -104,61 +119,49 @@ class AdbDevice(object):
             Whether the connection was established (:attr:`AdbDevice.available`)
 
         """
-        # 1. Create a TCP / USB handle (adb.adb_commands.AdbCommands.ConnectDevice)
-        # if ':' in self._serial:
-        #     self._handle = TcpHandle(self._serial)
-        # else:
-        #     self._handle = UsbHandle.FindAndOpen(DeviceIsAvailable, port_path=port_path, serial=serial, timeout_ms=default_timeout_ms)
-
-        # 2. Use the handle to connect (adb.adb_commands.AdbCommands._Connect)
+        # 1. Use the handle to establish a socket connection
         self._handle.close()
         self._handle.connect(auth_timeout_s)
 
-        # 3. Create an ADB message (adb.adb_protocol.AdbMessage.Connect)
+        # 2. Send a ``b'CNXN'`` message
         msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner_bytes)
-
-        # 4. Send the message using the handle (adb.adb_protocol.AdbMessage.Send)
         self._send(msg, timeout_s)
 
-        # 5. Read the response (adb.adb_protocol.AdbMessage.Read)
-        # cmd, arg0, arg1, banner = cls.Read(usb, [b'CNXN', b'AUTH'])
+        # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
         cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], timeout_s, total_timeout_s)
 
-        # 6. If necessary, authenticate (adb.adb_protocol.AdbMessage.Connect)
-        if cmd == constants.AUTH:
-            if not rsa_keys:
-                raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
+        # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
+        if cmd != constants.AUTH:
+            return True  # return banner
 
-            # Loop through our keys, signing the last 'banner' or token.
-            for rsa_key in rsa_keys:
-                if arg0 != constants.AUTH_TOKEN:
-                    raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
+        # 5. If no ``rsa_keys`` are provided, raise an exception
+        if not rsa_keys:
+            raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
 
-                # Do not mangle the banner property here by converting it to a string
-                signed_token = rsa_key.Sign(banner)
-                msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
-                self._send(msg, timeout_s)
-                cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], timeout_s, total_timeout_s)
-                if cmd == constants.CNXN:
-                    return banner
+        # 6. Loop through our keys, signing the last ``banner`` that we received
+        for rsa_key in rsa_keys:
+            # 6.1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
+            if arg0 != constants.AUTH_TOKEN:
+                raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
 
-            # None of the keys worked, so send a public key.
-            msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, rsa_keys[0].GetPublicKey() + b'\0')
+            # 6.2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
+            signed_token = rsa_key.Sign(banner)
+            msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
             self._send(msg, timeout_s)
-            cmd, arg0, _, banner = self._read([constants.CNXN], auth_timeout_s, total_timeout_s)
-            # try:
-            #     cmd, arg0, _, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
-            # except exceptions.ReadFailedError as e:
-            #     if e.usb_error.value == -7:  # Timeout.
-            #         raise exceptions.DeviceAuthError('Accept auth key on device, then retry.')
 
-            #     raise
+            # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
+            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], timeout_s, total_timeout_s)
 
-            # This didn't time-out, so we got a CNXN response.
-            # return banner
-        # return banner
+            # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
+            if cmd == constants.CNXN:
+                return True  # return banner
 
-        return self.available
+        # 7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
+        msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, rsa_keys[0].GetPublicKey() + b'\0')
+        self._send(msg, timeout_s)
+
+        cmd, arg0, _, banner = self._read([constants.CNXN], auth_timeout_s, total_timeout_s)
+        return True  # return banner
 
     def shell(self, command, timeout_s=constants.DEFAULT_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Send an ADB shell command to the device.
@@ -181,7 +184,16 @@ class AdbDevice(object):
         return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s))
 
     def _okay(self, local_id, remote_id, timeout_s):
-        """TODO
+        """Send an ``b'OKAY'`` mesage.
+
+        Parameters
+        ----------
+        local_id : int
+            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
+        remote_id : int
+            The ID for the recipient, or ``None`` if a connection could not be opened
+        timeout_s : int
+            Timeout in seconds for TCP packets
 
         """
         msg = AdbMessage(constants.OKAY, local_id, remote_id)
@@ -197,6 +209,7 @@ class AdbDevice(object):
             * If the received command is ``b'CLSE'``, :meth:`~AdbDevice._read` another response from the device
             * If the received command is not ``b'OKAY'``, raise an exception
             * Return ``local_id`` and ``remote_id``
+
 
         Parameters
         ----------
@@ -251,6 +264,7 @@ class AdbDevice(object):
         4. Read ``data_length`` bytes from the device
         5. If the checksum of the read data does not match ``data_checksum``, raise an exception
         6. Return ``command``, ``arg0``, ``arg1``, and ``bytes(data)``
+
 
         Parameters
         ----------
@@ -324,6 +338,7 @@ class AdbDevice(object):
         1. Read data via :meth:`AdbDevice._read`
         2. If a ``b'WRTE'`` packet is received, send an ``b'OKAY'`` packet via :meth:`AdbDevice._okay`
         3. Return the ``cmd`` and ``data`` that were read by :meth:`AdbDevice._read`
+
 
         Parameters
         ----------
@@ -420,6 +435,7 @@ class AdbDevice(object):
         1. Send the message header (:meth:`adb_shell.adb_message.AdbMessage.pack <AdbMessage.pack>`)
         2. Send the message data
 
+
         Parameters
         ----------
         msg : AdbMessage
@@ -439,6 +455,7 @@ class AdbDevice(object):
 
         1. :meth:`~AdbDevice._open` a new connection to the device, where the ``destination`` parameter is ``service:command``
         2. Read the response data via :meth:`AdbDevice._read_until_close`
+
 
         .. note::
 
