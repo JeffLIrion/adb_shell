@@ -13,12 +13,12 @@ def checksum(data):
 
     Parameters
     ----------
-    data : TODO
+    data : bytearray, bytes, str
         TODO
 
     Returns
     -------
-    TODO
+    int
         TODO
 
     """
@@ -81,6 +81,9 @@ def unpack(message):
 class AdbMessage(object):
     """TODO
 
+    Parameters
+    ----------
+
     """
     def __init__(self, command=None, arg0=None, arg1=None, data=b''):
         self.command = constants.ID_TO_WIRE[command]
@@ -106,8 +109,8 @@ class AdbMessage(object):
 
         Returns
         -------
-        TODO
-            TODO
+        int
+            The checksum of ``self.data``
 
         """
         return checksum(self.data)
