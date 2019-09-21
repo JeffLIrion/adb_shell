@@ -345,7 +345,7 @@ class AdbDevice(object):
 
         """
         local_id, remote_id = self._open(destination=b'%s:%s' % (service, command), timeout_s=timeout_s)
-        if local_id is None or remote_id is None and False:
+        if local_id is None or remote_id is None:
             return
 
         for data in self._read_until_close(local_id, remote_id, timeout_s):

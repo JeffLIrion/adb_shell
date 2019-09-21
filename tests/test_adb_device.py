@@ -42,10 +42,11 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'%s:%s' % (b'shell', 'TEST1234567890123'.encode('utf-8')) + b'\0')
         msg2 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'%s:%s' % (b'shell', 'TEST1234567890123'.encode('utf-8')) + b'\0')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=0, data=b'%s:%s' % (b'shell', 'TEST1234567890123'.encode('utf-8')) + b'\0')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.data]
+        msg3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=0, data='TEST1234567890123456789'.encode('utf-8') + b'\0')
+        msg4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'%s:%s' % (b'shell', 'TEST1234567890123'.encode('utf-8')) + b'\0')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.data, msg4.pack(), msg4.data]
 
-        self.assertEqual(self.device.shell('TEST'), '')
+        self.assertNotEqual(self.device.shell('TEST'), '')
 
 
 class TestAdbDeviceWithBanner(TestAdbDevice):
