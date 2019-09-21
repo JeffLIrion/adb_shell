@@ -9,17 +9,17 @@ from . import constants
 
 
 def checksum(data):
-    """TODO
+    """Calculate the checksum of the provided data.
 
     Parameters
     ----------
     data : bytearray, bytes, str
-        TODO
+        The data
 
     Returns
     -------
     int
-        TODO
+        The checksum
 
     """
     # The checksum is just a sum of all the bytes. I swear.
@@ -42,26 +42,26 @@ def checksum(data):
 
 
 def unpack(message):
-    """TODO
+    """Unpack a received ADB message.
 
     Parameters
     ----------
-    message : TODO
-        TODO
+    message : bytes
+        The received message
 
     Returns
     -------
-    cmd : TODO
+    cmd : int
+        The ADB command
+    arg0 : int
         TODO
-    arg0 : TODO
+    arg1 : int
         TODO
-    arg1 : TODO
+    data_length : int
         TODO
-    data_length : TODO
+    data_checksum : int
         TODO
-    data_checksum : TODO
-        TODO
-    unused_magic : TODO
+    unused_magic : int
         TODO
 
     Raises
@@ -70,8 +70,15 @@ def unpack(message):
         Unable to unpack the ADB command.
 
     """
+    print('\n\ntype(message) = {}\n\n'.format(type(message)))
     try:
         cmd, arg0, arg1, data_length, data_checksum, unused_magic = struct.unpack(constants.MESSAGE_FORMAT, message)
+        print('type(cmd) = {}'.format(type(cmd)))
+        print('type(arg0) = {}'.format(type(arg0)))
+        print('type(arg1) = {}'.format(type(arg1)))
+        print('type(data_length) = {}'.format(type(data_length)))
+        print('type(data_checksum) = {}'.format(type(data_checksum)))
+        print('type(unused_magic) = {}'.format(type(unused_magic)))
     except struct.error as e:
         raise ValueError('Unable to unpack ADB command. ({})'.format(len(message)), constants.MESSAGE_FORMAT, message, e)
 
@@ -83,9 +90,17 @@ class AdbMessage(object):
 
     Parameters
     ----------
+    command : bytes
+        TODO
+    arg0 : int
+        TODO
+    arg1 : int
+        TODO
+    data : bytes
+        TODO
 
     """
-    def __init__(self, command=None, arg0=None, arg1=None, data=b''):
+    def __init__(self, command, arg0=None, arg1=None, data=b''):
         self.command = constants.ID_TO_WIRE[command]
         self.magic = self.command ^ 0xFFFFFFFF
         self.arg0 = arg0

@@ -115,14 +115,44 @@ class AdbDevice(object):
         """
         return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s))
 
-    def _okay(self, local_id, remote_id, timeout_s):
-        """TODO
+    def _streaming_command(self, service, command, timeout_s):
+        """One complete set of USB packets for a single command.
+
+        Sends ``service:command`` in a new connection, reading the data for the
+        response. All the data is held in memory, large responses will be slow and
+        can fill up memory.
+
+        Parameters
+        ----------
+        usb : adb.common.TcpHandle, adb.common.UsbHandle
+            A :class:`adb.common.TcpHandle` or :class:`adb.common.UsbHandle` instance with ``BulkRead`` and ``BulkWrite`` methods.
+        service : TODO
+            The service on the device to talk to.
+        command : str
+            The command to send to the service.
+        timeout_ms : int, None
+            Timeout in milliseconds for USB packets.
+
+        Yields
+        ------
+        str
+            The responses from the service.
+
+        Raises
+        ------
+        adb_shell.exceptions.InterleavedDataError
+            Multiple streams running over usb.
+        adb_shell.exceptions.InvalidCommandError
+            Got an unexpected response command.
 
         """
-        msg = AdbMessage(constants.OKAY, arg0=local_id, arg1=remote_id)
-        self._send(msg, timeout_s)
+        local_id, remote_id = self._open(destination=b'%s:%s' % (service, command), timeout_s=timeout_s)
+        if local_id is None or remote_id is None:
+            return
 
-    # AdbMessage
+        for data in self._read_until_close(local_id, remote_id, timeout_s):
+            yield data.decode('utf8')
+
     def _open(self, destination, timeout_s):
         """Opens a new connection to the device via an ``OPEN`` message.
 
@@ -170,7 +200,6 @@ class AdbDevice(object):
 
         return local_id, remote_id
 
-    # AdbMessage
     def _read(self, expected_cmds, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Receive a response from the device.
 
@@ -225,6 +254,7 @@ class AdbDevice(object):
             while data_length > 0:
                 temp = self._handle.bulk_read(data_length, timeout_s)
                 _LOGGER.debug("bulk_read(%d): %s", data_length, temp)
+
                 if len(temp) != data_length:
                     _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d", data_length, len(temp))
                 data += temp
@@ -302,7 +332,6 @@ class AdbDevice(object):
 
             yield data
 
-    # AdbMessage
     def _send(self, msg, timeout_s):
         """TODO
 
@@ -313,41 +342,9 @@ class AdbDevice(object):
         _LOGGER.debug("bulk_write: %s", msg.data)
         self._handle.bulk_write(msg.data, timeout_s)
 
-    # AdbMessage
-    def _streaming_command(self, service, command, timeout_s):
-        """One complete set of USB packets for a single command.
-
-        Sends ``service:command`` in a new connection, reading the data for the
-        response. All the data is held in memory, large responses will be slow and
-        can fill up memory.
-
-        Parameters
-        ----------
-        usb : adb.common.TcpHandle, adb.common.UsbHandle
-            A :class:`adb.common.TcpHandle` or :class:`adb.common.UsbHandle` instance with ``BulkRead`` and ``BulkWrite`` methods.
-        service : TODO
-            The service on the device to talk to.
-        command : str
-            The command to send to the service.
-        timeout_ms : int, None
-            Timeout in milliseconds for USB packets.
-
-        Yields
-        ------
-        str
-            The responses from the service.
-
-        Raises
-        ------
-        adb_shell.exceptions.InterleavedDataError
-            Multiple streams running over usb.
-        adb_shell.exceptions.InvalidCommandError
-            Got an unexpected response command.
+    def _okay(self, local_id, remote_id, timeout_s):
+        """TODO
 
         """
-        local_id, remote_id = self._open(destination=b'%s:%s' % (service, command), timeout_s=timeout_s)
-        if local_id is None or remote_id is None:
-            return
-
-        for data in self._read_until_close(local_id, remote_id, timeout_s):
-            yield data.decode('utf8')
+        msg = AdbMessage(constants.OKAY, arg0=local_id, arg1=remote_id)
+        self._send(msg, timeout_s)
