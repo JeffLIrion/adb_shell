@@ -250,6 +250,7 @@ class AdbDevice(object):
             if cmd == constants.CLSE:
                 return None, None
 
+        # I don't think this can be reached...
         if cmd != constants.OKAY:
             raise exceptions.InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
