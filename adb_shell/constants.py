@@ -1,4 +1,4 @@
-"""TODO
+"""Constants used throughout the code.
 
 """
 
