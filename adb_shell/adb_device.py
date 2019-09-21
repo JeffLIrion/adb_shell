@@ -1,5 +1,18 @@
 """TODO.
 
+.. rubric:: Contents
+
+* :class:`AdbDevice`
+
+    * :meth:`AdbDevice._open`
+    * :meth:`AdbDevice._read`
+    * :meth:`AdbDevice._read_until`
+    * :meth:`AdbDevice._read_until_close`
+    * :meth:`AdbDevice._streaming_command`
+    * :attr:`AdbDevice.available`
+    * :meth:`AdbDevice.close`
+    * :meth:`AdbDevice.shell`
+
 """
 
 
@@ -17,7 +30,26 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class AdbDevice(object):
-    """TODO.
+    """A class with methods for connecting to a device and sending shell commands.
+
+    Parameters
+    ----------
+    serial : str
+        ``<host>`` or ``<host>:<port>``
+    banner : str, None
+        The hostname of the machine where the Python interpreter is currently running; if
+        it is not provided, it will be determined via ``socket.gethostname()``
+
+    Attributes
+    ----------
+    _banner : str
+        The hostname of the machine where the Python interpreter is currently running
+    _banner_bytes : bytearray
+        ``self._banner`` converted to a bytearray
+    _handle : TcpHandle
+        The :class:`~adb_shell.tcp_handle.TcpHandle` instance that is used to connect to the device
+    _serial : str
+        ``<host>`` or ``<host>:<port>``
 
     """
 
@@ -38,19 +70,38 @@ class AdbDevice(object):
 
     @property
     def available(self):
-        """TODO
+        """Whether or not the socket connection is established.
+
+        Returns
+        -------
+        bool
+            :attr:`adb_shell.tcp_handle.TcpHandle.available`
 
         """
         return self._handle.available
 
     def close(self):
-        """TODO
+        """Close the socket connection via :meth:`adb_shell.tcp_handle.TcpHandle.close`.
 
         """
         self._handle.close()
 
-    def connect(self, rsa_keys=None, timeout_s=constants.DEFAULT_TIMEOUT_S, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S):
+    def connect(self, rsa_keys=None, timeout_s=constants.DEFAULT_TIMEOUT_S, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """TODO
+
+        Parameters
+        ----------
+        rsa_keys : list, None
+            A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`, :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`adb_shell.auth.sign_pythonrsa.PythonRSASigner`
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        auth_timeout_s : int
+            TODO
+
+        Returns
+        -------
+        bool
+            Whether the connection was established (:attr:`AdbDevice.available`)
 
         """
         # 1. Create a TCP / USB handle (adb.adb_commands.AdbCommands.ConnectDevice)
@@ -64,14 +115,14 @@ class AdbDevice(object):
         self._handle.connect(auth_timeout_s)
 
         # 3. Create an ADB message (adb.adb_protocol.AdbMessage.Connect)
-        msg = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::%s\0' % self._banner_bytes)
+        msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner_bytes)
 
         # 4. Send the message using the handle (adb.adb_protocol.AdbMessage.Send)
         self._send(msg, timeout_s)
 
         # 5. Read the response (adb.adb_protocol.AdbMessage.Read)
         # cmd, arg0, arg1, banner = cls.Read(usb, [b'CNXN', b'AUTH'])
-        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN])
+        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], timeout_s, total_timeout_s)
 
         # 6. If necessary, authenticate (adb.adb_protocol.AdbMessage.Connect)
         if cmd == constants.AUTH:
@@ -85,18 +136,18 @@ class AdbDevice(object):
 
                 # Do not mangle the banner property here by converting it to a string
                 signed_token = rsa_key.Sign(banner)
-                msg = AdbMessage(command=constants.AUTH, arg0=constants.AUTH_SIGNATURE, arg1=0, data=signed_token)
+                msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
                 self._send(msg, timeout_s)
-                cmd, arg0, unused_arg1, banner = self._read([constants.CNXN, constants.AUTH], timeout_s)
+                cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], timeout_s, total_timeout_s)
                 if cmd == constants.CNXN:
                     return banner
 
             # None of the keys worked, so send a public key.
-            msg = AdbMessage(command=constants.AUTH, arg0=constants.AUTH_RSAPUBLICKEY, arg1=0, data=rsa_keys[0].GetPublicKey() + b'\0')
+            msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, rsa_keys[0].GetPublicKey() + b'\0')
             self._send(msg, timeout_s)
-            cmd, arg0, unused_arg1, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
+            cmd, arg0, _, banner = self._read([constants.CNXN], auth_timeout_s, total_timeout_s)
             # try:
-            #     cmd, arg0, unused_arg1, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
+            #     cmd, arg0, _, banner = self._read([constants.CNXN], timeout_s=auth_timeout_s)
             # except exceptions.ReadFailedError as e:
             #     if e.usb_error.value == -7:  # Timeout.
             #         raise exceptions.DeviceAuthError('Accept auth key on device, then retry.')
@@ -109,68 +160,59 @@ class AdbDevice(object):
 
         return self.available
 
-    def shell(self, command, timeout_s=constants.DEFAULT_TIMEOUT_S):
-        """TODO
-
-        """
-        return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s))
-
-    def _streaming_command(self, service, command, timeout_s):
-        """One complete set of USB packets for a single command.
-
-        Sends ``service:command`` in a new connection, reading the data for the
-        response. All the data is held in memory, large responses will be slow and
-        can fill up memory.
+    def shell(self, command, timeout_s=constants.DEFAULT_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Send an ADB shell command to the device.
 
         Parameters
         ----------
-        usb : adb.common.TcpHandle, adb.common.UsbHandle
-            A :class:`adb.common.TcpHandle` or :class:`adb.common.UsbHandle` instance with ``BulkRead`` and ``BulkWrite`` methods.
-        service : TODO
-            The service on the device to talk to.
         command : str
-            The command to send to the service.
-        timeout_ms : int, None
-            Timeout in milliseconds for USB packets.
-
-        Yields
-        ------
-        str
-            The responses from the service.
-
-        Raises
-        ------
-        adb_shell.exceptions.InterleavedDataError
-            Multiple streams running over usb.
-        adb_shell.exceptions.InvalidCommandError
-            Got an unexpected response command.
-
-        """
-        local_id, remote_id = self._open(destination=b'%s:%s' % (service, command), timeout_s=timeout_s)
-        if local_id is None or remote_id is None:
-            return
-
-        for data in self._read_until_close(local_id, remote_id, timeout_s):
-            yield data.decode('utf8')
-
-    def _open(self, destination, timeout_s):
-        """Opens a new connection to the device via an ``OPEN`` message.
-
-        Not the same as the posix ``open`` or any other google3 Open methods.
-
-        Parameters
-        ----------
-        usb : adb.common.TcpHandle, adb.common.UsbHandle
-            A :class:`adb.common.TcpHandle` or :class:`adb.common.UsbHandle` instance with ``BulkRead`` and ``BulkWrite`` methods.
-        destination : TODO
-            The service:command string.
-        timeout_ms : int, None
-            Timeout in milliseconds for USB packets.
+            The shell command that will be sent
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        total_timeout_s : int
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command                   ***************TODO************
 
         Returns
         -------
-        _AdbConnection, None
-            The local connection id.
+        str
+            The output of the ADB shell command
+
+        """
+        return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s))
+
+    def _okay(self, local_id, remote_id, timeout_s):
+        """TODO
+
+        """
+        msg = AdbMessage(constants.OKAY, local_id, remote_id)
+        self._send(msg, timeout_s)
+
+    def _open(self, destination, timeout_s, total_timeout_s):
+        """Opens a new connection to the device via an ``b'OPEN'`` message.
+
+        1. :meth:`~AdbDevice._send` an ``b'OPEN'`` command to the device that specifies the ``local_id``
+        2. :meth:`~AdbDevice._read` a response from the device that includes a command, another local ID (``their_local_id``), and ``remote_id``
+
+            * If ``local_id`` and ``their_local_id`` do not match, raise an exception.
+            * If the received command is ``b'CLSE'``, :meth:`~AdbDevice._read` another response from the device
+            * If the received command is not ``b'OKAY'``, raise an exception
+            * Return ``local_id`` and ``remote_id``
+
+        Parameters
+        ----------
+        destination : bytes
+            ``b'SERVICE:COMMAND'``
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        total_timeout_s : int
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command
+
+        Returns
+        -------
+        local_id : int, None
+            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
+        remote_id : int, None
+            The ID for the recipient, or ``None`` if a connection could not be opened
 
         Raises
         ------
@@ -181,16 +223,16 @@ class AdbDevice(object):
 
         """
         local_id = 1
-        msg = AdbMessage(command=constants.OPEN, arg0=local_id, arg1=0, data=destination + b'\0')
+        msg = AdbMessage(constants.OPEN, local_id, 0, destination + b'\0')
         self._send(msg, timeout_s)
-        cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s=timeout_s)
+        cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s, total_timeout_s)
 
         if local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
 
         if cmd == constants.CLSE:
             # Some devices seem to be sending CLSE once more after a request, this *should* handle it
-            cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s=timeout_s)
+            cmd, remote_id, their_local_id, _ = self._read([constants.CLSE, constants.OKAY], timeout_s, total_timeout_s)
             # Device doesn't support this service.
             if cmd == constants.CLSE:
                 return None, None
@@ -200,30 +242,35 @@ class AdbDevice(object):
 
         return local_id, remote_id
 
-    def _read(self, expected_cmds, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def _read(self, expected_cmds, timeout_s, total_timeout_s):
         """Receive a response from the device.
+
+        1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
+        2. If ``cmd`` is not a recognized command in :const:`adb_shell.constants.WIRE_TO_ID`, raise an exception
+        3. If the time has exceeded ``total_timeout_s``, raise an exception
+        4. Read ``data_length`` bytes from the device
+        5. If the checksum of the read data does not match ``data_checksum``, raise an exception
+        6. Return ``command``, ``arg0``, ``arg1``, and ``bytes(data)``
 
         Parameters
         ----------
-        usb : adb.common.TcpHandle, adb.common.UsbHandle
-            TODO
-        expected_cmds : TODO
-            Read until we receive a header ID that is in ``expected_cmds``
-        timeout_ms : int, None
-            Timeout in milliseconds for USB packets.
-        total_timeout_ms : int, None
-            The total time to wait for a command in ``expected_cmds``
+        expected_cmds : list[bytes]
+            We will read packets until we encounter one whose "command" field is in ``expected_cmds``
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        total_timeout_s : int
+            The total time in seconds to wait for a command in ``expected_cmds``
 
         Returns
         -------
-        command : TODO
+        command : bytes
+            The received command, which is in :const:`adb_shell.constants.WIRE_TO_ID` and must be in ``expected_cmds``
+        arg0 : int
             TODO
-        arg0 : TODO
-            TODO
-        arg1 : TODO
+        arg1 : int
             TODO
         bytes
-            TODO
+            The data that was read
 
         Raises
         ------
@@ -240,6 +287,7 @@ class AdbDevice(object):
             _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, msg)
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
+
             if not command:
                 raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
 
@@ -257,32 +305,45 @@ class AdbDevice(object):
 
                 if len(temp) != data_length:
                     _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d", data_length, len(temp))
-                data += temp
 
+                data += temp
                 data_length -= len(temp)
 
             actual_checksum = checksum(data)
             if actual_checksum != data_checksum:
                 raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+
         else:
             data = b''
 
         return command, arg0, arg1, bytes(data)
 
-    def _read_until(self, local_id, remote_id, expected_cmds, timeout_s):
-        """Read a packet, acknowledge any write packets.
+    def _read_until(self, local_id, remote_id, expected_cmds, timeout_s, total_timeout_s):
+        """Read a packet, acknowledging any write packets.
+
+        1. Read data via :meth:`AdbDevice._read`
+        2. If a ``b'WRTE'`` packet is received, send an ``b'OKAY'`` packet via :meth:`AdbDevice._okay`
+        3. Return the ``cmd`` and ``data`` that were read by :meth:`AdbDevice._read`
 
         Parameters
         ----------
-        *expected_cmds : TODO
-            TODO
+        local_id : int
+            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
+        remote_id : int
+            The ID for the recipient, or ``None`` if a connection could not be opened
+        expected_cmds : list[bytes]
+            :meth:`AdbDevice._read` with look for a packet whose command is in ``expected_cmds``
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        total_timeout_s : int
+            The total time in seconds to wait for a command in ``expected_cmds``
 
         Returns
         -------
-        cmd : TODO
-            TODO
-        data : TODO
-            TODO
+        cmd : bytes
+            The command that was received by :meth:`AdbDevice._read`, which is in :const:`adb_shell.constants.WIRE_TO_ID` and must be in ``expected_cmds``
+        data : bytes
+            The data that was received by :meth:`AdbDevice._read`
 
         Raises
         ------
@@ -292,7 +353,7 @@ class AdbDevice(object):
             Incorrect remote id.
 
         """
-        cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s)
+        cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
 
         if local_id2 not in (0, local_id):
             raise exceptions.InterleavedDataError("We don't support multiple streams...")
@@ -306,20 +367,41 @@ class AdbDevice(object):
 
         return cmd, data
 
-    def _read_until_close(self, local_id, remote_id, timeout_s):
-        """Yield packets until a :const:`~adb_shell.constants.CLSE` packet is received.
+    def _read_until_close(self, local_id, remote_id, timeout_s, total_timeout_s):
+        """Yield packets until a ``b'CLSE'`` packet is received.
+
+        1. Read the ``cmd`` and ``data`` fields from a ``b'CLSE'`` or ``b'WRTE'`` packet via :meth:`AdbDevice._read_until`
+        2. If ``cmd`` is ``b'CLSE'``, then send a ``b'CLSE'`` message and stop
+        3. If ``cmd`` is not ``b'WRTE'``, raise an exception
+
+            * If ``cmd`` is ``b'FAIL'``, raise :class:`~adb_shell.exceptions.AdbCommandFailureException`
+            * Otherwise, raise :class:`~~adb_shell.exceptions.InvalidCommandError`
+
+        4. Yield ``data`` and repeat
+
+
+        Parameters
+        ----------
+        local_id : int
+            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
+        remote_id : int
+            The ID for the recipient, or ``None`` if a connection could not be opened
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        total_timeout_s : int
+            The total time in seconds to wait for a command in ``expected_cmds``
 
         Yields
         ------
-        data : TODO
-            TODO
+        data : bytes
+            The data that was read by :meth:`AdbDevice._read_until`
 
         """
         while True:
-            cmd, data = self._read_until(local_id, remote_id, [constants.CLSE, constants.WRTE], timeout_s)
+            cmd, data = self._read_until(local_id, remote_id, [constants.CLSE, constants.WRTE], timeout_s, total_timeout_s)
 
             if cmd == constants.CLSE:
-                msg = AdbMessage(constants.CLSE, arg0=local_id, arg1=remote_id)
+                msg = AdbMessage(constants.CLSE, local_id, remote_id)
                 self._send(msg, timeout_s)
                 break
 
@@ -333,7 +415,17 @@ class AdbDevice(object):
             yield data
 
     def _send(self, msg, timeout_s):
-        """TODO
+        """Send a message to the device.
+
+        1. Send the message header (:meth:`adb_shell.adb_message.AdbMessage.pack <AdbMessage.pack>`)
+        2. Send the message data
+
+        Parameters
+        ----------
+        msg : AdbMessage
+            The data that will be sent
+        timeout_s : TODO
+            TODO
 
         """
         _LOGGER.debug("bulk_write: %s", msg.pack())
@@ -342,9 +434,44 @@ class AdbDevice(object):
         _LOGGER.debug("bulk_write: %s", msg.data)
         self._handle.bulk_write(msg.data, timeout_s)
 
-    def _okay(self, local_id, remote_id, timeout_s):
-        """TODO
+    def _streaming_command(self, service, command, timeout_s, total_timeout_s):
+        """One complete set of USB packets for a single command.
+
+        1. :meth:`~AdbDevice._open` a new connection to the device, where the ``destination`` parameter is ``service:command``
+        2. Read the response data via :meth:`AdbDevice._read_until_close`
+
+        .. note::
+
+           All the data is held in memory, and thus large responses will be slow and can fill up memory.
+
+
+        Parameters
+        ----------
+        service : bytes
+            The ADB service (e.g., ``b'shell'``, as used by :meth:`AdbDevice.shell`)
+        command : bytes
+            The service command
+        timeout_s : int
+            Timeout in seconds for TCP packets
+        total_timeout_s : int
+            The total time in seconds to wait for a command in ``expected_cmds``
+
+        Yields
+        ------
+        str
+            The responses from the service.
+
+        Raises
+        ------
+        adb_shell.exceptions.InterleavedDataError
+            Multiple streams running over usb.
+        adb_shell.exceptions.InvalidCommandError
+            Got an unexpected response command.
 
         """
-        msg = AdbMessage(constants.OKAY, arg0=local_id, arg1=remote_id)
-        self._send(msg, timeout_s)
+        local_id, remote_id = self._open(b'%s:%s' % (service, command), timeout_s, total_timeout_s)
+        if local_id is None or remote_id is None:
+            return
+
+        for data in self._read_until_close(local_id, remote_id, timeout_s, total_timeout_s):
+            yield data.decode('utf8')

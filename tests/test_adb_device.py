@@ -23,7 +23,12 @@ class TestAdbDevice(unittest.TestCase):
             self.device = AdbDevice('IP:5555')
 
     def test_init(self):
-        self.assertTrue(True)
+        device_with_banner = AdbDevice('IP:5555', 'banner')
+        self.assertEqual(device_with_banner._banner, 'banner')
+
+        with patch('socket.gethostname', side_effect=Exception):
+            device_banner_unknown = AdbDevice('IP:5555')
+            self.assertEqual(device_banner_unknown._banner, 'unknown')
 
     def test_available(self):
         self.assertFalse(self.device.available)

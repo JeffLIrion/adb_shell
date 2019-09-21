@@ -1,4 +1,4 @@
-"""TODO
+"""Functions and an :class:`AdbMessage` class for packing and unpacking ADB messages.
 
 """
 
@@ -58,11 +58,9 @@ def unpack(message):
     arg1 : int
         TODO
     data_length : int
-        TODO
+        The length of the data sent by the device (used by :meth:`adb_shell.adb_device._read`)
     data_checksum : int
-        TODO
-    unused_magic : int
-        TODO
+        The checksum of the data sent by the device
 
     Raises
     ------
@@ -70,15 +68,8 @@ def unpack(message):
         Unable to unpack the ADB command.
 
     """
-    print('\n\ntype(message) = {}\n\n'.format(type(message)))
     try:
-        cmd, arg0, arg1, data_length, data_checksum, unused_magic = struct.unpack(constants.MESSAGE_FORMAT, message)
-        print('type(cmd) = {}'.format(type(cmd)))
-        print('type(arg0) = {}'.format(type(arg0)))
-        print('type(arg1) = {}'.format(type(arg1)))
-        print('type(data_length) = {}'.format(type(data_length)))
-        print('type(data_checksum) = {}'.format(type(data_checksum)))
-        print('type(unused_magic) = {}'.format(type(unused_magic)))
+        cmd, arg0, arg1, data_length, data_checksum, _ = struct.unpack(constants.MESSAGE_FORMAT, message)
     except struct.error as e:
         raise ValueError('Unable to unpack ADB command. ({})'.format(len(message)), constants.MESSAGE_FORMAT, message, e)
 
@@ -86,18 +77,31 @@ def unpack(message):
 
 
 class AdbMessage(object):
-    """TODO
+    """A helper class for packing ADB messages.
 
     Parameters
     ----------
     command : bytes
-        TODO
+        A command; examples used in this package include :const:`adb_shell.constants.AUTH`, :const:`adb_shell.constants.CNXN`, :const:`adb_shell.constants.CLSE`, :const:`adb_shell.constants.OPEN`, and :const:`adb_shell.constants.OKAY`
     arg0 : int
-        TODO
+        Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
     arg1 : int
-        TODO
+        Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.MAX_ADB_DATA`
     data : bytes
-        TODO
+        The data that will be sent
+
+    Attributes
+    ----------
+    arg0 : int
+        Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
+    arg1 : int
+        Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.MAX_ADB_DATA`
+    command : int
+        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.ID_TO_WIRE`
+    data : bytes
+        The data that will be sent
+    magic : int
+        ``self.command`` with its bits flipped; in other words, ``self.command + self.magic == 2**32 - 1``
 
     """
     def __init__(self, command, arg0=None, arg1=None, data=b''):
@@ -113,14 +117,14 @@ class AdbMessage(object):
         Returns
         -------
         bytes
-            TODO
+            The message packed into the format required by ADB
 
         """
         return struct.pack(constants.MESSAGE_FORMAT, self.command, self.arg0, self.arg1, len(self.data), self.checksum, self.magic)
 
     @property
     def checksum(self):
-        """TODO
+        """Return ``checksum(self.data)``
 
         Returns
         -------
