@@ -254,7 +254,6 @@ class AdbDevice(object):
         if cmd != constants.OKAY:
             raise exceptions.InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
-        print('\n\nlocal_id = {}, remote_id = {}\n\n'.format(local_id, remote_id))
         return local_id, remote_id
 
     def _read(self, expected_cmds, timeout_s, total_timeout_s):
