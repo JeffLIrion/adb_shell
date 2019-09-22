@@ -157,7 +157,10 @@ class AdbDevice(object):
                 return True  # return banner
 
         # 7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
-        msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, rsa_keys[0].GetPublicKey() + b'\0')
+        pubkey = rsa_keys[0].GetPublicKey()
+        if isinstance(pubkey, str):
+            pubkey = bytearray(pubkey, 'utf-8')
+        msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
         self._send(msg, timeout_s)
 
         cmd, arg0, _, banner = self._read([constants.CNXN], auth_timeout_s, total_timeout_s)
@@ -418,9 +421,9 @@ class AdbDevice(object):
                 self._send(msg, timeout_s)
                 break
 
-            if cmd != constants.WRTE:
+            # I don't think this block will ever be entered...
+            if cmd != constants.WRTE:  # pragma: no cover
                 if cmd == constants.FAIL:
-                    # raise exceptions.AdbCommandFailureException('Command failed.', data)
                     raise exceptions.AdbCommandFailureException('Command failed.')
 
                 raise exceptions.InvalidCommandError('Expected a WRITE or a CLOSE, got {0} ({1})'.format(cmd, data), cmd, data)

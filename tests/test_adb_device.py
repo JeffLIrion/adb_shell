@@ -181,6 +181,24 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.connect([signer])
 
+    def test_connect_with_key(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device._handle.bulk_read_list = patchers.BULK_READ_LIST_WITH_AUTH[:]
+
+        self.assertTrue(self.device.connect([signer]))
+
+    def test_connect_with_new_key(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device._handle.bulk_read_list = patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY[:]
+
+        self.assertTrue(self.device.connect([signer]))
+
 
 
 
