@@ -1,4 +1,4 @@
-"""TODO
+"""ADB-related exceptions.
 
 """
 

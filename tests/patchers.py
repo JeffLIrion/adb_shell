@@ -5,9 +5,17 @@ from adb_shell.adb_message import AdbMessage, unpack
 from adb_shell.tcp_handle import TcpHandle
 
 
-MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.VERSION, arg1=constants.MAX_ADB_DATA, data=b'host::unknown1234567890\0')
+MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH_INVALID = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH1 = AdbMessage(command=constants.AUTH, arg0=constants.AUTH_TOKEN, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH2 = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH_NEW_KEY2 = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH_NEW_KEY3 = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
 
-BULK_READ_LIST0 = [b'CNXN\x00\x00\x00\x00\x00\x00\x00\x00\t\x00\x00\x00\xe4\x02\x00\x00\xbc\xb1\xa7\xb1', bytearray(b'device::\x00')]
+BULK_READ_LIST = [MSG_CONNECT.pack(), MSG_CONNECT.data]
+BULK_READ_LIST_WITH_AUTH_INVALID = [MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CONNECT_WITH_AUTH_INVALID.data]
+BULK_READ_LIST_WITH_AUTH = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH2.pack(), MSG_CONNECT_WITH_AUTH2.data]
+BULK_READ_LIST_WITH_AUTH_NEW_KEY = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH_NEW_KEY2.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY2.data, MSG_CONNECT_WITH_AUTH_NEW_KEY3.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY3.data]
 
 
 class FakeSocket(object):
@@ -36,13 +44,18 @@ class FakeTcpHandle(TcpHandle):
 
     def connect(self, auth_timeout_s=None):
         self._connection = True
-        self.bulk_read_list = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 
     def bulk_read(self, numbytes, timeout_s=None):
         return self.bulk_read_list.pop(0)
 
     def bulk_write(self, data, timeout_s=None):
         return len(data)
+
+
+class FakeTcpHandleWithAuth(FakeTcpHandle):
+    def connect(self, auth_timeout_s=None):
+        self._connection = True
+        self.bulk_read_list = [MSG_CONNECT_WITH_AUTH.pack(), MSG_CONNECT_WITH_AUTH.data]
 
 
 # `socket` patches
@@ -57,3 +70,5 @@ patch_select_fail = patch('select.select', return_value=(False, False, False))
 
 # `TcpHandle` patches
 patch_tcp_handle = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
+
+patch_tcp_handle_with_auth = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandleWithAuth)
