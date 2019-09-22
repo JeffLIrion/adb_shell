@@ -116,6 +116,7 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidCommandError):
             self.device.shell('TEST', total_timeout_s=-1)
 
+    @unittest.skipIf(sys.version_info[0] == 2, "``unittest.testCase.assertLogs`` is not implemented in Python 2.")
     def test_shell_warning_data_length(self):
         self.assertTrue(self.device.connect())
 
