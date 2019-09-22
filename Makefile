@@ -1,3 +1,10 @@
+.PHONY: release
+release:
+	rm -rf dist
+	scripts/git_tag.sh
+	python setup.py sdist bdist_wheel
+	twine upload dist/*
+
 .PHONY: docs
 docs:
 	rm -rf docs/build/html
