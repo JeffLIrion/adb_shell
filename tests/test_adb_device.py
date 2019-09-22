@@ -17,6 +17,15 @@ _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
 
+class AdbMessageForTesting(AdbMessage):
+    def __init__(self, command, arg0=None, arg1=None, data=b''):
+        self.command = sum(c << (i * 8) for i, c in enumerate(bytearray(command)))
+        self.magic = self.command ^ 0xFFFFFFFF
+        self.arg0 = arg0
+        self.arg1 = arg1
+        self.data = data
+
+
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
         with patchers.patch_tcp_handle:
@@ -73,16 +82,53 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
 
-    '''def test_shell_error_ids(self):
+    def test_shell_error_clse(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'\x00')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()]
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data]
 
-        self.assertEqual(self.device.shell('TEST'), 'PASS')'''
+        self.assertEqual(self.device.shell('TEST'), '')
+
+    def test_shell_error_unknown_command(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessageForTesting(command=constants.FAIL, arg0=1, arg1=1, data=b'\x00')
+        self.device._handle.bulk_read_list = [msg1.pack()]
+
+        with self.assertRaises(exceptions.InvalidCommandError):
+            self.assertEqual(self.device.shell('TEST'), '')
+
+    def test_shell_error_timeout(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'' + b'\0')
+        self.device._handle.bulk_read_list = [msg1.pack()]
+
+        with self.assertRaises(exceptions.InvalidCommandError):
+            self.device.shell('TEST', total_timeout_s=-1)
+
+    def test_shell_warning_data_length(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
+        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA', msg3.pack()]
+
+        with self.assertLogs(level=logging.WARNING) as logs:
+            with self.assertRaises(exceptions.InvalidChecksumError):
+                self.device.shell('TEST')
+
+        assert "Data_length 4 does not match actual number of bytes read: 9" in logs.output[-1]
+
+
+
 
 
     '''def test_shell_error_cmd(self):
