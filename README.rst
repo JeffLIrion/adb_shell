@@ -8,4 +8,6 @@ adb\_shell
    :target: https://coveralls.io/github/JeffLIrion/adb_shell?branch=master
 
 
+Documentation for this package can be found at https://adb-shell.readthedocs.io/.
+
 This Python package implements ADB shell functionality.  It originated from `python-adb <https://github.com/google/python-adb>`_.
