@@ -1,4 +1,4 @@
-"""TODO.
+"""Implement the :class:`AdbDevice` class, which can connect to a device and run ADB shell commands.
 
 .. rubric:: Contents
 
@@ -445,7 +445,6 @@ class AdbDevice(object):
 
         """
         _LOGGER.debug("bulk_write: %s", msg.pack())
-        # _LOGGER.debug("msg: command = %s (%s), arg0 = %s, arg1 = %s, data = %s, len(data) = %d, checksum = %d, magic = %d", msg.command, constants.WIRE_TO_ID.get(msg.command), msg.arg0, msg.arg1, msg.data, len(msg.data), msg.checksum, msg.magic)
         self._handle.bulk_write(msg.pack(), timeout_s)
         _LOGGER.debug("bulk_write: %s", msg.data)
         self._handle.bulk_write(msg.data, timeout_s)
