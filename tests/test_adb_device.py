@@ -7,8 +7,11 @@ import unittest
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice
 from adb_shell.adb_message import AdbMessage, unpack
+from adb_shell.auth.keygen import keygen
+from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
+from .keygen_stub import open_priv_pub
 
 
 # https://stackoverflow.com/a/7483862
@@ -30,6 +33,7 @@ class TestAdbDevice(unittest.TestCase):
     def setUp(self):
         with patchers.patch_tcp_handle:
             self.device = AdbDevice('IP:5555')
+            self.device._handle.bulk_read_list = patchers.BULK_READ_LIST[:]
 
     def test_init(self):
         device_with_banner = AdbDevice('IP:5555', 'banner')
@@ -139,6 +143,45 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidChecksumError):
             self.device.shell('TEST')
 
+    def test_shell_error_local_id2(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data]
+
+        with self.assertRaises(exceptions.InterleavedDataError):
+            self.device.shell('TEST')
+            self.device.shell('TEST')
+
+    def test_shell_error_remote_id2(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data]
+
+        with self.assertRaises(exceptions.InvalidResponseError):
+            self.device.shell('TEST')
+
+    def test_connect_no_keys(self):
+        self.device._handle.bulk_read_list = patchers.BULK_READ_LIST_WITH_AUTH[:]
+        with self.assertRaises(exceptions.DeviceAuthError):
+            self.device.connect()
+
+    def test_connect_with_key_invalid_response(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device._handle.bulk_read_list = patchers.BULK_READ_LIST_WITH_AUTH_INVALID[:]
+
+        with self.assertRaises(exceptions.InvalidResponseError):
+            self.device.connect([signer])
+
+
 
 
 
@@ -187,6 +230,7 @@ class TestAdbDeviceWithBanner(TestAdbDevice):
     def setUp(self):
         with patchers.patch_tcp_handle:
             self.device = AdbDevice('IP:5555', 'banner')
+            self.device._handle.bulk_read_list = patchers.BULK_READ_LIST[:]
 
 
 class TestAdbDeviceBannerError(TestAdbDevice):
@@ -194,3 +238,41 @@ class TestAdbDeviceBannerError(TestAdbDevice):
         with patch('socket.gethostname', side_effect=Exception):
             with patchers.patch_tcp_handle:
                 self.device = AdbDevice('IP:5555')
+                self.device._handle.bulk_read_list = patchers.BULK_READ_LIST[:]
+
+
+'''class TestAdbDeviceWithAuth(unittest.TestCase):#TestAdbDevice):
+    def setUp(self):
+        with patchers.patch_tcp_handle:
+            self.device = AdbDevice('IP:5555')
+            self.device._handle.bulk_read_list = patchers.BULK_READ_LIST[:]
+
+    def test_connect(self):
+        self.assertTrue(self.device.connect())
+        self.assertTrue(self.device.available)
+
+    
+
+
+class TestAdbDeviceWithAuth(unittest.TestCase):#TestAdbDevice):
+    def setUp(self):
+        with patchers.patch_tcp_handle:
+            self.device = AdbDevice('IP:5555')
+
+    def test_connect_no_keys(self):
+        with self.assertRaises(exceptions.DeviceAuthError):
+            self.device.connect()
+
+    def test_connect_with_key(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device.connect([signer])
+
+    def test_connect_with_key_invalid_response(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device.connect([signer])'''
