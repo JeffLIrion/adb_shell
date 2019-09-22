@@ -127,6 +127,18 @@ class TestAdbDevice(unittest.TestCase):
 
         assert "Data_length 4 does not match actual number of bytes read: 9" in logs.output[-1]
 
+    def test_shell_error_checksum(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
+        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data[:-1] + b'0', msg3.pack()]
+
+        with self.assertRaises(exceptions.InvalidChecksumError):
+            self.device.shell('TEST')
+
 
 
 
