@@ -301,7 +301,6 @@ class AdbDevice(object):
             _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, msg)
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
-            print('\n\ncommand = {}\ntotal_timeout_s = {}\n'.format(command, total_timeout_s))
 
             if not command:
                 raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
