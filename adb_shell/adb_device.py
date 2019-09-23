@@ -107,11 +107,14 @@ class AdbDevice(object):
         Parameters
         ----------
         rsa_keys : list, None
-            A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`, :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`adb_shell.auth.sign_pythonrsa.PythonRSASigner`
+            A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
+            :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`adb_shell.auth.sign_pythonrsa.PythonRSASigner`
         timeout_s : int
             Timeout in seconds for TCP packets
         auth_timeout_s : int
             TODO
+        total_timeout_s : int
+            The total time in seconds to wait for expected commands in :meth:`AdbDevice._read`
 
         Returns
         -------
@@ -176,7 +179,7 @@ class AdbDevice(object):
         timeout_s : int
             Timeout in seconds for TCP packets
         total_timeout_s : int
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command                   ***************TODO************
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         Returns
         -------
@@ -221,7 +224,7 @@ class AdbDevice(object):
         timeout_s : int
             Timeout in seconds for TCP packets
         total_timeout_s : int
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         Returns
         -------
@@ -252,6 +255,10 @@ class AdbDevice(object):
             # Device doesn't support this service.
             if cmd == constants.CLSE:
                 return None, None
+
+        # I don't think this block will ever be entered...
+        if cmd != constants.OKAY:  # pragma: no cover
+            raise exceptions.InvalidCommandError('Expected a ready response, got {}'.format(cmd), cmd, (remote_id, their_local_id))
 
         return local_id, remote_id
 
@@ -351,7 +358,7 @@ class AdbDevice(object):
         timeout_s : int
             Timeout in seconds for TCP packets
         total_timeout_s : int
-            The total time in seconds to wait for a command in ``expected_cmds``
+            The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
         Returns
         -------
@@ -404,7 +411,7 @@ class AdbDevice(object):
         timeout_s : int
             Timeout in seconds for TCP packets
         total_timeout_s : int
-            The total time in seconds to wait for a command in ``expected_cmds``
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'WRTE'`` command in :meth:`AdbDevice._read`
 
         Yields
         ------
@@ -470,7 +477,7 @@ class AdbDevice(object):
         timeout_s : int
             Timeout in seconds for TCP packets
         total_timeout_s : int
-            The total time in seconds to wait for a command in ``expected_cmds``
+            The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
         Yields
         ------

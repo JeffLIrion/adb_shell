@@ -30,7 +30,7 @@ from Crypto.Signature import pkcs1_15
 
 
 class PycryptodomeAuthSigner(object):
-    """TODO
+    """AuthSigner using the pycryptodome package.
 
     Parameters
     ----------

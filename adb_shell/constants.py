@@ -21,13 +21,13 @@ MAX_ADB_DATA = 4096
 #: ADB protocol version.
 VERSION = 0x01000000
 
-#: AUTH constant for arg0.
+#: AUTH constant for ``arg0``
 AUTH_TOKEN = 1
 
-#: AUTH constant for arg0.
+#: AUTH constant for ``arg0``
 AUTH_SIGNATURE = 2
 
-#: AUTH constant for arg0.
+#: AUTH constant for ``arg0``
 AUTH_RSAPUBLICKEY = 3
 
 AUTH = b'AUTH'
