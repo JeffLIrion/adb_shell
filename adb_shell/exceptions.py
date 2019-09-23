@@ -7,7 +7,7 @@ from . import constants
 
 
 class AdbCommandFailureException(Exception):
-    """TODO
+    """A ``b'FAIL'`` packet was received.
 
     """
 
@@ -34,7 +34,7 @@ class InvalidChecksumError(Exception):
 
 
 class InvalidCommandError(Exception):
-    """Got an invalid command over USB.
+    """Got an invalid command.
 
     """
     def __init__(self, message, response_header, response_data):

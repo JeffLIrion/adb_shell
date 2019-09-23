@@ -25,7 +25,6 @@ class TcpHandle(object):
     ----------
     serial : str, bytes, bytearray
         Android device serial of the form "host" or "host:port".  (Host may be an IP address or a host name.)
-        TODO
 
     Attributes
     ----------
@@ -71,28 +70,30 @@ class TcpHandle(object):
             self._connection.close()
             self._connection = None
 
-    def connect(self, auth_timeout_s=None):
+    def connect(self, timeout_s=None):
         """Create a socket connection to the device.
 
         Parameters
         ----------
-        auth_timeout_s : TODO
+        timeout_s : TODO
             TODO
 
         """
-        timeout = constants.DEFAULT_AUTH_TIMEOUT_S if auth_timeout_s is None else auth_timeout_s
+        timeout = constants.DEFAULT_AUTH_TIMEOUT_S if timeout_s is None else timeout_s
         self._connection = socket.create_connection((self.host, self.port), timeout=timeout)
         if timeout:
+            # Put the socket in non-blocking mode
+            # https://docs.python.org/3/library/socket.html#socket.socket.settimeout
             self._connection.setblocking(0)
 
     def bulk_read(self, numbytes, timeout_s=None):
-        """TODO
+        """Receive data from the socket.
 
         Parameters
         ----------
         numbytes : int
-            TODO
-        timeout_s : int, None
+            The maximum amount of data to be received
+        timeout_s : TODO, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
@@ -115,12 +116,12 @@ class TcpHandle(object):
         raise TcpTimeoutException(msg)
 
     def bulk_write(self, data, timeout_s=None):
-        """TODO
+        """Send data to the socket.
 
         Parameters
         ----------
-        data : TODO
-            TODO
+        data : bytes
+            The data to be sent
         timeout_s : TODO, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
