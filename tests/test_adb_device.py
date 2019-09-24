@@ -69,9 +69,10 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()]
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA')
+        msg3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS')
+        msg4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg3.data, msg4.pack()]
 
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
