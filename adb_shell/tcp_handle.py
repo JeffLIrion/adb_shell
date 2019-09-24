@@ -99,7 +99,7 @@ class TcpHandle(object):
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : TODO, None
+        timeout_s : float, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
@@ -128,7 +128,7 @@ class TcpHandle(object):
         ----------
         data : bytes
             The data to be sent
-        timeout_s : TODO, None
+        timeout_s : float, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
