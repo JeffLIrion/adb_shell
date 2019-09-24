@@ -117,8 +117,21 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidCommandError):
             self.device.shell('TEST', total_timeout_s=-1)
 
+    @unittest.skipIf(sys.version_info[0] == 3, "``unittest.testCase.assertLogs`` is not implemented in Python 2.")
+    def test_shell_warning_data_length_python2(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
+        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA', msg3.pack()]
+
+        with self.assertRaises(exceptions.InvalidChecksumError):
+            self.device.shell('TEST')
+
     @unittest.skipIf(sys.version_info[0] == 2, "``unittest.testCase.assertLogs`` is not implemented in Python 2.")
-    def test_shell_warning_data_length(self):
+    def test_shell_warning_data_length_python3(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
