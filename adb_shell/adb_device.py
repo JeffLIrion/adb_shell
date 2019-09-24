@@ -39,6 +39,8 @@ class AdbDevice(object):
     banner : str, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
+    default_timeout_s : float, None
+        Default timeout in seconds for TCP packets, or ``None``; see :class:`~adb_shell.tcp_handle.TcpHandle`
 
     Attributes
     ----------
@@ -53,7 +55,7 @@ class AdbDevice(object):
 
     """
 
-    def __init__(self, serial, banner=None):
+    def __init__(self, serial, banner=None, default_timeout_s=None):
         if banner and isinstance(banner, str):
             self._banner = banner
         else:
@@ -66,7 +68,7 @@ class AdbDevice(object):
 
         self._serial = serial
 
-        self._handle = TcpHandle(self._serial)
+        self._handle = TcpHandle(self._serial, default_timeout_s)
 
     @property
     def available(self):
@@ -109,8 +111,8 @@ class AdbDevice(object):
         rsa_keys : list, None
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`adb_shell.auth.sign_pythonrsa.PythonRSASigner`
-        timeout_s : int
-            Timeout in seconds for TCP packets
+        timeout_s : float, None
+            Timeout in seconds for TCP packets, or ``None``
         auth_timeout_s : int
             TODO
         total_timeout_s : int
@@ -124,7 +126,7 @@ class AdbDevice(object):
         """
         # 1. Use the handle to establish a socket connection
         self._handle.close()
-        self._handle.connect(auth_timeout_s)
+        self._handle.connect(timeout_s)
 
         # 2. Send a ``b'CNXN'`` message
         msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner_bytes)

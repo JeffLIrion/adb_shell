@@ -54,11 +54,8 @@ MESSAGE_FORMAT = b'<6I'
 #: The size of an ADB message
 MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
-# Default timeout (in ms) for :meth:`adb_shell.adb_device.AdbDevice.shell`
-DEFAULT_TIMEOUT_MS = 9000
-
 #: Default timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read` and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write`
-DEFAULT_TIMEOUT_S = DEFAULT_TIMEOUT_MS / 1000.
+DEFAULT_TIMEOUT_S = 1.
 
 #: Default authentication timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
 DEFAULT_AUTH_TIMEOUT_S = 10.

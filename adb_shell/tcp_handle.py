@@ -25,11 +25,15 @@ class TcpHandle(object):
     ----------
     serial : str, bytes, bytearray
         Android device serial of the form "host" or "host:port".  (Host may be an IP address or a host name.)
+    default_timeout_s : float, None
+        Default timeout in seconds for TCP packets, or ``None``
 
     Attributes
     ----------
     _connection : socket.socket, None
         A socket connection to the device
+    _default_timeout_s : float, None
+        Default timeout in seconds for TCP packets, or ``None``
     host : str
         The address of the device
     port : str
@@ -38,7 +42,7 @@ class TcpHandle(object):
         ``<host>:<port>``
 
     """
-    def __init__(self, serial):
+    def __init__(self, serial, default_timeout_s=None):
         if ':' in serial:
             self.host, port = serial.split(':')
             self.port = int(port)
@@ -47,6 +51,9 @@ class TcpHandle(object):
             self.port = 5555
 
         self.serial = '{}:{}'.format(self.host, self.port)
+
+        self._default_timeout_s = default_timeout_s
+
         self._connection = None
 
     @property
@@ -79,7 +86,7 @@ class TcpHandle(object):
             TODO
 
         """
-        timeout = constants.DEFAULT_AUTH_TIMEOUT_S if timeout_s is None else timeout_s
+        timeout = self._default_timeout_s if timeout_s is None else timeout_s
         self._connection = socket.create_connection((self.host, self.port), timeout=timeout)
         if timeout:
             # Put the socket in non-blocking mode
@@ -107,7 +114,7 @@ class TcpHandle(object):
             Reading timed out.
 
         """
-        timeout = constants.DEFAULT_TIMEOUT_S if timeout_s is None else timeout_s
+        timeout = self._default_timeout_s if timeout_s is None else timeout_s
         readable, _, _ = select.select([self._connection], [], [], timeout)
         if readable:
             return self._connection.recv(numbytes)
@@ -136,7 +143,7 @@ class TcpHandle(object):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = constants.DEFAULT_TIMEOUT_S if timeout_s is None else timeout_s
+        timeout = self._default_timeout_s if timeout_s is None else timeout_s
         _, writeable, _ = select.select([], [self._connection], [], timeout)
         if writeable:
             return self._connection.send(data)
