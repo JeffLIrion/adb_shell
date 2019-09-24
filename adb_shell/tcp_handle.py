@@ -14,7 +14,6 @@
 import select
 import socket
 
-from . import constants
 from .exceptions import TcpTimeoutException
 
 
