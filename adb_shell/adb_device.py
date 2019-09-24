@@ -113,9 +113,9 @@ class AdbDevice(object):
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`adb_shell.auth.sign_pythonrsa.PythonRSASigner`
         timeout_s : float, None
             Timeout in seconds for TCP packets, or ``None``
-        auth_timeout_s : int
-            TODO
-        total_timeout_s : int
+        auth_timeout_s : float, None
+            The time in seconds to wait for a ``b'CNXN'`` authentication response
+        total_timeout_s : float
             The total time in seconds to wait for expected commands in :meth:`AdbDevice._read`
 
         Returns
