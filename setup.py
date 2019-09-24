@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='adb_shell',
-    version='0.0.1',
+    version='0.0.2',
     description='ADB shell functionality',
     author='Jeff Irion',
     author_email='jefflirion@users.noreply.github.com',
