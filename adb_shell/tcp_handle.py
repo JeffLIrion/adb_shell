@@ -81,8 +81,8 @@ class TcpHandle(object):
 
         Parameters
         ----------
-        timeout_s : TODO
-            TODO
+        timeout_s : float, None
+            Set the timeout on the socket instance
 
         """
         timeout = self._default_timeout_s if timeout_s is None else timeout_s
