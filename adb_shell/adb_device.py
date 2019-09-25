@@ -11,6 +11,7 @@
     * :meth:`AdbDevice._streaming_command`
     * :attr:`AdbDevice.available`
     * :meth:`AdbDevice.close`
+    * :meth:`AdbDevice.connect`
     * :meth:`AdbDevice.shell`
 
 """
