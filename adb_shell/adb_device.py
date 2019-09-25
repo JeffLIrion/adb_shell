@@ -11,6 +11,7 @@
     * :meth:`AdbDevice._streaming_command`
     * :attr:`AdbDevice.available`
     * :meth:`AdbDevice.close`
+    * :meth:`AdbDevice.connect`
     * :meth:`AdbDevice.shell`
 
 """
@@ -110,10 +111,10 @@ class AdbDevice(object):
         ----------
         rsa_keys : list, None
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
-            :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`adb_shell.auth.sign_pythonrsa.PythonRSASigner`
+            :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`~adb_shell.auth.sign_pythonrsa.PythonRSASigner`
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
         auth_timeout_s : float, None
             The time in seconds to wait for a ``b'CNXN'`` authentication response
         total_timeout_s : float
@@ -187,8 +188,8 @@ class AdbDevice(object):
         command : str
             The shell command that will be sent
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
@@ -210,8 +211,8 @@ class AdbDevice(object):
         remote_id : int
             The ID for the recipient, or ``None`` if a connection could not be opened
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
 
         """
         msg = AdbMessage(constants.OKAY, local_id, remote_id)
@@ -234,8 +235,8 @@ class AdbDevice(object):
         destination : bytes
             ``b'SERVICE:COMMAND'``
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
@@ -291,8 +292,8 @@ class AdbDevice(object):
         expected_cmds : list[bytes]
             We will read packets until we encounter one whose "command" field is in ``expected_cmds``
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a command in ``expected_cmds``
 
@@ -370,8 +371,8 @@ class AdbDevice(object):
         expected_cmds : list[bytes]
             :meth:`AdbDevice._read` with look for a packet whose command is in ``expected_cmds``
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
@@ -471,8 +472,7 @@ class AdbDevice(object):
         msg : AdbMessage
             The data that will be sent
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
 
         """
         _LOGGER.debug("bulk_write: %s", msg.pack())
@@ -499,8 +499,8 @@ class AdbDevice(object):
         command : bytes
             The service command
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
