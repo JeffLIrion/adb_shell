@@ -39,13 +39,13 @@ OPEN = b'OPEN'
 SYNC = b'SYNC'
 WRTE = b'WRTE'
 
-#: Commands that are recognized by :meth:`~adb_shell.adb_device.AdbDevice._read`
+#: Commands that are recognized by :meth:`adb_shell.adb_device.AdbDevice._read`
 IDS = (AUTH, CLSE, CNXN, OKAY, OPEN, SYNC, WRTE)
 
 #: A dictionary where the keys are the commands in :const:`IDS` and the values are the keys converted to integers
 ID_TO_WIRE = {cmd_id: sum(c << (i * 8) for i, c in enumerate(bytearray(cmd_id))) for cmd_id in IDS}
 
-#: A dictionary where the keys are integers and the values are their corresponding commands (type: bytes) from :const:`IDS`
+#: A dictionary where the keys are integers and the values are their corresponding commands (type = bytes) from :const:`IDS`
 WIRE_TO_ID = {wire: cmd_id for cmd_id, wire in ID_TO_WIRE.items()}
 
 #: An ADB message is 6 words in little-endian.
