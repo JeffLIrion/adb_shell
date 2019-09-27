@@ -46,8 +46,12 @@ class TestAdbDevice(unittest.TestCase):
             device_banner_unknown = AdbDevice('IP:5555')
             self.assertEqual(device_banner_unknown._banner, 'unknown')
 
+        self.device._handle.bulk_read_list = []
+
     def test_available(self):
         self.assertFalse(self.device.available)
+
+        self.device._handle.bulk_read_list = []
 
     def test_connect(self):
         self.assertTrue(self.device.connect())
@@ -56,6 +60,8 @@ class TestAdbDevice(unittest.TestCase):
     def test_close(self):
         self.assertFalse(self.device.close())
         self.assertFalse(self.device.available)
+
+        self.device._handle.bulk_read_list = []
 
     def test_shell_no_return(self):
         self.assertTrue(self.device.connect())
@@ -85,7 +91,7 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00')
         msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack()]
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data]#, msg2.pack()]
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
@@ -127,8 +133,8 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA', msg3.pack()]
+        #msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA']
 
         with self.assertRaises(exceptions.InvalidChecksumError):
             self.device.shell('TEST')
@@ -140,8 +146,8 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA', msg3.pack()]
+        #msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA']
 
         with self.assertLogs(level=logging.WARNING) as logs:
             with self.assertRaises(exceptions.InvalidChecksumError):
@@ -155,8 +161,8 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data[:-1] + b'0', msg3.pack()]
+        #msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data[:-1] + b'0']
 
         with self.assertRaises(exceptions.InvalidChecksumError):
             self.device.shell('TEST')
@@ -185,7 +191,7 @@ class TestAdbDevice(unittest.TestCase):
             self.device.shell('TEST')
 
     def test_connect_no_keys(self):
-        self.device._handle.bulk_read_list = patchers.BULK_READ_LIST_WITH_AUTH[:]
+        self.device._handle.bulk_read_list = patchers.BULK_READ_LIST_WITH_AUTH[:2]
         with self.assertRaises(exceptions.DeviceAuthError):
             self.device.connect()
 
