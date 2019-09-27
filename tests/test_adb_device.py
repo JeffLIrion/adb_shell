@@ -90,8 +90,7 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00')
-        msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data]#, msg2.pack()]
+        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data]
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
@@ -133,7 +132,6 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        #msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
         self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA']
 
         with self.assertRaises(exceptions.InvalidChecksumError):
@@ -146,7 +144,6 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        #msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
         self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data + b'EXTRA']
 
         with self.assertLogs(level=logging.WARNING) as logs:
@@ -161,7 +158,6 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        #msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
         self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data[:-1] + b'0']
 
         with self.assertRaises(exceptions.InvalidChecksumError):
