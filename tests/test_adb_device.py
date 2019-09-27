@@ -35,6 +35,9 @@ class TestAdbDevice(unittest.TestCase):
             self.device = AdbDevice('IP:5555')
             self.device._handle.bulk_read_list = patchers.BULK_READ_LIST[:]
 
+    def tearDown(self):
+        self.assertFalse(self.device._handle.bulk_read_list)
+
     def test_init(self):
         device_with_banner = AdbDevice('IP:5555', 'banner')
         self.assertEqual(device_with_banner._banner, 'banner')
