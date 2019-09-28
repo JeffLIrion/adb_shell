@@ -12,21 +12,23 @@ MSG_CONNECT_WITH_AUTH2 = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data
 MSG_CONNECT_WITH_AUTH_NEW_KEY2 = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH_NEW_KEY3 = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
 
-BULK_READ_LIST = [MSG_CONNECT.pack(), MSG_CONNECT.data]
-BULK_READ_LIST_WITH_AUTH_INVALID = [MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CONNECT_WITH_AUTH_INVALID.data]
-BULK_READ_LIST_WITH_AUTH = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH2.pack(), MSG_CONNECT_WITH_AUTH2.data]
-BULK_READ_LIST_WITH_AUTH_NEW_KEY = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH_NEW_KEY2.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY2.data, MSG_CONNECT_WITH_AUTH_NEW_KEY3.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY3.data]
+BULK_READ_BYTES = b''.join([MSG_CONNECT.pack(), MSG_CONNECT.data])
+BULK_READ_BYTES_WITH_AUTH_INVALID = b''.join([MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CONNECT_WITH_AUTH_INVALID.data])
+BULK_READ_BYTES_WITH_AUTH = b''.join([MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH2.pack(), MSG_CONNECT_WITH_AUTH2.data])
+BULK_READ_BYTES_WITH_AUTH_NEW_KEY = b''.join([MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH_NEW_KEY2.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY2.data, MSG_CONNECT_WITH_AUTH_NEW_KEY3.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY3.data])
 
 
 class FakeSocket(object):
     def __init__(self):
-        self.recv_list = [b'']
+        self._recv = b''
 
     def close(self):
         pass
 
     def recv(self, bufsize):
-        return self.recv_list.pop(0)
+        ret = self._recv[:bufsize]
+        self._recv = self._recv[bufsize:]
+        return ret
 
     def send(self, data):
         pass
@@ -39,6 +41,10 @@ class FakeSocket(object):
 
 
 class FakeTcpHandle(TcpHandle):
+    def __init__(self, *args, **kwargs):
+        TcpHandle.__init__(self, *args, **kwargs)
+        self._bulk_read = b''
+
     def close(self):
         self._connection = None
 
@@ -46,7 +52,9 @@ class FakeTcpHandle(TcpHandle):
         self._connection = True
 
     def bulk_read(self, numbytes, timeout_s=None):
-        return self.bulk_read_list.pop(0)
+        ret = self._bulk_read[:numbytes]
+        self._bulk_read = self._bulk_read[numbytes:]
+        return ret
 
     def bulk_write(self, data, timeout_s=None):
         return len(data)
@@ -55,7 +63,7 @@ class FakeTcpHandle(TcpHandle):
 class FakeTcpHandleWithAuth(FakeTcpHandle):
     def connect(self, auth_timeout_s=None):
         self._connection = True
-        self.bulk_read_list = [MSG_CONNECT_WITH_AUTH.pack(), MSG_CONNECT_WITH_AUTH.data]
+        self._bulk_read = b''.join([MSG_CONNECT_WITH_AUTH.pack(), MSG_CONNECT_WITH_AUTH.data])
 
 
 # `socket` patches
