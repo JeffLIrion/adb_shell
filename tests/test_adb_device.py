@@ -73,7 +73,7 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertEqual(self.device.shell('TEST'), '')
 
-'''    def test_shell_return_pass(self):
+    def test_shell_return_pass(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
@@ -81,7 +81,7 @@ class TestAdbDevice(unittest.TestCase):
         msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA')
         msg3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS')
         msg4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg3.data, msg4.pack()]
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg3.data, msg4.pack()])
 
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
@@ -90,12 +90,12 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data]
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data])
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
 
-    def test_shell_error_clse(self):
+'''    def test_shell_error_clse(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
