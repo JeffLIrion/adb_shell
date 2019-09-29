@@ -286,7 +286,7 @@ class TestAdbDevice(unittest.TestCase):
         msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
         msg2 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=ON\n')
         msg3 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack()])
 
         self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
 
@@ -302,8 +302,9 @@ class TestAdbDevice(unittest.TestCase):
         msg2 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
         msg3 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=ON\n')
         msg4 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.data, msg4.pack()])
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.pack(), msg1.pack(), msg2.pack(), msg3.pack(), msg3.data, msg4.pack()])
 
+        self.device.shell('TEST')
         self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
 
 
