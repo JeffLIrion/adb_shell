@@ -11,8 +11,8 @@ from adb_shell.adb_message import AdbMessage, unpack
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
-import patchers
-from keygen_stub import open_priv_pub
+from . import patchers
+from .keygen_stub import open_priv_pub
 
 
 # https://stackoverflow.com/a/7483862
@@ -25,10 +25,6 @@ def to_int(cmd):
     return sum(c << (i * 8) for i, c in enumerate(bytearray(cmd)))
 
 
-def from_int(x):
-    return struct.pack('<I', x)
-
-
 def pack(msg):
     ints = [to_int(msg[4*i:4*(i+1)]) for i in range(6)]
     return struct.pack(b'<6I', *ints)
@@ -36,7 +32,7 @@ def pack(msg):
 
 class AdbMessageForTesting(AdbMessage):
     def __init__(self, command, arg0=None, arg1=None, data=b''):
-        self.command = sum(c << (i * 8) for i, c in enumerate(bytearray(command)))
+        self.command = to_int(command)
         self.magic = self.command ^ 0xFFFFFFFF
         self.arg0 = arg0
         self.arg1 = arg1
@@ -67,16 +63,59 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device._handle._bulk_read = b''
 
-    def test_connect(self):
-        self.assertTrue(self.device.connect())
-        self.assertTrue(self.device.available)
-
     def test_close(self):
         self.assertFalse(self.device.close())
         self.assertFalse(self.device.available)
 
         self.device._handle._bulk_read = b''
 
+    # ======================================================================= #
+    #                                                                         #
+    #                             `connect` tests                             #
+    #                                                                         #
+    # ======================================================================= #
+    def test_connect(self):
+        self.assertTrue(self.device.connect())
+        self.assertTrue(self.device.available)
+
+    def test_connect_no_keys(self):
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH[:2])
+        with self.assertRaises(exceptions.DeviceAuthError):
+            self.device.connect()
+
+    def test_connect_with_key_invalid_response(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_INVALID)
+
+        with self.assertRaises(exceptions.InvalidResponseError):
+            self.device.connect([signer])
+
+    def test_connect_with_key(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH)
+
+        self.assertTrue(self.device.connect([signer]))
+
+    def test_connect_with_new_key(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
+
+        self.assertTrue(self.device.connect([signer]))
+
+    # ======================================================================= #
+    #                                                                         #
+    #                              `shell` tests                              #
+    #                                                                         #
+    # ======================================================================= #
     def test_shell_no_return(self):
         self.assertTrue(self.device.connect())
 
@@ -215,7 +254,6 @@ class TestAdbDevice(unittest.TestCase):
         self.device.shell('dumpsys power | grep "Display Power"')
         self.assertTrue(True)
 
-    @unittest.skipIf(False, "This test is a work in progress")
     def test_shell_issue_136_log2_3(self):
         # https://github.com/google/python-adb/issues/136#issuecomment-438690462
         # https://pastebin.com/raw/0k1GaNaa
@@ -227,59 +265,10 @@ class TestAdbDevice(unittest.TestCase):
         msg1 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
         msg2 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
         msg3 = b'Display Power: state=ON\n'
-        
-        
-        '''msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=OFF\n')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        msg4 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1)
-        msg5 = AdbMessage(command=constants.WRTE, arg0=544825708, arg1=1, data=b'Display Power: state=ON\n')
-        msg6 = AdbMessage(command=constants.CLSE, arg0=544825708, arg1=1, data=b'')
-        msg7 = b'Display Power: state=ON\n'
-        msg8 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg4.pack(), msg5.pack(), msg7, msg6.pack()])
-        self.device._handle._bulk_read = b''.join([msg8.pack(), msg4.pack(), msg5.pack(), msg7, msg6.pack()])
-        self.device._handle._bulk_read = b''.join([msg4.pack(), pack(msg7), msg7, msg6.pack()])  # This reproduces the error message, but I don't think it reproduces it correctly
-        #self.device._handle._bulk_read = b''.join([msg4.pack(), msg3.pack(), msg5.pack(), msg7, msg6.pack()])'''
         self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), pack(msg3)])
 
-        _LOGGER.debug("test_shell_issue_136_log2")
-        #print("1) {}".format(self.device.shell('dumpsys power | grep "Display Power"')))
-        print("2) {}".format(self.device.shell('dumpsys power | grep "Display Power"')))
-        self.assertTrue(True)
-
-    def test_connect_no_keys(self):
-        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH[:2])
-        with self.assertRaises(exceptions.DeviceAuthError):
-            self.device.connect()
-
-    def test_connect_with_key_invalid_response(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            keygen('tests/adbkey')
-            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
-
-        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_INVALID)
-
-        with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.connect([signer])
-
-    def test_connect_with_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            keygen('tests/adbkey')
-            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
-
-        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH)
-
-        self.assertTrue(self.device.connect([signer]))
-
-    def test_connect_with_new_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            keygen('tests/adbkey')
-            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
-
-        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
-
-        self.assertTrue(self.device.connect([signer]))
+        with self.assertRaises(exceptions.InvalidCommandError):
+            self.device.shell('dumpsys power | grep "Display Power"')
 
 
 class TestAdbDeviceWithBanner(TestAdbDevice):
