@@ -1,6 +1,7 @@
 import logging
 from mock import patch
 import os
+import struct
 import sys
 import unittest
 
@@ -10,14 +11,27 @@ from adb_shell.adb_message import AdbMessage, unpack
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
-from . import patchers
-from .keygen_stub import open_priv_pub
+import patchers
+from keygen_stub import open_priv_pub
 
 
 # https://stackoverflow.com/a/7483862
 _LOGGER = logging.getLogger('adb_shell.adb_device')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
+
+
+def to_int(cmd):
+    return sum(c << (i * 8) for i, c in enumerate(bytearray(cmd)))
+
+
+def from_int(x):
+    return struct.pack('<I', x)
+
+
+def pack(msg):
+    ints = [to_int(msg[4*i:4*(i+1)]) for i in range(6)]
+    return struct.pack(b'<6I', *ints)
 
 
 class AdbMessageForTesting(AdbMessage):
@@ -201,25 +215,38 @@ class TestAdbDevice(unittest.TestCase):
         self.device.shell('dumpsys power | grep "Display Power"')
         self.assertTrue(True)
 
-    '''def test_shell_issue_136_log2_3(self):
+    @unittest.skipIf(False, "This test is a work in progress")
+    def test_shell_issue_136_log2_3(self):
         # https://github.com/google/python-adb/issues/136#issuecomment-438690462
         # https://pastebin.com/raw/0k1GaNaa
         # https://pastebin.com/raw/q33Qna0u
+        # python -m unittest test_adb_device.TestAdbDevice.test_shell_issue_136_log2_3
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'\x00')
+        msg1 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
+        msg2 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
+        msg3 = b'Display Power: state=ON\n'
+        
+        
+        '''msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=OFF\n')
         msg3 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        msg4 = AdbMessage(command=constants.OKAY, arg0=544825708, arg1=1, data=b'\x00')
+        msg4 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1)
         msg5 = AdbMessage(command=constants.WRTE, arg0=544825708, arg1=1, data=b'Display Power: state=ON\n')
         msg6 = AdbMessage(command=constants.CLSE, arg0=544825708, arg1=1, data=b'')
-        self.device._handle.bulk_read_list = [msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg4.pack(), msg4.data, msg5.pack(), msg5.data, msg6.pack()]
+        msg7 = b'Display Power: state=ON\n'
+        msg8 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg4.pack(), msg5.pack(), msg7, msg6.pack()])
+        self.device._handle._bulk_read = b''.join([msg8.pack(), msg4.pack(), msg5.pack(), msg7, msg6.pack()])
+        self.device._handle._bulk_read = b''.join([msg4.pack(), pack(msg7), msg7, msg6.pack()])  # This reproduces the error message, but I don't think it reproduces it correctly
+        #self.device._handle._bulk_read = b''.join([msg4.pack(), msg3.pack(), msg5.pack(), msg7, msg6.pack()])'''
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), pack(msg3)])
 
         _LOGGER.debug("test_shell_issue_136_log2")
-        self.device.shell('dumpsys power | grep "Display Power"')
-        self.device.shell('dumpsys power | grep "Display Power"')
-        self.assertTrue(True)'''
+        #print("1) {}".format(self.device.shell('dumpsys power | grep "Display Power"')))
+        print("2) {}".format(self.device.shell('dumpsys power | grep "Display Power"')))
+        self.assertTrue(True)
 
     def test_connect_no_keys(self):
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH[:2])
