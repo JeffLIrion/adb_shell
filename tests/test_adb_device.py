@@ -307,6 +307,34 @@ class TestAdbDevice(unittest.TestCase):
         self.device.shell('TEST')
         self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
 
+    def test_shell_issue_136_log2_3d(self):
+        # https://github.com/google/python-adb/issues/136#issuecomment-438690462
+        # https://pastebin.com/raw/0k1GaNaa
+        # https://pastebin.com/raw/q33Qna0u
+        # python -m unittest test_adb_device.TestAdbDevice.test_shell_issue_136_log2_3d
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=ON\n')
+        msg3 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
+        msg4 = AdbMessage(command=constants.OKAY, arg0=27641, arg1=1, data=b'')
+        msg5 = AdbMessage(command=constants.WRTE, arg0=27641, arg1=1, data=b'Display Power: state=ON\n')
+        msg6 = AdbMessage(command=constants.CLSE, arg0=27641, arg1=1, data=b'')
+        msg7 = AdbMessage(command=constants.OKAY, arg0=27642, arg1=1, data=b'')
+        msg8 = AdbMessage(command=constants.WRTE, arg0=27642, arg1=1, data=b'Display Power: state=ON\n')
+        msg9 = AdbMessage(command=constants.CLSE, arg0=27642, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.pack(), msg3.pack(), msg4.pack(), msg5.pack(), msg5.data, msg6.pack(), msg6.pack(), msg6.pack(), msg7.pack(), msg8.pack(), msg8.data, msg9.pack()])
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg4.pack(), msg5.pack(), msg5.data, msg6.pack(), msg7.pack(), msg8.pack(), msg8.data, msg9.pack()])
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.pack(), msg4.pack(), msg5.pack(), msg5.data, msg6.pack(), msg6.pack(), msg7.pack(), msg8.pack(), msg8.data, msg9.pack()])
+
+        self.device.shell('dumpsys power | grep "Display Power"')
+        self.device.shell('dumpsys power | grep "Display Power"')
+        self.device.shell('dumpsys power | grep "Display Power"')
+        '''self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
+        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
+        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))'''
+
 
 class TestAdbDeviceWithBanner(TestAdbDevice):
     def setUp(self):
