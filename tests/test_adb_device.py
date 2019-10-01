@@ -25,11 +25,6 @@ def to_int(cmd):
     return sum(c << (i * 8) for i, c in enumerate(bytearray(cmd)))
 
 
-def pack(msg):
-    ints = [to_int(msg[4*i:4*(i+1)]) for i in range(6)]
-    return struct.pack(b'<6I', *ints)
-
-
 class AdbMessageForTesting(AdbMessage):
     def __init__(self, command, arg0=None, arg1=None, data=b''):
         self.command = to_int(command)
