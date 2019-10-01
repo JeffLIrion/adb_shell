@@ -407,6 +407,8 @@ class AdbDevice(object):
             if time.time() - start > total_timeout_s:
                 raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
 
+            # Ignore CLSE responses to previous commands
+            # https://github.com/JeffLIrion/adb_shell/pull/14
             if cmd != constants.CLSE:
                 raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
 
