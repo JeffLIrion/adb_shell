@@ -120,7 +120,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'' + b'\0')
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
         self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack()])
 
@@ -161,6 +161,11 @@ class TestAdbDevice(unittest.TestCase):
         self.device.shell("dumpsys power | grep 'Display Power' | grep -q 'state=ON' && echo -e '1\\c' && dumpsys power | grep mWakefulness | grep -q Awake && echo -e '1\\c' && dumpsys audio | grep paused | grep -qv 'Buffer Queue' && echo -e '1\\c' || (dumpsys audio | grep started | grep -qv 'Buffer Queue' && echo '2\\c' || echo '0\\c') && dumpsys power | grep Locks | grep 'size=' && CURRENT_APP=$(dumpsys window windows | grep mCurrentFocus) && CURRENT_APP=${CURRENT_APP#*{* * } && CURRENT_APP=${CURRENT_APP%%/*} && echo $CURRENT_APP && (dumpsys media_session | grep -A 100 'Sessions Stack' | grep -A 100 $CURRENT_APP | grep -m 1 'state=PlaybackState {' || echo) && dumpsys audio | grep '\\- STREAM_MUSIC:' -A 12")
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
+    # ======================================================================= #
+    #                                                                         #
+    #                           `shell` error tests                           #
+    #                                                                         #
+    # ======================================================================= #
     def test_shell_error_local_id(self):
         self.assertTrue(self.device.connect())
 
@@ -195,7 +200,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'' + b'\0')
+        msg1 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'')
         self.device._handle._bulk_read = msg1.pack()
 
         with self.assertRaises(exceptions.InvalidCommandError):
@@ -273,120 +278,6 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
-
-    '''def test_shell_issue_136_log1(self):
-        # https://github.com/google/python-adb/issues/136#issuecomment-438690462
-        # https://pastebin.com/raw/K4CM3kVV
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=27630, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=27630, arg1=1, data=b'Display Power: state=OFF\n')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
-
-        self.device.shell('dumpsys power | grep "Display Power"')
-        self.assertTrue(True)
-
-    def test_shell_issue_136_log2_3(self):
-        # https://github.com/google/python-adb/issues/136#issuecomment-438690462
-        # https://pastebin.com/raw/0k1GaNaa
-        # https://pastebin.com/raw/q33Qna0u
-        # python -m unittest test_adb_device.TestAdbDevice.test_shell_issue_136_log2_3
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
-        msg2 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
-        msg3 = b'Display Power: state=ON\n'
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), pack(msg3)])
-
-        with self.assertRaises(exceptions.InvalidCommandError):
-            self.device.shell('dumpsys power | grep "Display Power"')
-
-    def test_shell_issue_136_log2_3b(self):
-        # https://github.com/google/python-adb/issues/136#issuecomment-438690462
-        # https://pastebin.com/raw/0k1GaNaa
-        # https://pastebin.com/raw/q33Qna0u
-        # python -m unittest test_adb_device.TestAdbDevice.test_shell_issue_136_log2_3b
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=ON\n')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack()])
-
-        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
-
-    def test_shell_issue_136_log2_3c(self):
-        # https://github.com/google/python-adb/issues/136#issuecomment-438690462
-        # https://pastebin.com/raw/0k1GaNaa
-        # https://pastebin.com/raw/q33Qna0u
-        # python -m unittest test_adb_device.TestAdbDevice.test_shell_issue_136_log2_3c
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.CLSE, arg0=27630, arg1=1, data=b'')
-        msg2 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
-        msg3 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=ON\n')
-        msg4 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.pack(), msg1.pack(), msg2.pack(), msg3.pack(), msg3.data, msg4.pack()])
-
-        self.device.shell('TEST')
-        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
-
-    def test_shell_issue_136_log2_3d(self):
-        # https://github.com/google/python-adb/issues/136#issuecomment-438690462
-        # https://pastebin.com/raw/0k1GaNaa
-        # https://pastebin.com/raw/q33Qna0u
-        # python -m unittest test_adb_device.TestAdbDevice.test_shell_issue_136_log2_3d
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=27640, arg1=1, data=b'')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=27640, arg1=1, data=b'Display Power: state=ON\n')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=27640, arg1=1, data=b'')
-        msg4 = AdbMessage(command=constants.OKAY, arg0=27641, arg1=1, data=b'')
-        msg5 = AdbMessage(command=constants.WRTE, arg0=27641, arg1=1, data=b'Display Power: state=ON\n')
-        msg6 = AdbMessage(command=constants.CLSE, arg0=27641, arg1=1, data=b'')
-        msg7 = AdbMessage(command=constants.OKAY, arg0=27642, arg1=1, data=b'')
-        msg8 = AdbMessage(command=constants.WRTE, arg0=27642, arg1=1, data=b'Display Power: state=ON\n')
-        msg9 = AdbMessage(command=constants.CLSE, arg0=27642, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.pack(), msg3.pack(), msg4.pack(), msg5.pack(), msg5.data, msg6.pack(), msg6.pack(), msg6.pack(), msg7.pack(), msg8.pack(), msg8.data, msg9.pack()])
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg4.pack(), msg5.pack(), msg5.data, msg6.pack(), msg7.pack(), msg8.pack(), msg8.data, msg9.pack()])
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack(), msg2.data, msg3.pack(), msg3.pack(), msg4.pack(), msg5.pack(), msg5.data, msg6.pack(), msg6.pack(), msg7.pack(), msg8.pack(), msg8.data, msg9.pack()])
-
-        self.device.shell('dumpsys power | grep "Display Power"')
-        self.device.shell('dumpsys power | grep "Display Power"')
-        self.device.shell('dumpsys power | grep "Display Power"')
-        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
-        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
-        self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
-
-    def test_shell_new_logs2(self):
-        # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
-        self.device._handle._bulk_read = b''.join([b'OKAY\xe9R\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
-                                                   b'WRTE\xe9R\x00\x00\x01\x00\x00\x00\x01\x00\x00\x002\x00\x00\x00\xa8\xad\xab\xba',
-                                                   b'2',
-                                                   b'WRTE\xe9R\x00\x00\x01\x00\x00\x00\x0c\x02\x00\x00\xbf\x92\x00\x00\xa8\xad\xab\xba',
-                                                   b'Wake Locks: size=1\ncom.google.android.tvlauncher\n\n- STREAM_MUSIC:\n   Muted: true\n   Min: 0\n   Max: 15\n   Current: 2 (speaker): 15, 4 (headset): 10, 8 (headphone): 10, 80 (bt_a2dp): 10, 1000 (digital_dock): 10, 4000000 (usb_headset): 3, 40000000 (default): 15\n   Devices: speaker\n- STREAM_ALARM:\n   Muted: true\n   Min: 1\n   Max: 7\n   Current: 2 (speaker): 7, 4 (headset): 5, 8 (headphone): 5, 80 (bt_a2dp): 5, 1000 (digital_dock): 5, 4000000 (usb_headset): 1, 40000000 (default): 7\n   Devices: speaker\n- STREAM_NOTIFICATION:\n',
-                                                   b'CLSE\xe9R\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',
-                                                   msg1.pack(),
-                                                   b'CLSE\xe9R\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',
-                                                   msg2.pack(),
-                                                   msg2.data,
-                                                   msg3.pack()])
-
-        self.device.shell('Update command (success)')
-        self.device.shell('Update command (fail)')'''
 
 
 class TestAdbDeviceWithBanner(TestAdbDevice):
