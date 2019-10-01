@@ -61,12 +61,6 @@ class FakeTcpHandle(TcpHandle):
         return len(data)
 
 
-class FakeTcpHandleWithAuth(FakeTcpHandle):
-    def connect(self, auth_timeout_s=None):
-        self._connection = True
-        self._bulk_read = b''.join([MSG_CONNECT_WITH_AUTH.pack(), MSG_CONNECT_WITH_AUTH.data])
-
-
 # `socket` patches
 patch_create_connection = patch('socket.create_connection', return_value=FakeSocket())
 
@@ -79,5 +73,3 @@ patch_select_fail = patch('select.select', return_value=(False, False, False))
 
 # `TcpHandle` patches
 patch_tcp_handle = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
-
-patch_tcp_handle_with_auth = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandleWithAuth)
