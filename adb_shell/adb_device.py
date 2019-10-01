@@ -391,13 +391,17 @@ class AdbDevice(object):
             Incorrect remote id.
 
         """
-        cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
+        while True:
+            cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
 
-        if local_id2 not in (0, local_id):
-            raise exceptions.InterleavedDataError("We don't support multiple streams...")
+            if local_id2 not in (0, local_id):
+                raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
-        if remote_id2 not in (0, remote_id):
-            raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
+            if remote_id2 in (0, remote_id):
+                break
+
+            if cmd != constants.CLSE:
+                raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
 
         # Acknowledge write packets
         if cmd == constants.WRTE:

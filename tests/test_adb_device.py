@@ -335,6 +335,30 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))
         self.assertEqual('Display Power: state=ON\n', self.device.shell('dumpsys power | grep "Display Power"'))'''
 
+    def test_shell_new_logs(self):
+        # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS')
+        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
+        self.device._handle._bulk_read = b''.join([b'OKAY\xd9R\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
+                                                   b'WRTE\xd9R\x00\x00\x01\x00\x00\x00\x01\x00\x00\x002\x00\x00\x00\xa8\xad\xab\xba',
+                                                   b'2',
+                                                   b'WRTE\xd9R\x00\x00\x01\x00\x00\x00\x0c\x02\x00\x00\xc0\x92\x00\x00\xa8\xad\xab\xba',
+                                                   b'Wake Locks: size=2\ncom.google.android.tvlauncher\n\n- STREAM_MUSIC:\n   Muted: true\n   Min: 0\n   Max: 15\n   Current: 2 (speaker): 15, 4 (headset): 10, 8 (headphone): 10, 80 (bt_a2dp): 10, 1000 (digital_dock): 10, 4000000 (usb_headset): 3, 40000000 (default): 15\n   Devices: speaker\n- STREAM_ALARM:\n   Muted: true\n   Min: 1\n   Max: 7\n   Current: 2 (speaker): 7, 4 (headset): 5, 8 (headphone): 5, 80 (bt_a2dp): 5, 1000 (digital_dock): 5, 4000000 (usb_headset): 1, 40000000 (default): 7\n   Devices: speaker\n- STREAM_NOTIFICATION:\n',
+                                                   b'CLSE\xd9R\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',
+                                                   msg1.pack(),
+                                                   b'CLSE\xdaR\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',
+                                                   msg2.pack(),
+                                                   msg2.data,
+                                                   msg3.pack()])
+
+        self.device.shell('Update command (success)')
+        self.device.shell('Update command (fail)')
+
 
 class TestAdbDeviceWithBanner(TestAdbDevice):
     def setUp(self):
