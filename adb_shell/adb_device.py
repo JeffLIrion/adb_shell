@@ -389,8 +389,12 @@ class AdbDevice(object):
             We don't support multiple streams...
         adb_shell.exceptions.InvalidResponseError
             Incorrect remote id.
+        adb_shell.exceptions.InvalidCommandError
+            Never got one of the expected responses.
 
         """
+        start = time.time()
+
         while True:
             cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
 
@@ -399,6 +403,9 @@ class AdbDevice(object):
 
             if remote_id2 in (0, remote_id):
                 break
+
+            if time.time() - start > total_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
 
             if cmd != constants.CLSE:
                 raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
