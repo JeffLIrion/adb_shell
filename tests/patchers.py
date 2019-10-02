@@ -20,13 +20,15 @@ BULK_READ_LIST_WITH_AUTH_NEW_KEY = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_W
 
 class FakeSocket(object):
     def __init__(self):
-        self.recv_list = [b'']
+        self._recv = b''
 
     def close(self):
         pass
 
     def recv(self, bufsize):
-        return self.recv_list.pop(0)
+        ret = self._recv[:bufsize]
+        self._recv = self._recv[bufsize:]
+        return ret
 
     def send(self, data):
         pass
@@ -39,6 +41,10 @@ class FakeSocket(object):
 
 
 class FakeTcpHandle(TcpHandle):
+    def __init__(self, *args, **kwargs):
+        TcpHandle.__init__(self, *args, **kwargs)
+        self._bulk_read = b''
+
     def close(self):
         self._connection = None
 
@@ -46,16 +52,13 @@ class FakeTcpHandle(TcpHandle):
         self._connection = True
 
     def bulk_read(self, numbytes, timeout_s=None):
-        return self.bulk_read_list.pop(0)
+        num = min(numbytes, constants.MAX_ADB_DATA)
+        ret = self._bulk_read[:num]
+        self._bulk_read = self._bulk_read[num:]
+        return ret
 
     def bulk_write(self, data, timeout_s=None):
         return len(data)
-
-
-class FakeTcpHandleWithAuth(FakeTcpHandle):
-    def connect(self, auth_timeout_s=None):
-        self._connection = True
-        self.bulk_read_list = [MSG_CONNECT_WITH_AUTH.pack(), MSG_CONNECT_WITH_AUTH.data]
 
 
 # `socket` patches
@@ -70,5 +73,3 @@ patch_select_fail = patch('select.select', return_value=(False, False, False))
 
 # `TcpHandle` patches
 patch_tcp_handle = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
-
-patch_tcp_handle_with_auth = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandleWithAuth)

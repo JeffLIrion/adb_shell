@@ -33,15 +33,15 @@ class TestTcpHandle(unittest.TestCase):
 
         """
         # Provide the `recv` return values
-        self.handle._connection.recv_list = [b'TEST1', b'TEST2']
+        self.handle._connection._recv = b'TEST1TEST2'
 
         with patchers.patch_select_success:
-            self.assertEqual(self.handle.bulk_read(1234), b'TEST1')
-            self.assertEqual(self.handle.bulk_read(5678), b'TEST2')
+            self.assertEqual(self.handle.bulk_read(5), b'TEST1')
+            self.assertEqual(self.handle.bulk_read(5), b'TEST2')
 
         with patchers.patch_select_fail:
             with self.assertRaises(TcpTimeoutException):
-                self.handle.bulk_read(b'FAIL')
+                self.handle.bulk_read(4)
 
     def test_bulk_write(self):
         """TODO

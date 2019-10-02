@@ -389,15 +389,28 @@ class AdbDevice(object):
             We don't support multiple streams...
         adb_shell.exceptions.InvalidResponseError
             Incorrect remote id.
+        adb_shell.exceptions.InvalidCommandError
+            Never got one of the expected responses.
 
         """
-        cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
+        start = time.time()
 
-        if local_id2 not in (0, local_id):
-            raise exceptions.InterleavedDataError("We don't support multiple streams...")
+        while True:
+            cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
 
-        if remote_id2 not in (0, remote_id):
-            raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
+            if local_id2 not in (0, local_id):
+                raise exceptions.InterleavedDataError("We don't support multiple streams...")
+
+            if remote_id2 in (0, remote_id):
+                break
+
+            if time.time() - start > total_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
+
+            # Ignore CLSE responses to previous commands
+            # https://github.com/JeffLIrion/adb_shell/pull/14
+            if cmd != constants.CLSE:
+                raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
 
         # Acknowledge write packets
         if cmd == constants.WRTE:
