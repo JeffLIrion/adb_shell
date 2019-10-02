@@ -1,3 +1,4 @@
 sphinx==2.1.2
+adb-shell
 cryptography
 pycryptodome
