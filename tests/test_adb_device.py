@@ -78,6 +78,8 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.DeviceAuthError):
             self.device.connect()
 
+        self.assertFalse(self.device.available)
+
     def test_connect_with_key_invalid_response(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
@@ -87,6 +89,8 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.connect([signer])
+
+        self.assertFalse(self.device.available)
 
     def test_connect_with_key(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
