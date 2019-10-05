@@ -16,7 +16,7 @@ This Python package implements ADB shell functionality.  It originated from `pyt
 Example Usage
 -------------
 
-(Based on `androidtv.adb_manager.py <https://github.com/JeffLIrion/python-androidtv/blob/133063c8d6793a88259af405d6a69ceb301a0ca0/androidtv/adb_manager.py#L67>`_)
+(Based on `androidtv/adb_manager.py <https://github.com/JeffLIrion/python-androidtv/blob/133063c8d6793a88259af405d6a69ceb301a0ca0/androidtv/adb_manager.py#L67>`_)
 
 .. code-block:: python
 
