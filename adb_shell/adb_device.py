@@ -45,6 +45,8 @@ class AdbDevice(object):
 
     Attributes
     ----------
+    _available : bool
+        Whether an ADB connection to the device has been established
     _banner : str
         The hostname of the machine where the Python interpreter is currently running
     _banner_bytes : bytearray
@@ -71,22 +73,25 @@ class AdbDevice(object):
 
         self._handle = TcpHandle(self._serial, default_timeout_s)
 
+        self._available = False
+
     @property
     def available(self):
-        """Whether or not the socket connection is established.
+        """Whether or not an ADB connection to the device has been established.
 
         Returns
         -------
         bool
-            :attr:`adb_shell.tcp_handle.TcpHandle.available`
+            ``self._available``
 
         """
-        return self._handle.available
+        return self._available
 
     def close(self):
         """Close the socket connection via :meth:`adb_shell.tcp_handle.TcpHandle.close`.
 
         """
+        self._available = False
         self._handle.close()
 
     def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
@@ -146,6 +151,7 @@ class AdbDevice(object):
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
+            self._available = True
             return True  # return banner
 
         # 5. If no ``rsa_keys`` are provided, raise an exception
@@ -168,6 +174,7 @@ class AdbDevice(object):
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
+                self._available = True
                 return True  # return banner
 
         # 7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
@@ -178,6 +185,7 @@ class AdbDevice(object):
         self._send(msg, timeout_s)
 
         cmd, arg0, _, banner = self._read([constants.CNXN], auth_timeout_s, total_timeout_s)
+        self._available = True
         return True  # return banner
 
     def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):

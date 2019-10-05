@@ -55,18 +55,6 @@ class TcpHandle(object):
 
         self._connection = None
 
-    @property
-    def available(self):
-        """Whether the socket connection has been created.
-
-        Returns
-        -------
-        bool
-            Whether the connection has been created
-
-        """
-        return bool(self._connection)
-
     def close(self):
         """Close the socket connection.
 
