@@ -156,12 +156,14 @@ class AdbDevice(object):
 
         # 5. If no ``rsa_keys`` are provided, raise an exception
         if not rsa_keys:
+            self._handle.close()
             raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
 
         # 6. Loop through our keys, signing the last ``banner`` that we received
         for rsa_key in rsa_keys:
             # 6.1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
             if arg0 != constants.AUTH_TOKEN:
+                self._handle.close()
                 raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
 
             # 6.2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
