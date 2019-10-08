@@ -53,7 +53,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 
-if sys.version_info[0] == 2:
+if sys.version_info[0] == 2:  # pragma: no cover
     FileNotFoundError = IOError  # pylint: disable=redefined-builtin
 
 
