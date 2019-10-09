@@ -40,10 +40,9 @@ https://github.com/aosp-mirror/platform_system_core/blob/c55fab4a59cfa461857c6a6
 """
 
 
-from __future__ import print_function
-
 import os
 import base64
+import logging
 import socket
 import struct
 import sys
@@ -52,6 +51,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+
+_LOGGER = logging.getLogger(__name__)
 
 if sys.version_info[0] == 2:  # pragma: no cover
     FileNotFoundError = IOError  # pylint: disable=redefined-builtin
@@ -116,13 +117,11 @@ def decode_pubkey(public_key):
     assert modulus_size_words == ANDROID_PUBKEY_MODULUS_SIZE_WORDS
     modulus = reversed(modulus_bytes)
     rr = reversed(rr_bytes)
-    print('modulus_size_words:', hex(modulus_size_words))
-    print('n0inv:', hex(n0inv))
-    print('modulus: ', end='')
-    print(*map(hex, modulus), sep=':')
-    print('rr: ', end='')
-    print(*map(hex, rr), sep=':')
-    print('exponent:', hex(exponent))
+    _LOGGER.debug('modulus_size_words: %s', hex(modulus_size_words))
+    _LOGGER.debug('n0inv: %s', hex(n0inv))
+    _LOGGER.debug('modulus: %s', ':'.join(map(hex, modulus)))
+    _LOGGER.debug('rr: %s', ':'.join(map(hex, rr)))
+    _LOGGER.debug('exponent: %s', hex(exponent))
 
 
 def decode_pubkey_file(public_key_path):
