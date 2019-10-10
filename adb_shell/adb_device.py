@@ -261,8 +261,6 @@ class AdbDevice(object):
         ------
         adb_shell.exceptions.InvalidResponseError
             Wrong local_id sent to us.
-        adb_shell.exceptions.InvalidCommandError
-            Didn't get a ready response.
 
         """
         local_id = 1
