@@ -187,16 +187,6 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
 
-    def test_shell_error_clse(self):
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'\x00')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data])
-
-        self.assertEqual(self.device.shell('TEST'), '')
-
     def test_shell_error_unknown_command(self):
         self.assertTrue(self.device.connect())
 
