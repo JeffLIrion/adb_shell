@@ -268,7 +268,7 @@ class AdbDevice(object):
         local_id = 1
         msg = AdbMessage(constants.OPEN, local_id, 0, destination + b'\0')
         self._send(msg, timeout_s)
-        cmd, remote_id, their_local_id, _ = self._read([constants.OKAY], timeout_s, total_timeout_s)
+        _, remote_id, their_local_id, _ = self._read([constants.OKAY], timeout_s, total_timeout_s)
 
         if local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
