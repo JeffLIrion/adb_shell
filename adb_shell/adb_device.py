@@ -349,9 +349,6 @@ class AdbDevice(object):
                 temp = self._handle.bulk_read(data_length, timeout_s)
                 _LOGGER.debug("bulk_read(%d): %s", data_length, temp)
 
-                if len(temp) != data_length:
-                    _LOGGER.warning("Data_length %d does not match actual number of bytes read: %d", data_length, len(temp))
-
                 data += temp
                 data_length -= len(temp)
 
