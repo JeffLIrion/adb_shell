@@ -216,8 +216,7 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidCommandError):
             self.device.shell('TEST', total_timeout_s=-1)
 
-    @unittest.skipIf(sys.version_info[0] == 3, "``unittest.testCase.assertLogs`` is not implemented in Python 2.")
-    def test_shell_warning_data_length_python2(self):
+    def test_shell_data_length_exceeds_max(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
@@ -228,21 +227,6 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device.shell('TEST')
         self.assertTrue(True)
-
-    @unittest.skipIf(sys.version_info[0] == 2, "``unittest.testCase.assertLogs`` is not implemented in Python 2.")
-    def test_shell_warning_data_length_python3(self):
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1))
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
-
-        with self.assertLogs(level=logging.WARNING) as logs:
-            self.device.shell('TEST')
-
-        assert any(["Data_length 4097 does not match actual number of bytes read: 4096" in output for output in logs.output])
 
     def test_shell_error_checksum(self):
         self.assertTrue(self.device.connect())
