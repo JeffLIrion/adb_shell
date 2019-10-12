@@ -137,6 +137,18 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
+    def test_shell_data_length_exceeds_max(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1))
+        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
+
+        self.device.shell('TEST')
+        self.assertTrue(True)
+
     def test_shell_multiple_clse(self):
         # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
         self.assertTrue(self.device.connect())
@@ -215,18 +227,6 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidCommandError):
             self.device.shell('TEST', total_timeout_s=-1)
-
-    def test_shell_data_length_exceeds_max(self):
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1))
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
-
-        self.device.shell('TEST')
-        self.assertTrue(True)
 
     def test_shell_error_checksum(self):
         self.assertTrue(self.device.connect())
