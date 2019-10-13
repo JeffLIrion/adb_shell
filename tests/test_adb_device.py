@@ -283,7 +283,7 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device.shell('Android TV update command')
 
-    def test_issue29_lines290_(self):
+    def test_issue29_lines290_342(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
