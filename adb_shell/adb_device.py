@@ -442,13 +442,6 @@ class AdbDevice(object):
         data : bytes
             The data that was read by :meth:`AdbDevice._read_until`
 
-        Raises
-        ------
-        adb_shell.exceptions.AdbCommandFailureException
-            Command failed (``b'FAIL'``)
-        adb_shell.exceptions.InvalidCommandError
-            Expected a ``b'WRTE'`` or ``b'CLSE'`` command, but got something else
-
         """
         while True:
             cmd, data = self._read_until(local_id, remote_id, [constants.CLSE, constants.WRTE], timeout_s, total_timeout_s)
