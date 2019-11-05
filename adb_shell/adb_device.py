@@ -209,7 +209,7 @@ class AdbDevice(object):
             The output of the ADB shell command
 
         """
-        return ''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s))
+        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s)).decode('utf-8')
 
     def _okay(self, local_id, remote_id, timeout_s):
         """Send an ``b'OKAY'`` mesage.
@@ -499,11 +499,11 @@ class AdbDevice(object):
 
         Yields
         ------
-        str
+        bytes
             The responses from the service.
 
         """
         local_id, remote_id = self._open(b'%s:%s' % (service, command), timeout_s, total_timeout_s)
 
         for data in self._read_until_close(local_id, remote_id, timeout_s, total_timeout_s):
-            yield data.decode('utf8')
+            yield data
