@@ -1,13 +1,11 @@
 import logging
 from mock import patch
-import os
-import struct
 import sys
 import unittest
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice
-from adb_shell.adb_message import AdbMessage, unpack
+from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
@@ -148,6 +146,32 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device.shell('TEST')
         self.assertTrue(True)
+
+    def test_shell_multibytes_sequence_exceeds_max(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA-1) + b'\xe3\x81\x82')
+        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
+
+        res = self.device.shell('TEST')
+        self.assertEqual(u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042', res)
+
+    def test_shell_with_multibytes_sequence_over_two_messages(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\xe3')
+        msg3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\x81\x82')
+        msg4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data,
+                                                   msg3.pack(), msg3.data, msg4.pack()])
+
+        res = self.device.shell('TEST')
+        self.assertEqual(u'\u3042', res)
 
     def test_shell_multiple_clse(self):
         # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
