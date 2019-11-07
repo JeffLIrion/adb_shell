@@ -22,7 +22,7 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'adb_shell'
-copyright = '2019, Jeff Irion'
+copyright = '2019, Jeff Irion and contributors'
 author = 'Jeff Irion'
 
 # The short X.Y version
