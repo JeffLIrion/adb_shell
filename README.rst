@@ -12,6 +12,13 @@ Documentation for this package can be found at https://adb-shell.readthedocs.io/
 
 This Python package implements ADB shell functionality.  It originated from `python-adb <https://github.com/google/python-adb>`_.
 
+Installation
+------------
+
+.. code-block::
+
+   pip install adb-shell
+
 
 Example Usage
 -------------
