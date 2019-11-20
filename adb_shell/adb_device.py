@@ -247,40 +247,42 @@ class AdbDevice(object):
     #                                 FileSync                                #
     #                                                                         #
     # ======================================================================= #
-    def stat(self, filename):
-        """Get file status (mode, size, and mtime).
+    def list(self, device_path, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Return a directory listing of the given path.
 
         Parameters
         ----------
-        filename : str, bytes
-            The file for which we are getting info
+        device_path : TODO
+            Directory to list.
+        timeout_ms : int, None
+            Expected timeout for any part of the pull.
+        total_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         Returns
         -------
-        mode : int
-            The mode of the file
-        size : int
-            The size of the file
-        mtime : int
-            The time of last modification for the file
-
-        Raises
-        ------
-        adb.adb_protocol.InvalidResponseError
-            Expected STAT response to STAT, got something else
+        files : TODO
+            TODO
 
         """
-        # cnxn = FileSyncConnection(connection, b'<4I')
-        # cnxn.Send(b'STAT', filename)
-        self._filesync_send(constants.STAT, filename)
-        command, (mode, size, mtime) = self._filesync_read([constants.STAT], read_data=False)
+        local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
 
-        if command != constants.STAT:
-            raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
+        self._filesync_send(constants.LIST, device_path)
+        files = []
 
-        return mode, size, mtime
+        for cmd_id, header, filename in self._filesync_read_until([constants.DENT], [constants.DONE]):
+            if cmd_id == constants.DONE:
+                break
 
-    def list(self, path):
+            mode, size, mtime = header
+            files.append(DeviceFile(filename, mode, size, mtime))
+
+        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+
+        return files
+
+    # THIS FUNCTION IS PROBABLY UNNECESSARY
+    def _list(self, path):
         """Get a list of the files in ``path``.
 
         Parameters
@@ -308,7 +310,58 @@ class AdbDevice(object):
 
         return files
 
-    def pull(self, filename, dest_file, progress_callback):
+    def pull(self, device_filename, dest_file=None, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Pull a file from the device.
+
+        Parameters
+        ----------
+        device_filename : TODO
+            Filename on the device to pull.
+        dest_file : str, file, io.IOBase, None
+            If set, a filename or writable file-like object.
+        progress_callback : TODO, None
+            Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
+            objects
+        timeout_ms : int, None
+            Expected timeout for any part of the pull.
+        total_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+
+        Returns
+        -------
+        TODO
+            The file data if ``dest_file`` is not set. Otherwise, ``True`` if the destination file exists
+
+        Raises
+        ------
+        ValueError
+            If ``dest_file`` is of unknown type.
+
+        """
+        if not dest_file:
+            dest_file = io.BytesIO()
+        elif isinstance(dest_file, str):
+            dest_file = open(dest_file, 'wb')
+        elif isinstance(dest_file, file_types):
+            pass
+        else:
+            raise ValueError("dest_file is of unknown type")
+
+        local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
+        self._pull(device_filename, dest_file, progress_callback)
+        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+
+        if isinstance(dest_file, io.BytesIO):
+            return dest_file.getvalue()
+
+        dest_file.close()
+        if hasattr(dest_file, 'name'):
+            return os.path.exists(dest_file.name)
+
+        # We don't know what the path is, so we just assume it exists.
+        return True
+
+    def _pull(self, filename, dest_file, progress_callback):
         """Pull a file from the device into the file-like ``dest_file``.
 
         Parameters
@@ -342,7 +395,44 @@ class AdbDevice(object):
             if progress_callback:
                 progress.send(len(data))
 
-    def push(self, datafile, filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None):
+    def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Push a file or directory to the device.
+
+        Parameters
+        ----------
+        source_file : TODO
+            Either a filename, a directory or file-like object to push to the device.
+        device_filename : TODO
+            Destination on the device to write to.
+        st_mode : TODO, None
+            Stat mode for filename
+        mtime : str
+            Modification time to set on the file.
+        progress_callback : TODO, None
+            Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
+            objects
+        timeout_ms : int, None
+            Expected timeout for any part of the push.
+        total_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+
+        """
+        if isinstance(source_file, str):
+            if os.path.isdir(source_file):
+                self.shell("mkdir " + device_filename, timeout_s, total_timeout_s)
+                for f in os.listdir(source_file):
+                    self.push(os.path.join(source_file, f), device_filename + '/' + f, progress_callback=progress_callback)
+                return
+
+            source_file = open(source_file, "rb")
+
+        with source_file:
+            local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
+            self._push(source_file, device_filename, st_mode, mtime=int(mtime), progress_callback=progress_callback)
+
+        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+
+    def _push(self, datafile, filename, st_mode, mtime, progress_callback):
         """Push a file-like object to the device.
 
         Parameters
@@ -399,11 +489,98 @@ class AdbDevice(object):
 
             raise exceptions.PushFailedError(data)
 
+    def stat(self, device_filename, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Get a file's ``stat()`` information.
+
+        Parameters
+        ----------
+        device_filename : TODO
+            TODO
+        timeout_ms : int, None
+            Expected timeout for any part of the pull.
+        total_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+
+        Returns
+        -------
+        mode : TODO
+            TODO
+        size : TODO
+            TODO
+        mtime : TODO
+            TODO
+
+        """
+        local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
+
+        self._filesync_send(constants.STAT, device_filename)
+        command, (mode, size, mtime) = self._filesync_read([constants.STAT], read_data=False)
+        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+
+        if command != constants.STAT:
+            raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
+
+        return mode, size, mtime
+
+    # THIS FUNCTION IS PROBABLY UNNECESSARY
+    def _stat(self, filename):
+        """Get file status (mode, size, and mtime).
+
+        Parameters
+        ----------
+        filename : str, bytes
+            The file for which we are getting info
+
+        Returns
+        -------
+        mode : int
+            The mode of the file
+        size : int
+            The size of the file
+        mtime : int
+            The time of last modification for the file
+
+        Raises
+        ------
+        adb.adb_protocol.InvalidResponseError
+            Expected STAT response to STAT, got something else
+
+        """
+        # cnxn = FileSyncConnection(connection, b'<4I')
+        # cnxn.Send(b'STAT', filename)
+        self._filesync_send(constants.STAT, filename)
+        command, (mode, size, mtime) = self._filesync_read([constants.STAT], read_data=False)
+
+        if command != constants.STAT:
+            raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
+
+        return mode, size, mtime
+
     # ======================================================================= #
     #                                                                         #
     #                              Hidden Methods                             #
     #                                                                         #
     # ======================================================================= #
+    def _close(self, local_id, remote_id, timeout_s, total_timeout_s):
+        """TODO
+
+        Parameters
+        ----------
+        local_id : int
+            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
+        remote_id : int
+            The ID for the recipient, or ``None`` if a connection could not be opened
+        timeout_s : float, None
+            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+        total_timeout_s : float
+            The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
+
+        """
+        msg = AdbMessage(constants.CLSE, local_id, remote_id)
+        self._send(msg, timeout_s)
+        self._read_until(local_id, remote_id, [constants.CLSE], timeout_s, total_timeout_s)
+
     def _okay(self, local_id, remote_id, timeout_s):
         """Send an ``b'OKAY'`` mesage.
 
