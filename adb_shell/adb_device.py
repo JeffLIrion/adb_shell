@@ -37,8 +37,12 @@
 """
 
 
+import collections
+import io
 import logging
+import os
 import socket
+import struct
 import time
 
 from . import constants
@@ -47,7 +51,14 @@ from .adb_message import AdbMessage, checksum, unpack
 from .tcp_handle import TcpHandle
 
 
+try:
+    file_types = (file, io.IOBase)
+except NameError:
+    file_types = (io.IOBase,)
+
 _LOGGER = logging.getLogger(__name__)
+
+DeviceFile = collections.namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
 
 
 class AdbDevice(object):
@@ -229,8 +240,170 @@ class AdbDevice(object):
             The output of the ADB shell command
 
         """
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s)).decode('utf8')
+        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s)).decode('utf8')@staticmethod
 
+    # ======================================================================= #
+    #                                                                         #
+    #                                 FileSync                                #
+    #                                                                         #
+    # ======================================================================= #
+    def stat(self, filename):
+        """Get file status (mode, size, and mtime).
+
+        Parameters
+        ----------
+        filename : str, bytes
+            The file for which we are getting info
+
+        Returns
+        -------
+        mode : int
+            The mode of the file
+        size : int
+            The size of the file
+        mtime : int
+            The time of last modification for the file
+
+        Raises
+        ------
+        adb.adb_protocol.InvalidResponseError
+            Expected STAT response to STAT, got something else
+
+        """
+        # cnxn = FileSyncConnection(connection, b'<4I')
+        # cnxn.Send(b'STAT', filename)
+        self._filesync_send(constants.STAT, filename)
+        command, (mode, size, mtime) = self._filesync_read([constants.STAT], read_data=False)
+
+        if command != constants.STAT:
+            raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
+
+        return mode, size, mtime
+
+    def list(self, path):
+        """Get a list of the files in ``path``.
+
+        Parameters
+        ----------
+        path : str, bytes
+            The path for which we are getting a list of files
+
+        Returns
+        -------
+        files : list[DeviceFile]
+            Information about the files in ``path``
+
+        """
+        # cnxn = FileSyncConnection(connection, b'<5I')
+        # cnxn.Send(b'LIST', path)
+        self._filesync_send(constants.LIST, path)
+        files = []
+
+        for cmd_id, header, filename in self._filesync_read_until([constants.DENT], [constants.DONE]):
+            if cmd_id == constants.DONE:
+                break
+
+            mode, size, mtime = header
+            files.append(DeviceFile(filename, mode, size, mtime))
+
+        return files
+
+    def pull(self, filename, dest_file, progress_callback):
+        """Pull a file from the device into the file-like ``dest_file``.
+
+        Parameters
+        ----------
+        filename : str
+            The file to be pulled
+        dest_file : _io.BytesIO
+            File-like object for writing to
+        progress_callback : function, None
+            Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
+
+        Raises
+        ------
+        PullFailedError
+            Unable to pull file
+
+        """
+        if progress_callback:
+            total_bytes = self.stat(filename)[1]
+            progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
+            next(progress)
+
+        # cnxn = FileSyncConnection(connection, b'<2I')
+        # cnxn.Send(b'RECV', filename)
+        self._filesync_send(constants.RECV, filename)
+        for cmd_id, _, data in self._filesync_read_until([constants.DATA], [constants.DONE]):
+            if cmd_id == constants.DONE:
+                break
+
+            dest_file.write(data)
+            if progress_callback:
+                progress.send(len(data))
+
+    def push(self, datafile, filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None):
+        """Push a file-like object to the device.
+
+        Parameters
+        ----------
+        datafile : _io.BytesIO
+            File-like object for reading from
+        filename : str
+            Filename to push to
+        st_mode : int
+            Stat mode for filename
+        mtime : int
+            Modification time
+        progress_callback : function, None
+            Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
+
+        Raises
+        ------
+        PushFailedError
+            Raised on push failure.
+
+        """
+        fileinfo = ('{},{}'.format(filename, int(st_mode))).encode('utf-8')
+
+        # cnxn = FileSyncConnection(connection, b'<2I')
+        # cnxn.Send(b'SEND', fileinfo)
+        self._filesync_send(constants.SEND, fileinfo)
+
+        if progress_callback:
+            total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, file_types) else -1
+            progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
+            next(progress)
+
+        while True:
+            data = datafile.read(constants.MAX_PUSH_DATA)
+            if data:
+                # cnxn.Send(b'DATA', data)
+                self._filesync_send(constants.DATA, data)
+
+                if progress_callback:
+                    progress.send(len(data))
+            else:
+                break
+
+        if mtime == 0:
+            mtime = int(time.time())
+        # DONE doesn't send data, but it hides the last bit of data in the size
+        # field.
+
+        # cnxn.Send(b'DONE', size=mtime)
+        self._filesync_send(constants.DONE, size=mtime)
+        for cmd_id, _, data in self._filesync_read_until([], [constants.OKAY, constants.FAIL]):
+            if cmd_id == constants.OKAY:
+                return
+
+            raise exceptions.PushFailedError(data)
+
+    # ======================================================================= #
+    #                                                                         #
+    #                              Hidden Methods                             #
+    #                                                                         #
+    # ======================================================================= #
     def _okay(self, local_id, remote_id, timeout_s):
         """Send an ``b'OKAY'`` mesage.
 
@@ -527,3 +700,221 @@ class AdbDevice(object):
 
         for data in self._read_until_close(local_id, remote_id, timeout_s, total_timeout_s):
             yield data
+
+    def _write(self, local_id, remote_id, data, timeout_s, total_timeout_s):
+        """Write a packet and expect an Ack.
+
+        Parameters
+        ----------
+        local_id : TODO
+            TODO
+        remote_id : TODO
+            TODO
+        data : TODO
+            TODO
+
+        Returns
+        -------
+        int
+            ``len(data)``
+
+        Raises
+        ------
+        usb_exceptions.AdbCommandFailureException
+            The command failed.
+        adb.adb_protocol.InvalidCommandError
+            Expected an OKAY in response to a WRITE, got something else.
+
+        """
+        msg = AdbMessage(constants.WRTE, local_id, remote_id, data)
+        self._send(msg, timeout_s)
+
+        # Expect an ack in response.
+        cmd, okay_data = self._read_until(local_id, remote_id, [constants.OKAY], timeout_s, total_timeout_s)
+        if cmd != b'OKAY':
+            if cmd == b'FAIL':
+                raise exceptions.AdbCommandFailureException('Command failed.', okay_data)
+
+            raise exceptions.InvalidCommandError('Expected an OKAY in response to a WRITE, got {0} ({1})'.format(cmd, okay_data), cmd, okay_data)
+
+        return len(data)
+
+    # ======================================================================= #
+    #                                                                         #
+    #                         FileSync Hidden Methods                         #
+    #                                                                         #
+    # ======================================================================= #
+    @staticmethod
+    def _handle_progress(progress_callback):
+        """Calls the callback with the current progress and total bytes written/received.
+
+        Parameters
+        ----------
+        progress_callback : function
+            Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``; total_bytes will be -1 for file-like
+            objects.
+
+        """
+        current = 0
+        while True:
+            current += yield
+            try:
+                progress_callback(current)
+            except Exception:  # pylint: disable=broad-except
+                continue
+
+    def _filesync_send(self, command_id, data=b'', size=0):
+        """Send/buffer FileSync packets.
+
+        Packets are buffered and only flushed when this connection is read from. All
+        messages have a response from the device, so this will always get flushed.
+
+        Parameters
+        ----------
+        command_id : bytes
+            Command to send.
+        data : str, bytes
+            Optional data to send, must set data or size.
+        size : int
+            Optionally override size from len(data).
+
+        """
+        if data:
+            if not isinstance(data, bytes):
+                data = data.encode('utf8')
+            size = len(data)
+
+        if not self._can_add_to_send_buffer(len(data)):
+            self._filesync_flush()
+
+        buf = struct.pack(constants.FILESYNC_FORMAT, constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
+        self.send_buffer[self.send_idx:self.send_idx + len(buf)] = buf
+        self.send_idx += len(buf)
+
+    def _filesync_read(self, expected_ids, read_data=True):
+        """Read ADB messages and return FileSync packets.
+
+        Parameters
+        ----------
+        expected_ids : tuple[bytes]
+            If the received header ID is not in ``expected_ids``, an exception will be raised
+        read_data : bool
+            Whether to read the received data
+
+        Returns
+        -------
+        command_id : bytes
+            The received header ID
+        tuple
+            TODO
+        data : bytearray
+            The received data
+
+        Raises
+        ------
+        adb.usb_exceptions.AdbCommandFailureException
+            Command failed
+        adb.adb_protocol.InvalidResponseError
+            Received response was not in ``expected_ids``
+
+        """
+        if self.send_idx:
+            self._filesync_flush()
+
+        # Read one filesync packet off the recv buffer.
+        header_data = self._filesync_read_buffered(self.recv_header_len)
+        header = struct.unpack(self.recv_header_format, header_data)
+        # Header is (ID, ...).
+        command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
+
+        if command_id not in expected_ids:
+            if command_id == constants.FAIL:
+                reason = ''
+                if self.recv_buffer:
+                    reason = self.recv_buffer.decode('utf-8', errors='ignore')
+
+                raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
+
+            raise exceptions.InvalidResponseError('Expected one of %s, got %s' % (expected_ids, command_id))
+
+        if not read_data:
+            return command_id, header[1:]
+
+        # Header is (ID, ..., size).
+        size = header[-1]
+        data = self._filesync_read_buffered(size)
+
+        return command_id, header[1:-1], data
+
+    def _filesync_read_until(self, expected_ids, finish_ids):
+        """Useful wrapper around :meth:`AdbDevice._filesync_read`.
+
+        Parameters
+        ----------
+        expected_ids : tuple[bytes]
+            If the received header ID is not in ``expected_ids``, an exception will be raised
+        finish_ids : tuple[bytes]
+            We will read until we find a header ID that is in ``finish_ids``
+
+        Yields
+        ------
+        cmd_id : bytes
+            The received header ID
+        header : tuple
+            TODO
+        data : bytearray
+            The received data
+
+        """
+        while True:
+            cmd_id, header, data = self._filesync_read(expected_ids + finish_ids)
+            yield cmd_id, header, data
+            if cmd_id in finish_ids:
+                break
+
+    def _can_add_to_send_buffer(self, data_len):
+        """Determine whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`.
+
+        Parameters
+        ----------
+        data_len : int
+            The length of the data to be potentially added to the send buffer (not including the length of its header)
+
+        Returns
+        -------
+        bool
+            Whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`
+
+        """
+        added_len = self.send_header_len + data_len
+        return self.send_idx + added_len < constants.MAX_ADB_DATA
+
+    def _filesync_flush(self):
+        """TODO
+
+        """
+        self._write(self.send_buffer[:self.send_idx])
+        self.send_idx = 0
+
+    def _filesync_read_buffered(self, size):
+        """Read ``size`` bytes of data from ``self.recv_buffer``.
+
+        Parameters
+        ----------
+        size : int
+            The amount of data to read
+
+        Returns
+        -------
+        result : bytearray
+            The read data
+
+        """
+        # Ensure recv buffer has enough data.
+        while len(self.recv_buffer) < size:
+            _, data = self._read_until(constants.WRTE)
+            self.recv_buffer += data
+
+        result = self.recv_buffer[:size]
+        self.recv_buffer = self.recv_buffer[size:]
+        return result
