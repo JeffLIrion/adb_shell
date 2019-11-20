@@ -240,7 +240,7 @@ class AdbDevice(object):
             The output of the ADB shell command
 
         """
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s)).decode('utf8')@staticmethod
+        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s)).decode('utf8')
 
     # ======================================================================= #
     #                                                                         #
@@ -563,6 +563,11 @@ class AdbDevice(object):
     # ======================================================================= #
     def _close(self, local_id, remote_id, timeout_s, total_timeout_s):
         """TODO
+
+        .. warning::
+
+           This is not to be confused with the :meth:`AdbDevice.close` method!
+
 
         Parameters
         ----------
