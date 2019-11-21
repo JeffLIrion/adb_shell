@@ -161,16 +161,21 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
         TODO
 
     """
-    def __init__(self):
+    def __init__(self, recv_header_format):
         self.recv_buffer = bytearray()
         self.send_buffer = bytearray(constants.MAX_ADB_DATA)
         self.send_idx = 0
 
-    def can_add_to_send_buffer(self, data_len):
+        self.message_format = recv_header_format
+        self.message_size = struct.calcsize(recv_header_format)
+
+    def can_add_to_send_buffer(self, filesync_info, data_len):
         """Determine whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`.
 
         Parameters
         ----------
+        filesync_info:
+            TODO
         data_len : int
             The length of the data to be potentially added to the send buffer (not including the length of its header)
 
@@ -180,7 +185,7 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
             Whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`
 
         """
-        added_len = constants.FILESYNC_MESSAGE_SIZE + data_len
+        added_len = filesync_info.message_size + data_len
         return self.send_idx + added_len < constants.MAX_ADB_DATA
 
 
@@ -393,10 +398,10 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        filesync_info = _FileSyncTransactionInfo()
+        filesync_info = _FileSyncTransactionInfo('<5I')
         self._open(b'sync:', adb_info)
 
-        self._filesync_send(constants.LIST, device_path, adb_info, filesync_info)
+        self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
         files = []
 
         for cmd_id, header, filename in self._filesync_read_until([constants.DENT], [constants.DONE], adb_info, filesync_info):
@@ -450,7 +455,7 @@ class AdbDevice(object):
             raise ValueError("dest_file is of unknown type")
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        filesync_info = _FileSyncTransactionInfo()
+        filesync_info = _FileSyncTransactionInfo('<2I')
 
         with _open(dest_file, 'wb') as dest:
             self._open(b'sync:', adb_info)
@@ -527,7 +532,7 @@ class AdbDevice(object):
                 return
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        filesync_info = _FileSyncTransactionInfo()
+        filesync_info = _FileSyncTransactionInfo('<2I')
 
         with _open(source_file, 'rb') as source:
             self._open(b'sync:', adb_info)
@@ -614,9 +619,9 @@ class AdbDevice(object):
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         self._open(b'sync:', adb_info)
 
-        filesync_info = _FileSyncTransactionInfo()
-        self._filesync_send(constants.STAT, device_filename, adb_info, filesync_info)
-        command, (mode, size, mtime) = self._filesync_read([constants.STAT], False, adb_info)
+        filesync_info = _FileSyncTransactionInfo('<4I')
+        self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
+        command, (mode, size, mtime) = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         self._close(adb_info)
 
         if command != constants.STAT:
@@ -978,8 +983,8 @@ class AdbDevice(object):
             self._filesync_flush(adb_info, filesync_info)
 
         # Read one filesync packet off the recv buffer.
-        header_data = self._filesync_read_buffered(constants.FILESYNC_MESSAGE_SIZE, adb_info, filesync_info)
-        header = struct.unpack(constants.FILESYNC_FORMAT, header_data)
+        header_data = self._filesync_read_buffered(filesync_info.message_size, adb_info, filesync_info)
+        header = struct.unpack(filesync_info.message_format, header_data)
         # Header is (ID, ...).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
 
@@ -1084,10 +1089,10 @@ class AdbDevice(object):
                 data = data.encode('utf8')
             size = len(data)
 
-        if not filesync_info.can_add_to_send_buffer(len(data)):
+        if not filesync_info.can_add_to_send_buffer(filesync_info, len(data)):
             self._filesync_flush(adb_info, filesync_info)
 
-        buf = struct.pack(constants.FILESYNC_FORMAT, constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
+        buf = struct.pack('<2I', constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
         filesync_info.send_buffer[filesync_info.send_idx:filesync_info.send_idx + len(buf)] = buf
         filesync_info.send_idx += len(buf)
 

@@ -186,13 +186,11 @@ class FileSyncMessage(object):
         The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
     data : bytes
         The data that will be sent
-    magic : int
-        ``self.command`` with its bits flipped; in other words, ``self.command + self.magic == 2**32 - 1``
 
     """
     def __init__(self, command, arg0=None, data=b''):
+        self.message_format = '<2I'
         self.command = constants.FILESYNC_ID_TO_WIRE[command]
-        self.magic = self.command ^ 0xFFFFFFFF
         self.arg0 = arg0 or len(data)
         self.data = data
 
@@ -205,4 +203,46 @@ class FileSyncMessage(object):
             The message packed into the format required by ADB
 
         """
-        return struct.pack(constants.FILESYNC_FORMAT, self.command, self.arg0)
+        return struct.pack(self.message_format, self.command, self.arg0)
+
+
+class ListFileSyncMessage(object):
+    def __init__(self, command, arg0, arg1, arg2, data=b''):
+        self.message_format = '<5I'
+        self.command = constants.FILESYNC_ID_TO_WIRE[command]
+        self.arg0 = arg0
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.arg3 = len(data)
+        self.data = data
+
+    def pack(self):
+        """Returns this message in an over-the-wire format.
+
+        Returns
+        -------
+        bytes
+            The message packed into the format required by ADB
+
+        """
+        return struct.pack(self.message_format, self.command, self.arg0, self.arg1, self.arg2, self.arg3)
+
+
+class StatFileSyncMessage(object):
+    def __init__(self, command, arg0, arg1, arg2):
+        self.message_format = '<4I'
+        self.command = constants.FILESYNC_ID_TO_WIRE[command]
+        self.arg0 = arg0
+        self.arg1 = arg1
+        self.arg2 = arg2
+
+    def pack(self):
+        """Returns this message in an over-the-wire format.
+
+        Returns
+        -------
+        bytes
+            The message packed into the format required by ADB
+
+        """
+        return struct.pack(self.message_format, self.command, self.arg0, self.arg1, self.arg2)

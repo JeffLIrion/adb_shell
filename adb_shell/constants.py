@@ -97,12 +97,13 @@ FILESYNC_WIRE_TO_ID = {wire: cmd_id for cmd_id, wire in FILESYNC_ID_TO_WIRE.item
 MESSAGE_FORMAT = b'<6I'
 
 #: The format for FileSync messages
-FILESYNC_FORMAT = b'<2I'
+# FILESYNC_FORMAT = b'<2I'
 
 #: The size of an ADB message
 MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
-FILESYNC_MESSAGE_SIZE = struct.calcsize(FILESYNC_FORMAT)
+#: The size of a FileSync message
+# FILESYNC_MESSAGE_SIZE = struct.calcsize(FILESYNC_FORMAT)
 
 #: Default authentication timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
 DEFAULT_AUTH_TIMEOUT_S = 10.
