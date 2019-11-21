@@ -22,17 +22,38 @@
 
 .. rubric:: Contents
 
+* :class:`_AdbTransactionInfo`
+* :class:`_FileSyncTransactionInfo`
+
+    * :meth:`_FileSyncTransactionInfo.can_add_to_send_buffer`
+
 * :class:`AdbDevice`
 
+    * :meth:`AdbDevice._close`
+    * :meth:`AdbDevice._filesync_flush`
+    * :meth:`AdbDevice._filesync_read`
+    * :meth:`AdbDevice._filesync_read_buffered`
+    * :meth:`AdbDevice._filesync_read_until`
+    * :meth:`AdbDevice._filesync_send`
+    * :meth:`AdbDevice._handle_progress`
+    * :meth:`AdbDevice._okay`
     * :meth:`AdbDevice._open`
+    * :meth:`AdbDevice._pull`
+    * :meth:`AdbDevice._push`
     * :meth:`AdbDevice._read`
     * :meth:`AdbDevice._read_until`
     * :meth:`AdbDevice._read_until_close`
+    * :meth:`AdbDevice._send`
     * :meth:`AdbDevice._streaming_command`
+    * :meth:`AdbDevice._write`
     * :attr:`AdbDevice.available`
     * :meth:`AdbDevice.close`
     * :meth:`AdbDevice.connect`
+    * :meth:`AdbDevice.list`
+    * :meth:`AdbDevice.pull`
+    * :meth:`AdbDevice.push`
     * :meth:`AdbDevice.shell`
+    * :meth:`AdbDevice.stat`
 
 """
 
@@ -59,6 +80,77 @@ except NameError:
 _LOGGER = logging.getLogger(__name__)
 
 DeviceFile = collections.namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
+
+
+class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
+    """A class for storing info and settings used during a single ADB "transaction."
+
+    Parameters
+    ----------
+    local_id : int
+        The ID for the sender (i.e., the device running this code)
+    remote_id : int
+        The ID for the recipient
+    timeout_s : float, None
+        Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+        and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+    total_timeout_s : float
+        The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
+
+    Attributes
+    ----------
+    local_id : int
+        The ID for the sender (i.e., the device running this code)
+    remote_id : int
+        The ID for the recipient
+    timeout_s : float, None
+        Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
+        and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+    total_timeout_s : float
+        The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
+
+    """
+    def __init__(self, local_id, remote_id, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        self.local_id = local_id
+        self.remote_id = remote_id
+        self.timeout_s = timeout_s
+        self.total_timeout_s = total_timeout_s
+
+
+class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-methods
+    """A class for storing info used during a single FileSync "transaction."
+
+    Attributes
+    ----------
+    recv_buffer : bytearray
+        TODO
+    send_buffer : bytearray
+        TODO
+    send_idx : int
+        TODO
+
+    """
+    def __init__(self):
+        self.recv_buffer = bytearray()
+        self.send_buffer = bytearray(constants.MAX_ADB_DATA)
+        self.send_idx = 0
+
+    def can_add_to_send_buffer(self, data_len):
+        """Determine whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`.
+
+        Parameters
+        ----------
+        data_len : int
+            The length of the data to be potentially added to the send buffer (not including the length of its header)
+
+        Returns
+        -------
+        bool
+            Whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`
+
+        """
+        added_len = constants.FILESYNC_MESSAGE_SIZE + data_len
+        return self.send_idx + added_len < constants.MAX_ADB_DATA
 
 
 class AdbDevice(object):
@@ -105,11 +197,6 @@ class AdbDevice(object):
         self._handle = TcpHandle(self._serial, default_timeout_s)
 
         self._available = False
-
-        self.send_buffer = bytearray(constants.MAX_ADB_DATA)
-        self.send_idx = 0
-
-        self.recv_buffer = bytearray()
 
     @property
     def available(self):
@@ -180,10 +267,11 @@ class AdbDevice(object):
 
         # 2. Send a ``b'CNXN'`` message
         msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner_bytes)
-        self._send(msg, timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
-        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], timeout_s, total_timeout_s)
+        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
@@ -205,10 +293,10 @@ class AdbDevice(object):
             # 6.2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
             signed_token = rsa_key.Sign(banner)
             msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
-            self._send(msg, timeout_s)
+            self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], timeout_s, total_timeout_s)
+            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
@@ -219,10 +307,12 @@ class AdbDevice(object):
         pubkey = rsa_keys[0].GetPublicKey()
         if isinstance(pubkey, str):
             pubkey = bytearray(pubkey, 'utf-8')
-        msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
-        self._send(msg, timeout_s)
 
-        cmd, arg0, _, banner = self._read([constants.CNXN], auth_timeout_s, total_timeout_s)
+        msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
+        self._send(msg, adb_info)
+
+        adb_info.timeout_s = auth_timeout_s
+        cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
         self._available = True
         return True  # return banner
 
@@ -245,7 +335,8 @@ class AdbDevice(object):
             The output of the ADB shell command
 
         """
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), timeout_s, total_timeout_s)).decode('utf8')
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info)).decode('utf8')
 
     # ======================================================================= #
     #                                                                         #
@@ -270,19 +361,21 @@ class AdbDevice(object):
             TODO
 
         """
-        local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        filesync_info = _FileSyncTransactionInfo()
+        self._open(b'sync:', adb_info)
 
-        self._filesync_send(constants.LIST, device_path)
+        self._filesync_send(constants.LIST, device_path, adb_info, filesync_info)
         files = []
 
-        for cmd_id, header, filename in self._filesync_read_until((constants.DENT,), (constants.DONE,), local_id, remote_id, timeout_s, total_timeout_s):
+        for cmd_id, header, filename in self._filesync_read_until([constants.DENT], [constants.DONE], adb_info, filesync_info):
             if cmd_id == constants.DONE:
                 break
 
             mode, size, mtime = header
             files.append(DeviceFile(filename, mode, size, mtime))
 
-        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+        self._close(adb_info)
 
         return files
 
@@ -298,7 +391,7 @@ class AdbDevice(object):
         progress_callback : TODO, None
             Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
             objects
-        timeout_ms : int, None
+        timeout_s : float, None
             Expected timeout for any part of the pull.
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
@@ -323,9 +416,12 @@ class AdbDevice(object):
         else:
             raise ValueError("dest_file is of unknown type")
 
-        local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
-        self._pull(device_filename, dest_file, progress_callback, local_id, remote_id, timeout_s, total_timeout_s)
-        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        filesync_info = _FileSyncTransactionInfo()
+
+        self._open(b'sync:', adb_info)
+        self._pull(device_filename, dest_file, progress_callback, adb_info, filesync_info)
+        self._close(adb_info)
 
         if isinstance(dest_file, io.BytesIO):
             return dest_file.getvalue()
@@ -337,7 +433,7 @@ class AdbDevice(object):
         # We don't know what the path is, so we just assume it exists.
         return True
 
-    def _pull(self, filename, dest_file, progress_callback, local_id, remote_id, timeout_s, total_timeout_s):
+    def _pull(self, filename, dest_file, progress_callback, adb_info, filesync_info):
         """Pull a file from the device into the file-like ``dest_file``.
 
         Parameters
@@ -348,11 +444,10 @@ class AdbDevice(object):
             File-like object for writing to
         progress_callback : function, None
             Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
-
-        Raises
-        ------
-        PullFailedError
-            Unable to pull file
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        filesync_info : _FileSyncTransactionInfo
+            Data and storage for this FileSync transaction
 
         """
         if progress_callback:
@@ -360,10 +455,8 @@ class AdbDevice(object):
             progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
             next(progress)
 
-        # cnxn = FileSyncConnection(connection, b'<2I')
-        # cnxn.Send(b'RECV', filename)
-        self._filesync_send(constants.RECV, local_id, remote_id, timeout_s, total_timeout_s, filename)
-        for cmd_id, _, data in self._filesync_read_until((constants.DATA,), (constants.DONE,), local_id, remote_id, timeout_s, total_timeout_s):
+        self._filesync_send(constants.RECV, adb_info, filesync_info, data=filename)
+        for cmd_id, _, data in self._filesync_read_until([constants.DATA], [constants.DONE], adb_info, filesync_info):
             if cmd_id == constants.DONE:
                 break
 
@@ -387,7 +480,7 @@ class AdbDevice(object):
         progress_callback : TODO, None
             Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
             objects
-        timeout_ms : int, None
+        timeout_s : float, None
             Expected timeout for any part of the push.
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
@@ -402,13 +495,15 @@ class AdbDevice(object):
 
             source_file = open(source_file, "rb")
 
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         with source_file:
-            local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
-            self._push(source_file, device_filename, st_mode, local_id, remote_id, timeout_s, total_timeout_s, mtime=int(mtime), progress_callback=progress_callback)
+            filesync_info = _FileSyncTransactionInfo()
+            self._open(b'sync:', adb_info)
+            self._push(source_file, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
-        self._close(local_id, remote_id, timeout_s, total_timeout_s)
+        self._close(adb_info)
 
-    def _push(self, datafile, filename, st_mode, local_id, remote_id, timeout_s, total_timeout_s, mtime, progress_callback):
+    def _push(self, datafile, filename, st_mode, mtime, progress_callback, adb_info, filesync_info):
         """Push a file-like object to the device.
 
         Parameters
@@ -419,18 +514,12 @@ class AdbDevice(object):
             Filename to push to
         st_mode : int
             Stat mode for filename
-        local_id: int
-            TODO
-        remote_id: int
-            TODO
-        timeout_s: float
-            TODO
-        total_timeout_s: float
-            TODO
         mtime : int
             Modification time
         progress_callback : function, None
             Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Raises
         ------
@@ -440,9 +529,7 @@ class AdbDevice(object):
         """
         fileinfo = ('{},{}'.format(filename, int(st_mode))).encode('utf-8')
 
-        # cnxn = FileSyncConnection(connection, b'<2I')
-        # cnxn.Send(b'SEND', fileinfo)
-        self._filesync_send(constants.SEND, local_id, remote_id, timeout_s, total_timeout_s, fileinfo)
+        self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
             total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, file_types) else -1
@@ -452,8 +539,7 @@ class AdbDevice(object):
         while True:
             data = datafile.read(constants.MAX_PUSH_DATA)
             if data:
-                # cnxn.Send(b'DATA', data)
-                self._filesync_send(constants.DATA, local_id, remote_id, timeout_s, total_timeout_s, data)
+                self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
                 if progress_callback:
                     progress.send(len(data))
@@ -462,12 +548,10 @@ class AdbDevice(object):
 
         if mtime == 0:
             mtime = int(time.time())
-        # DONE doesn't send data, but it hides the last bit of data in the size
-        # field.
 
-        # cnxn.Send(b'DONE', size=mtime)
-        self._filesync_send(constants.DONE, local_id, remote_id, timeout_s, total_timeout_s, size=mtime)
-        for cmd_id, _, data in self._filesync_read_until(tuple(), (constants.OKAY, constants.FAIL), local_id, remote_id, timeout_s, total_timeout_s):
+        # DONE doesn't send data, but it hides the last bit of data in the size field.
+        self._filesync_send(constants.DONE, adb_info, filesync_info, size=mtime)
+        for cmd_id, _, data in self._filesync_read_until([], [constants.OKAY, constants.FAIL], adb_info, filesync_info):
             if cmd_id == constants.OKAY:
                 return
 
@@ -480,7 +564,7 @@ class AdbDevice(object):
         ----------
         device_filename : TODO
             TODO
-        timeout_ms : int, None
+        timeout_s : float, None
             Expected timeout for any part of the pull.
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
@@ -495,45 +579,13 @@ class AdbDevice(object):
             TODO
 
         """
-        local_id, remote_id = self._open(b'sync:', timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        self._open(b'sync:', adb_info)
 
-        self._filesync_send(constants.STAT, device_filename)
-        command, (mode, size, mtime) = self._filesync_read((constants.STAT,), local_id, remote_id, timeout_s, total_timeout_s, read_data=False)
-        self._close(local_id, remote_id, timeout_s, total_timeout_s)
-
-        if command != constants.STAT:
-            raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
-
-        return mode, size, mtime
-
-    # THIS FUNCTION IS PROBABLY UNNECESSARY
-    def _stat(self, filename):
-        """Get file status (mode, size, and mtime).
-
-        Parameters
-        ----------
-        filename : str, bytes
-            The file for which we are getting info
-
-        Returns
-        -------
-        mode : int
-            The mode of the file
-        size : int
-            The size of the file
-        mtime : int
-            The time of last modification for the file
-
-        Raises
-        ------
-        adb.adb_protocol.InvalidResponseError
-            Expected STAT response to STAT, got something else
-
-        """
-        # cnxn = FileSyncConnection(connection, b'<4I')
-        # cnxn.Send(b'STAT', filename)
-        self._filesync_send(constants.STAT, filename)
-        command, (mode, size, mtime) = self._filesync_read([constants.STAT], read_data=False)
+        filesync_info = _FileSyncTransactionInfo()
+        self._filesync_send(constants.STAT, device_filename, adb_info, filesync_info)
+        command, (mode, size, mtime) = self._filesync_read([constants.STAT], False, adb_info)
+        self._close(adb_info)
 
         if command != constants.STAT:
             raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
@@ -545,8 +597,8 @@ class AdbDevice(object):
     #                              Hidden Methods                             #
     #                                                                         #
     # ======================================================================= #
-    def _close(self, local_id, remote_id, timeout_s, total_timeout_s):
-        """TODO
+    def _close(self, adb_info):
+        """Send a ``b'CLSE'`` message.
 
         .. warning::
 
@@ -555,39 +607,27 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        local_id : int
-            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
-        remote_id : int
-            The ID for the recipient, or ``None`` if a connection could not be opened
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
-        total_timeout_s : float
-            The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         """
-        msg = AdbMessage(constants.CLSE, local_id, remote_id)
-        self._send(msg, timeout_s)
-        self._read_until(local_id, remote_id, [constants.CLSE], timeout_s, total_timeout_s)
+        msg = AdbMessage(constants.CLSE, adb_info.local_id, adb_info.remote_id)
+        self._send(msg, adb_info)
+        self._read_until([constants.CLSE], adb_info)
 
-    def _okay(self, local_id, remote_id, timeout_s):
+    def _okay(self, adb_info):
         """Send an ``b'OKAY'`` mesage.
 
         Parameters
         ----------
-        local_id : int
-            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
-        remote_id : int
-            The ID for the recipient, or ``None`` if a connection could not be opened
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         """
-        msg = AdbMessage(constants.OKAY, local_id, remote_id)
-        self._send(msg, timeout_s)
+        msg = AdbMessage(constants.OKAY, adb_info.local_id, adb_info.remote_id)
+        self._send(msg, adb_info)
 
-    def _open(self, destination, timeout_s, total_timeout_s):
+    def _open(self, destination, adb_info):
         """Opens a new connection to the device via an ``b'OPEN'`` message.
 
         1. :meth:`~AdbDevice._send` an ``b'OPEN'`` command to the device that specifies the ``local_id``
@@ -596,25 +636,15 @@ class AdbDevice(object):
             * If ``local_id`` and ``their_local_id`` do not match, raise an exception.
             * If the received command is ``b'CLSE'``, :meth:`~AdbDevice._read` another response from the device
             * If the received command is not ``b'OKAY'``, raise an exception
-            * Return ``local_id`` and ``remote_id``
+            * Set the ``adb_info.local_id`` and ``adb_info.remote_id`` attributes
 
 
         Parameters
         ----------
         destination : bytes
             ``b'SERVICE:COMMAND'``
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
-        total_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
-
-        Returns
-        -------
-        local_id : int, None
-            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
-        remote_id : int, None
-            The ID for the recipient, or ``None`` if a connection could not be opened
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Raises
         ------
@@ -622,17 +652,15 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
-        local_id = 1
-        msg = AdbMessage(constants.OPEN, local_id, 0, destination + b'\0')
-        self._send(msg, timeout_s)
-        _, remote_id, their_local_id, _ = self._read([constants.OKAY], timeout_s, total_timeout_s)
+        adb_info.local_id = 1
+        msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
+        self._send(msg, adb_info)
+        _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
 
-        if local_id != their_local_id:
-            raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(local_id, their_local_id))
+        if adb_info.local_id != their_local_id:
+            raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
 
-        return local_id, remote_id
-
-    def _read(self, expected_cmds, timeout_s, total_timeout_s):
+    def _read(self, expected_cmds, adb_info):
         """Receive a response from the device.
 
         1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
@@ -647,11 +675,8 @@ class AdbDevice(object):
         ----------
         expected_cmds : list[bytes]
             We will read packets until we encounter one whose "command" field is in ``expected_cmds``
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
-        total_timeout_s : float
-            The total time in seconds to wait for a command in ``expected_cmds``
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Returns
         -------
@@ -675,7 +700,7 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            msg = self._handle.bulk_read(constants.MESSAGE_SIZE, timeout_s)
+            msg = self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
             _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
@@ -686,13 +711,13 @@ class AdbDevice(object):
             if command in expected_cmds:
                 break
 
-            if time.time() - start > total_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
+            if time.time() - start > adb_info.total_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
 
         if data_length > 0:
             data = bytearray()
             while data_length > 0:
-                temp = self._handle.bulk_read(data_length, timeout_s)
+                temp = self._handle.bulk_read(data_length, adb_info.timeout_s)
                 _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
 
                 data += temp
@@ -707,7 +732,7 @@ class AdbDevice(object):
 
         return command, arg0, arg1, bytes(data)
 
-    def _read_until(self, local_id, remote_id, expected_cmds, timeout_s, total_timeout_s):
+    def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
 
         1. Read data via :meth:`AdbDevice._read`
@@ -717,17 +742,10 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        local_id : int
-            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
-        remote_id : int
-            The ID for the recipient, or ``None`` if a connection could not be opened
         expected_cmds : list[bytes]
             :meth:`AdbDevice._read` with look for a packet whose command is in ``expected_cmds``
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
-        total_timeout_s : float
-            The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Returns
         -------
@@ -749,29 +767,29 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            cmd, remote_id2, local_id2, data = self._read(expected_cmds, timeout_s, total_timeout_s)
+            cmd, remote_id2, local_id2, data = self._read(expected_cmds, adb_info)
 
-            if local_id2 not in (0, local_id):
+            if local_id2 not in (0, adb_info.local_id):
                 raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
-            if remote_id2 in (0, remote_id):
+            if remote_id2 in (0, adb_info.remote_id):
                 break
 
-            if time.time() - start > total_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (timeout_s, total_timeout_s))
+            if time.time() - start > adb_info.total_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
 
             # Ignore CLSE responses to previous commands
             # https://github.com/JeffLIrion/adb_shell/pull/14
             if cmd != constants.CLSE:
-                raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(remote_id, remote_id2))
+                raise exceptions.InvalidResponseError('Incorrect remote id, expected {0} got {1}'.format(adb_info.remote_id, remote_id2))
 
         # Acknowledge write packets
         if cmd == constants.WRTE:
-            self._okay(local_id, remote_id, timeout_s)
+            self._okay(adb_info)
 
         return cmd, data
 
-    def _read_until_close(self, local_id, remote_id, timeout_s, total_timeout_s):
+    def _read_until_close(self, adb_info):
         """Yield packets until a ``b'CLSE'`` packet is received.
 
         1. Read the ``cmd`` and ``data`` fields from a ``b'CLSE'`` or ``b'WRTE'`` packet via :meth:`AdbDevice._read_until`
@@ -786,15 +804,8 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        local_id : int
-            The ID for the sender (i.e., the device running this code), or ``None`` if a connection could not be opened
-        remote_id : int
-            The ID for the recipient, or ``None`` if a connection could not be opened
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`adb_shell.tcp_handle.TcpHandle.bulk_read <TcpHandle.bulk_read()>`
-            and :meth:`adb_shell.tcp_handle.TcpHandle.bulk_write <TcpHandle.bulk_write()>`
-        total_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'WRTE'`` command in :meth:`AdbDevice._read`
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Yields
         ------
@@ -803,16 +814,16 @@ class AdbDevice(object):
 
         """
         while True:
-            cmd, data = self._read_until(local_id, remote_id, [constants.CLSE, constants.WRTE], timeout_s, total_timeout_s)
+            cmd, data = self._read_until([constants.CLSE, constants.WRTE], adb_info)
 
             if cmd == constants.CLSE:
-                msg = AdbMessage(constants.CLSE, local_id, remote_id)
-                self._send(msg, timeout_s)
+                msg = AdbMessage(constants.CLSE, adb_info.local_id, adb_info.remote_id)
+                self._send(msg, adb_info)
                 break
 
             yield data
 
-    def _send(self, msg, timeout_s):
+    def _send(self, msg, adb_info):
         """Send a message to the device.
 
         1. Send the message header (:meth:`adb_shell.adb_message.AdbMessage.pack <AdbMessage.pack>`)
@@ -823,16 +834,16 @@ class AdbDevice(object):
         ----------
         msg : AdbMessage
             The data that will be sent
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         """
         _LOGGER.debug("bulk_write: %s", repr(msg.pack()))
-        self._handle.bulk_write(msg.pack(), timeout_s)
+        self._handle.bulk_write(msg.pack(), adb_info.timeout_s)
         _LOGGER.debug("bulk_write: %s", repr(msg.data))
-        self._handle.bulk_write(msg.data, timeout_s)
+        self._handle.bulk_write(msg.data, adb_info.timeout_s)
 
-    def _streaming_command(self, service, command, timeout_s, total_timeout_s):
+    def _streaming_command(self, service, command, adb_info):
         """One complete set of USB packets for a single command.
 
         1. :meth:`~AdbDevice._open` a new connection to the device, where the ``destination`` parameter is ``service:command``
@@ -850,34 +861,29 @@ class AdbDevice(object):
             The ADB service (e.g., ``b'shell'``, as used by :meth:`AdbDevice.shell`)
         command : bytes
             The service command
-        timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
-        total_timeout_s : float
-            The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Yields
         ------
-        str
+        bytes
             The responses from the service.
 
         """
-        local_id, remote_id = self._open(b'%s:%s' % (service, command), timeout_s, total_timeout_s)
+        self._open(b'%s:%s' % (service, command), adb_info)
 
-        for data in self._read_until_close(local_id, remote_id, timeout_s, total_timeout_s):
+        for data in self._read_until_close(adb_info):
             yield data
 
-    def _write(self, local_id, remote_id, data, timeout_s, total_timeout_s):
+    def _write(self, data, adb_info):
         """Write a packet and expect an Ack.
 
         Parameters
         ----------
-        local_id : TODO
-            TODO
-        remote_id : TODO
-            TODO
         data : TODO
             TODO
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Returns
         -------
@@ -886,19 +892,19 @@ class AdbDevice(object):
 
         Raises
         ------
-        usb_exceptions.AdbCommandFailureException
+        adb_shell.exceptions.AdbCommandFailureException
             The command failed.
-        adb.adb_protocol.InvalidCommandError
+        adb_shell.exceptions.InvalidCommandError
             Expected an OKAY in response to a WRITE, got something else.
 
         """
-        msg = AdbMessage(constants.WRTE, local_id, remote_id, data)
-        self._send(msg, timeout_s)
+        msg = AdbMessage(constants.WRTE, adb_info.local_id, adb_info.remote_id, data)
+        self._send(msg, adb_info)
 
         # Expect an ack in response.
-        cmd, okay_data = self._read_until(local_id, remote_id, [constants.OKAY], timeout_s, total_timeout_s)
-        if cmd != b'OKAY':
-            if cmd == b'FAIL':
+        cmd, okay_data = self._read_until([constants.OKAY], adb_info)
+        if cmd != constants.OKAY:
+            if cmd == constants.FAIL:
                 raise exceptions.AdbCommandFailureException('Command failed.', okay_data)
 
             raise exceptions.InvalidCommandError('Expected an OKAY in response to a WRITE, got {0} ({1})'.format(cmd, okay_data), cmd, okay_data)
@@ -910,6 +916,168 @@ class AdbDevice(object):
     #                         FileSync Hidden Methods                         #
     #                                                                         #
     # ======================================================================= #
+    def _filesync_flush(self, adb_info, filesync_info):
+        """TODO
+
+        Parameters
+        ----------
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        filesync_info : _FileSyncTransactionInfo
+            Data and storage for this FileSync transaction
+
+        """
+        self._write(filesync_info.send_buffer[:filesync_info.send_idx], adb_info)
+        filesync_info.send_idx = 0
+
+    def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
+        """Read ADB messages and return FileSync packets.
+
+        Parameters
+        ----------
+        expected_ids : tuple[bytes]
+            If the received header ID is not in ``expected_ids``, an exception will be raised
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        filesync_info : _FileSyncTransactionInfo
+            Data and storage for this FileSync transaction
+        read_data : bool
+            Whether to read the received data
+
+        Returns
+        -------
+        command_id : bytes
+            The received header ID
+        tuple
+            TODO
+        data : bytearray
+            The received data
+
+        Raises
+        ------
+        adb_shell.exceptions.AdbCommandFailureException
+            Command failed
+        adb_shell.exceptions.InvalidResponseError
+            Received response was not in ``expected_ids``
+
+        """
+        if filesync_info.send_idx:
+            self._filesync_flush(adb_info, filesync_info)
+
+        # Read one filesync packet off the recv buffer.
+        header_data = self._filesync_read_buffered(constants.FILESYNC_MESSAGE_SIZE, adb_info, filesync_info)
+        header = struct.unpack(constants.FILESYNC_FORMAT, header_data)
+        # Header is (ID, ...).
+        command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
+
+        if command_id not in expected_ids:
+            if command_id == constants.FAIL:
+                reason = ''
+                if filesync_info.recv_buffer:
+                    reason = filesync_info.recv_buffer.decode('utf-8', errors='ignore')
+
+                raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
+
+            raise exceptions.InvalidResponseError('Expected one of %s, got %s' % (expected_ids, command_id))
+
+        if not read_data:
+            return command_id, header[1:]
+
+        # Header is (ID, ..., size).
+        size = header[-1]
+        data = self._filesync_read_buffered(size, adb_info, filesync_info)
+
+        return command_id, header[1:-1], data
+
+    def _filesync_read_buffered(self, size, adb_info, filesync_info):
+        """Read ``size`` bytes of data from ``self.recv_buffer``.
+
+        Parameters
+        ----------
+        size : int
+            The amount of data to read
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        filesync_info : _FileSyncTransactionInfo
+            Data and storage for this FileSync transaction
+
+        Returns
+        -------
+        result : bytearray
+            The read data
+
+        """
+        # Ensure recv buffer has enough data.
+        while len(filesync_info.recv_buffer) < size:
+            _, data = self._read_until([constants.WRTE], adb_info)
+            filesync_info.recv_buffer += data
+
+        result = filesync_info.recv_buffer[:size]
+        filesync_info.recv_buffer = filesync_info.recv_buffer[size:]
+        return result
+
+    def _filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info):
+        """Useful wrapper around :meth:`AdbDevice._filesync_read`.
+
+        Parameters
+        ----------
+        expected_ids : tuple[bytes]
+            If the received header ID is not in ``expected_ids``, an exception will be raised
+        finish_ids : tuple[bytes]
+            We will read until we find a header ID that is in ``finish_ids``
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        filesync_info : _FileSyncTransactionInfo
+            Data and storage for this FileSync transaction
+
+        Yields
+        ------
+        cmd_id : bytes
+            The received header ID
+        header : tuple
+            TODO
+        data : bytearray
+            The received data
+
+        """
+        while True:
+            cmd_id, header, data = self._filesync_read(expected_ids + finish_ids, adb_info, filesync_info)
+            yield cmd_id, header, data
+            if cmd_id in finish_ids:
+                break
+
+    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=0):
+        """Send/buffer FileSync packets.
+
+        Packets are buffered and only flushed when this connection is read from. All
+        messages have a response from the device, so this will always get flushed.
+
+        Parameters
+        ----------
+        command_id : bytes
+            Command to send.
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        filesync_info : _FileSyncTransactionInfo
+            Data and storage for this FileSync transaction
+        data : str, bytes
+            Optional data to send, must set data or size.
+        size : int
+            Optionally override size from len(data).
+
+        """
+        if data:
+            if not isinstance(data, bytes):
+                data = data.encode('utf8')
+            size = len(data)
+
+        if not filesync_info.can_add_to_send_buffer(len(data)):
+            self._filesync_flush(adb_info, filesync_info)
+
+        buf = struct.pack(constants.FILESYNC_FORMAT, constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
+        filesync_info.send_buffer[filesync_info.send_idx:filesync_info.send_idx + len(buf)] = buf
+        filesync_info.send_idx += len(buf)
+
     @staticmethod
     def _handle_progress(progress_callback):
         """Calls the callback with the current progress and total bytes written/received.
@@ -928,191 +1096,3 @@ class AdbDevice(object):
                 progress_callback(current)
             except Exception:  # pylint: disable=broad-except
                 continue
-
-    def _filesync_send(self, command_id, local_id, remote_id, timeout_s, total_timeout_s, data=b'', size=0):
-        """Send/buffer FileSync packets.
-
-        Packets are buffered and only flushed when this connection is read from. All
-        messages have a response from the device, so this will always get flushed.
-
-        Parameters
-        ----------
-        command_id : bytes
-            Command to send.
-        local_id: int
-            TODO
-        remote_id: int
-            TODO
-        timeout_s: float
-            TODO
-        total_timeout_s: float
-            TODO
-        data : str, bytes
-            Optional data to send, must set data or size.
-        size : int
-            Optionally override size from len(data).
-
-        """
-        if data:
-            if not isinstance(data, bytes):
-                data = data.encode('utf8')
-            size = len(data)
-
-        if not self._can_add_to_send_buffer(len(data)):
-            self._filesync_flush(local_id, remote_id, timeout_s, total_timeout_s)
-
-        buf = struct.pack(constants.FILESYNC_FORMAT, constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
-        self.send_buffer[self.send_idx:self.send_idx + len(buf)] = buf
-        self.send_idx += len(buf)
-
-    def _filesync_read(self, expected_ids, local_id, remote_id, timeout_s, total_timeout_s, read_data=True):
-        """Read ADB messages and return FileSync packets.
-
-        Parameters
-        ----------
-        expected_ids : tuple[bytes]
-            If the received header ID is not in ``expected_ids``, an exception will be raised
-        local_id: int
-            TODO
-        remote_id: int
-            TODO
-        timeout_s: float
-            TODO
-        total_timeout_s: float
-            TODO
-        read_data : bool
-            Whether to read the received data
-
-        Returns
-        -------
-        command_id : bytes
-            The received header ID
-        tuple
-            TODO
-        data : bytearray
-            The received data
-
-        Raises
-        ------
-        adb.usb_exceptions.AdbCommandFailureException
-            Command failed
-        adb.adb_protocol.InvalidResponseError
-            Received response was not in ``expected_ids``
-
-        """
-        if self.send_idx:
-            self._filesync_flush(local_id, remote_id, timeout_s, total_timeout_s)
-
-        # Read one filesync packet off the recv buffer.
-        header_data = self._filesync_read_buffered(constants.FILESYNC_MESSAGE_SIZE, local_id, remote_id, timeout_s, total_timeout_s)
-        header = struct.unpack(constants.FILESYNC_FORMAT, header_data)
-        # Header is (ID, ...).
-        command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
-
-        if command_id not in expected_ids:
-            if command_id == constants.FAIL:
-                reason = ''
-                if self.recv_buffer:
-                    reason = self.recv_buffer.decode('utf-8', errors='ignore')
-
-                raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
-
-            raise exceptions.InvalidResponseError('Expected one of %s, got %s' % (expected_ids, command_id))
-
-        if not read_data:
-            return command_id, header[1:]
-
-        # Header is (ID, ..., size).
-        size = header[-1]
-        data = self._filesync_read_buffered(size, local_id, remote_id, timeout_s, total_timeout_s)
-
-        return command_id, header[1:-1], data
-
-    def _filesync_read_until(self, expected_ids, finish_ids, local_id, remote_id, timeout_s, total_timeout_s):
-        """Useful wrapper around :meth:`AdbDevice._filesync_read`.
-
-        Parameters
-        ----------
-        expected_ids : tuple[bytes]
-            If the received header ID is not in ``expected_ids``, an exception will be raised
-        finish_ids : tuple[bytes]
-            We will read until we find a header ID that is in ``finish_ids``
-        local_id: int
-            TODO
-        remote_id: int
-            TODO
-        timeout_s: float
-            TODO
-        total_timeout_s: float
-            TODO
-
-        Yields
-        ------
-        cmd_id : bytes
-            The received header ID
-        header : tuple
-            TODO
-        data : bytearray
-            The received data
-
-        """
-        while True:
-            cmd_id, header, data = self._filesync_read(expected_ids + finish_ids, local_id, remote_id, timeout_s, total_timeout_s)
-            yield cmd_id, header, data
-            if cmd_id in finish_ids:
-                break
-
-    def _can_add_to_send_buffer(self, data_len):
-        """Determine whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`.
-
-        Parameters
-        ----------
-        data_len : int
-            The length of the data to be potentially added to the send buffer (not including the length of its header)
-
-        Returns
-        -------
-        bool
-            Whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`
-
-        """
-        added_len = constants.FILESYNC_MESSAGE_SIZE + data_len
-        return self.send_idx + added_len < constants.MAX_ADB_DATA
-
-    def _filesync_flush(self, local_id, remote_id, timeout_s, total_timeout_s):
-        """TODO
-
-        """
-        self._write(local_id, remote_id, self.send_buffer[:self.send_idx], timeout_s, total_timeout_s)
-        self.send_idx = 0
-
-    def _filesync_read_buffered(self, size, local_id, remote_id, timeout_s, total_timeout_s):
-        """Read ``size`` bytes of data from ``self.recv_buffer``.
-
-        Parameters
-        ----------
-        size : int
-            The amount of data to read
-        local_id: int
-            TODO
-        remote_id: int
-            TODO
-        timeout_s: float
-            TODO
-        total_timeout_s: float
-            TODO
-
-        Returns
-        -------
-        result : bytearray
-            The read data
-
-        """
-        # Ensure recv buffer has enough data.
-        while len(self.recv_buffer) < size:
-            _, data = self._read_until(local_id, remote_id, [constants.WRTE], timeout_s, total_timeout_s)
-            self.recv_buffer += data
-
-        result = self.recv_buffer[:size]
-        self.recv_buffer = self.recv_buffer[size:]
-        return result

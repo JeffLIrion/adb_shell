@@ -165,6 +165,7 @@ class AdbMessage(object):
         return checksum(self.data)
 
 
+# pylint: disable=too-few-public-methods
 class FileSyncMessage(object):
     """A helper class for packing FileSync messages.
 
