@@ -108,7 +108,7 @@ def _open(name, mode='r'):
             yield name
     finally:
         if isinstance(name, str):
-            close(opened)
+            opened.close()
         else:
             name.close()
 
