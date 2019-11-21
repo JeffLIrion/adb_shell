@@ -890,24 +890,12 @@ class AdbDevice(object):
         int
             ``len(data)``
 
-        Raises
-        ------
-        adb_shell.exceptions.AdbCommandFailureException
-            The command failed.
-        adb_shell.exceptions.InvalidCommandError
-            Expected an OKAY in response to a WRITE, got something else.
-
         """
         msg = AdbMessage(constants.WRTE, adb_info.local_id, adb_info.remote_id, data)
         self._send(msg, adb_info)
 
         # Expect an ack in response.
         cmd, okay_data = self._read_until([constants.OKAY], adb_info)
-        if cmd != constants.OKAY:
-            if cmd == constants.FAIL:
-                raise exceptions.AdbCommandFailureException('Command failed.', okay_data)
-
-            raise exceptions.InvalidCommandError('Expected an OKAY in response to a WRITE, got {0} ({1})'.format(cmd, okay_data), cmd, okay_data)
 
         return len(data)
 
