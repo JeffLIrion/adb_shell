@@ -58,7 +58,8 @@
 """
 
 
-import collections
+from collections import namedtuple
+from contextlib import contextmanager
 import io
 import logging
 import os
@@ -79,7 +80,37 @@ except NameError:
 
 _LOGGER = logging.getLogger(__name__)
 
-DeviceFile = collections.namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
+DeviceFile = namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
+
+
+@contextmanager
+def _open(name, mode='r'):
+    """Handle opening and closing of files and IO streams.
+
+    Parameters
+    ----------
+    name : str, io.IOBase
+        The name of the file *or* an IO stream
+    mode : str
+        The mode for opening the file
+
+    Yields
+    ------
+    io.IOBase
+        The opened file *or* the IO stream
+
+    """
+    try:
+        opened = open(name, mode) if isinstance(name, str) else None
+        if isinstance(name, str):
+            yield opened
+        else:
+            yield name
+    finally:
+        if isinstance(name, str):
+            close(opened)
+        else:
+            name.close()
 
 
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
@@ -409,38 +440,40 @@ class AdbDevice(object):
         """
         if not dest_file:
             dest_file = io.BytesIO()
-        elif isinstance(dest_file, str):
-            dest_file = open(dest_file, 'wb')
-        elif isinstance(dest_file, file_types):
-            pass
-        else:
+        # elif isinstance(dest_file, str):
+        #     dest_file = open(dest_file, 'wb')
+        # elif isinstance(dest_file, file_types):
+        #     pass
+        # else:
+
+        if not isinstance(dest_file, file_types + (str,)):
             raise ValueError("dest_file is of unknown type")
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         filesync_info = _FileSyncTransactionInfo()
 
-        self._open(b'sync:', adb_info)
-        self._pull(device_filename, dest_file, progress_callback, adb_info, filesync_info)
-        self._close(adb_info)
+        with _open(dest_file, 'wb') as dest:
+            self._open(b'sync:', adb_info)
+            self._pull(device_filename, dest, progress_callback, adb_info, filesync_info)
+            self._close(adb_info)
 
-        if isinstance(dest_file, io.BytesIO):
-            return dest_file.getvalue()
+            if isinstance(dest, io.BytesIO):
+                return dest.getvalue()
 
-        dest_file.close()
-        if hasattr(dest_file, 'name'):
-            return os.path.exists(dest_file.name)
+            if hasattr(dest, 'name'):
+                return os.path.exists(dest.name)
 
-        # We don't know what the path is, so we just assume it exists.
-        return True
+            # We don't know what the path is, so we just assume it exists.
+            return True
 
-    def _pull(self, filename, dest_file, progress_callback, adb_info, filesync_info):
+    def _pull(self, filename, dest, progress_callback, adb_info, filesync_info):
         """Pull a file from the device into the file-like ``dest_file``.
 
         Parameters
         ----------
         filename : str
             The file to be pulled
-        dest_file : _io.BytesIO
+        dest : _io.BytesIO
             File-like object for writing to
         progress_callback : function, None
             Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
@@ -460,7 +493,7 @@ class AdbDevice(object):
             if cmd_id == constants.DONE:
                 break
 
-            dest_file.write(data)
+            dest.write(data)
             if progress_callback:
                 progress.send(len(data))
 
@@ -493,13 +526,12 @@ class AdbDevice(object):
                     self.push(os.path.join(source_file, f), device_filename + '/' + f, progress_callback=progress_callback)
                 return
 
-            source_file = open(source_file, "rb")
-
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        with source_file:
-            filesync_info = _FileSyncTransactionInfo()
+        filesync_info = _FileSyncTransactionInfo()
+
+        with _open(source_file, 'rb') as source:
             self._open(b'sync:', adb_info)
-            self._push(source_file, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
+            self._push(source, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
         self._close(adb_info)
 
