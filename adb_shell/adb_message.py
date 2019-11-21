@@ -134,7 +134,7 @@ class AdbMessage(object):
         ``self.command`` with its bits flipped; in other words, ``self.command + self.magic == 2**32 - 1``
 
     """
-    def __init__(self, command, arg0=None, arg1=None, data=b''):
+    def __init__(self, command, arg0, arg1, data=b''):
         self.command = constants.ID_TO_WIRE[command]
         self.magic = self.command ^ 0xFFFFFFFF
         self.arg0 = arg0
@@ -163,3 +163,45 @@ class AdbMessage(object):
 
         """
         return checksum(self.data)
+
+
+class FileSyncMessage(object):
+    """A helper class for packing FileSync messages.
+
+    Parameters
+    ----------
+    command : bytes
+        TODO
+    arg0 : int
+        TODO
+    data : bytes
+        The data that will be sent
+
+    Attributes
+    ----------
+    arg0 : int
+        TODO
+    command : int
+        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+    data : bytes
+        The data that will be sent
+    magic : int
+        ``self.command`` with its bits flipped; in other words, ``self.command + self.magic == 2**32 - 1``
+
+    """
+    def __init__(self, command, arg0=None, data=b''):
+        self.command = constants.FILESYNC_ID_TO_WIRE[command]
+        self.magic = self.command ^ 0xFFFFFFFF
+        self.arg0 = arg0 or len(data)
+        self.data = data
+
+    def pack(self):
+        """Returns this message in an over-the-wire format.
+
+        Returns
+        -------
+        bytes
+            The message packed into the format required by ADB
+
+        """
+        return struct.pack(constants.FILESYNC_FORMAT, self.command, self.arg0)

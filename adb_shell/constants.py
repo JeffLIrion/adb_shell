@@ -102,6 +102,8 @@ FILESYNC_FORMAT = b'<2I'
 #: The size of an ADB message
 MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
+FILESYNC_MESSAGE_SIZE = struct.calcsize(FILESYNC_FORMAT)
+
 #: Default authentication timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
 DEFAULT_AUTH_TIMEOUT_S = 10.
 

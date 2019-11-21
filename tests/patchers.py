@@ -44,6 +44,7 @@ class FakeTcpHandle(TcpHandle):
     def __init__(self, *args, **kwargs):
         TcpHandle.__init__(self, *args, **kwargs)
         self._bulk_read = b''
+        self._bulk_write = b''
 
     def close(self):
         self._connection = None
@@ -58,6 +59,7 @@ class FakeTcpHandle(TcpHandle):
         return ret
 
     def bulk_write(self, data, timeout_s=None):
+        self._bulk_write += data
         return len(data)
 
 
