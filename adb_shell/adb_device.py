@@ -885,19 +885,12 @@ class AdbDevice(object):
         adb_info : _AdbTransactionInfo
             Info and settings for this ADB transaction
 
-        Returns
-        -------
-        int
-            ``len(data)``
-
         """
         msg = AdbMessage(constants.WRTE, adb_info.local_id, adb_info.remote_id, data)
         self._send(msg, adb_info)
 
         # Expect an ack in response.
-        cmd, okay_data = self._read_until([constants.OKAY], adb_info)
-
-        return len(data)
+        self._read_until([constants.OKAY], adb_info)
 
     # ======================================================================= #
     #                                                                         #
