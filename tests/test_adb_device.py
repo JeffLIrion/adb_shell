@@ -432,7 +432,8 @@ class TestAdbDevice(unittest.TestCase):
                                         send3.pack(), send3.data,
                                         send4.pack(), send4.data])
 
-        self.device.push(BytesIO(filedata), '/data', mtime=mtime)
+        with patch('time.time', return_value=mtime):
+            self.device.push(BytesIO(filedata), '/data', mtime=mtime)
 
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
