@@ -165,8 +165,7 @@ class AdbMessage(object):
         return checksum(self.data)
 
 
-# pylint: disable=too-few-public-methods
-class FileSyncMessage(object):
+class FileSyncMessage(object):  # pylint: disable=too-few-public-methods
     """A helper class for packing FileSync messages.
 
     Parameters
@@ -206,15 +205,42 @@ class FileSyncMessage(object):
         return struct.pack(self.message_format, self.command, self.arg0)
 
 
-class ListFileSyncMessage(object):
+class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
+    """A helper class for packing FileSync messages for the "list" service".
+
+    Parameters
+    ----------
+    command : bytes
+        TODO
+    arg0 : int
+        TODO
+    arg1 : TODO
+        TODO
+    arg2 : TODO
+        TODO
+    data : bytes
+        The data that will be sent
+
+    Attributes
+    ----------
+    arg0 : int
+        TODO
+    arg1 : TODO
+        TODO
+    arg2 : TODO
+        TODO
+    arg3 : int
+        The size of the data
+    command : int
+        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+
+    """
     def __init__(self, command, arg0, arg1, arg2, data=b''):
-        self.message_format = '<5I'
         self.command = constants.FILESYNC_ID_TO_WIRE[command]
         self.arg0 = arg0
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = len(data)
-        self.data = data
 
     def pack(self):
         """Returns this message in an over-the-wire format.
@@ -225,12 +251,36 @@ class ListFileSyncMessage(object):
             The message packed into the format required by ADB
 
         """
-        return struct.pack(self.message_format, self.command, self.arg0, self.arg1, self.arg2, self.arg3)
+        return struct.pack(constants.FILESYNC_LIST_FORMAT, self.command, self.arg0, self.arg1, self.arg2, self.arg3)
 
 
-class StatFileSyncMessage(object):
+class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
+    """A helper class for packing FileSync messages for the "stat" service".
+
+    Parameters
+    ----------
+    command : bytes
+        TODO
+    arg0 : int
+        TODO
+    arg1 : TODO
+        TODO
+    arg2 : TODO
+        TODO
+
+    Attributes
+    ----------
+    arg0 : int
+        TODO
+    arg1 : TODO
+        TODO
+    arg2 : TODO
+        TODO
+    command : int
+        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+
+    """
     def __init__(self, command, arg0, arg1, arg2):
-        self.message_format = '<4I'
         self.command = constants.FILESYNC_ID_TO_WIRE[command]
         self.arg0 = arg0
         self.arg1 = arg1
@@ -245,4 +295,4 @@ class StatFileSyncMessage(object):
             The message packed into the format required by ADB
 
         """
-        return struct.pack(self.message_format, self.command, self.arg0, self.arg1, self.arg2)
+        return struct.pack(constants.FILESYNC_STAT_FORMAT, self.command, self.arg0, self.arg1, self.arg2)

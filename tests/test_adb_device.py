@@ -7,11 +7,12 @@ import unittest
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, DeviceFile
-from adb_shell.adb_message import AdbMessage, FileSyncMessage, ListFileSyncMessage, StatFileSyncMessage
+from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
+from .filesync_helpers import FileSyncMessage, FileSyncListMessage, FileSyncStatMessage
 from .keygen_stub import open_priv_pub
 
 
@@ -363,9 +364,9 @@ class TestAdbDevice(unittest.TestCase):
         read3 = AdbMessage(
             command=constants.WRTE, arg0=1, arg1=1,
             data=b''.join([
-                ListFileSyncMessage(constants.DENT, 1, 2, 3, data=b'file1').pack() + b'file1',
-                ListFileSyncMessage(constants.DENT, 4, 5, 6, data=b'file2').pack() + b'file2',
-                ListFileSyncMessage(constants.DONE, 0, 0, 0).pack(),
+                FileSyncListMessage(constants.DENT, 1, 2, 3, data=b'file1').pack() + b'file1',
+                FileSyncListMessage(constants.DENT, 4, 5, 6, data=b'file2').pack() + b'file2',
+                FileSyncListMessage(constants.DONE, 0, 0, 0).pack(),
             ])
         )
         read4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
@@ -472,8 +473,8 @@ class TestAdbDevice(unittest.TestCase):
         read3 = AdbMessage(
             command=constants.WRTE, arg0=1, arg1=1,
             data=b''.join([
-                StatFileSyncMessage(constants.STAT, 1, 2, 3).pack(),
-                StatFileSyncMessage(constants.DONE, 0, 0, 0).pack(),
+                FileSyncStatMessage(constants.STAT, 1, 2, 3).pack(),
+                FileSyncStatMessage(constants.DONE, 0, 0, 0).pack(),
             ])
         )
         read4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
