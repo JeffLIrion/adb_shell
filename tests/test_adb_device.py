@@ -358,6 +358,8 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_list(self):
+        self.assertTrue(self.device.connect())
+
         # Provide the `bulk_read` return values
         read1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         read2 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
@@ -394,6 +396,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
     def test_push(self):
+        self.assertTrue(self.device.connect())
+
         filedata = b'Ohayou sekai.\nGood morning world!'
         mtime = 100
 
@@ -432,6 +436,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
     def test_pull(self):
+        self.assertTrue(self.device.connect())
+
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
@@ -467,6 +473,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
     def test_stat(self):
+        self.assertTrue(self.device.connect())
+
         # Provide the `bulk_read` return values
         read1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
         read2 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
@@ -498,6 +506,17 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertEqual((1, 2, 3), self.device.stat('/data'))
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+
+    # ======================================================================= #
+    #                                                                         #
+    #                      `filesync` error tests                             #
+    #                                                                         #
+    # ======================================================================= #
+    def test_pull_value_error(self):
+        self.assertTrue(self.device.connect())
+
+        with self.assertRaises(ValueError):
+            self.device.pull('device_filename', 123)
 
 
 class TestAdbDeviceWithBanner(TestAdbDevice):
