@@ -486,18 +486,23 @@ class TestAdbDevice(unittest.TestCase):
         # Expected `bulk_write` values
         send1 = AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00')
         send2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''.join([FileSyncMessage(command=constants.SEND, data=b'/data,33272').pack() + b'/data,33272',
-                                                                                  FileSyncMessage(command=constants.DATA, data=filedata).pack() + filedata,
+                                                                                  FileSyncMessage(command=constants.DATA, data=filedata[0:constants.MAX_PUSH_DATA]).pack() + filedata[0:constants.MAX_PUSH_DATA]]))
+        send3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''.join([FileSyncMessage(command=constants.DATA, data=filedata[0:constants.MAX_PUSH_DATA]).pack() + filedata[0:constants.MAX_PUSH_DATA]]))
+        send4 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''.join([FileSyncMessage(command=constants.DATA, data=filedata[0:constants.MAX_PUSH_DATA]).pack() + filedata[0:constants.MAX_PUSH_DATA],
+                                                                                  FileSyncMessage(command=constants.DATA, data=filedata[0:1024]).pack() + filedata[0:1024],
                                                                                   FileSyncMessage(command=constants.DONE, arg0=mtime).pack()]))
-        send3 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1)
-        send4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        send5 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1)
+        send6 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
         expected_bulk_write = b''.join([send1.pack(), send1.data,
                                         send2.pack(), send2.data,
                                         send3.pack(), send3.data,
-                                        send4.pack(), send4.data])
+                                        send4.pack(), send4.data,
+                                        send5.pack(), send5.data,
+                                        send6.pack(), send6.data])
 
         with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
-            # self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+            self.assertEqual(repr(expected_bulk_write), repr(self.device._handle._bulk_write))
 
     def test_push_dir(self):
         self.assertTrue(self.device.connect())
