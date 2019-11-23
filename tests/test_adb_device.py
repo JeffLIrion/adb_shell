@@ -525,6 +525,45 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(filedata, self.device.pull('/data'))
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
+    def test_pull_file(self):
+        self.assertTrue(self.device.connect())
+        self.device._handle._bulk_write = b''
+
+        filedata = b'Ohayou sekai.\nGood morning world!'
+
+        # Provide the `bulk_read` return values
+        read1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        read2 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        read3 = AdbMessage(
+            command=constants.WRTE, arg0=1, arg1=1,
+            data=b''.join([
+                FileSyncMessage(command=constants.DATA, data=filedata).pack() + filedata,
+                FileSyncMessage(command=constants.DONE).pack()
+            ])
+        )
+        read4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([read1.pack(), read1.data,
+                                                   read2.pack(), read2.data,
+                                                   read3.pack(), read3.data,
+                                                   read4.pack(), read4.data])
+
+        # Expected `bulk_write` values
+        send1 = AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00')
+        send2 = AdbMessage(
+            command=constants.WRTE, arg0=1, arg1=1,
+            data=FileSyncMessage(command=constants.RECV, data=b'/data').pack() + b'/data'
+        )
+        send3 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1)
+        send4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        expected_bulk_write = b''.join([send1.pack(), send1.data,
+                                        send2.pack(), send2.data,
+                                        send3.pack(), send3.data,
+                                        send4.pack(), send4.data])
+
+        with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
+            self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
+            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+
     def test_stat(self):
         self.assertTrue(self.device.connect())
         self.device._handle._bulk_write = b''
