@@ -78,6 +78,7 @@ class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = len(data)
+        self.data = data
 
     def pack(self):
         """Returns this message in an over-the-wire format.
@@ -113,6 +114,8 @@ class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
         TODO
     arg2 : TODO
         TODO
+    data : bytes
+        The data that will be sent (always empty)
     command : int
         The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
 
@@ -122,6 +125,7 @@ class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
         self.arg0 = arg0
         self.arg1 = arg1
         self.arg2 = arg2
+        self.data = b''
 
     def pack(self):
         """Returns this message in an over-the-wire format.
