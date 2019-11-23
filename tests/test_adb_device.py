@@ -485,7 +485,33 @@ class TestAdbDevice(unittest.TestCase):
         with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
 
-        self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+    def test_push_dir(self):
+        self.assertTrue(self.device.connect())
+
+        mtime = 100
+        filedata = b'Ohayou sekai.\nGood morning world!'
+
+        # Provide the `bulk_read` return values
+        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack()])
+
+        read1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        read2 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
+        read3 = AdbMessage(
+            command=constants.WRTE, arg0=1, arg1=1,
+            data=FileSyncMessage(constants.OKAY).pack()
+        )
+        read4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        self.device._handle._bulk_read += b''.join([read1.pack(), read1.data,
+                                                    read2.pack(), read2.data,
+                                                    read3.pack(), read3.data,
+                                                    read4.pack(), read4.data]*2)
+
+        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
+            self.device.push('TEST_DIR/', '/data', mtime=mtime)
+
+        # self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
     def test_pull(self):
         self.assertTrue(self.device.connect())
