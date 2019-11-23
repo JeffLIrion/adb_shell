@@ -462,8 +462,6 @@ class TestAdbDevice(unittest.TestCase):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
-    maxDiff = None
-
     def test_push_big_file(self):
         self.assertTrue(self.device.connect())
         self.device._handle._bulk_write = b''
