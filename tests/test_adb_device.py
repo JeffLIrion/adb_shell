@@ -502,7 +502,7 @@ class TestAdbDevice(unittest.TestCase):
 
         with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
-            self.assertEqual(repr(expected_bulk_write), repr(self.device._handle._bulk_write))
+            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
     def test_push_dir(self):
         self.assertTrue(self.device.connect())
