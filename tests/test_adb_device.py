@@ -467,7 +467,7 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_write = b''
 
         mtime = 100
-        filedata = b'0' * int(0.95 * constants.MAX_ADB_DATA)
+        filedata = b'0' * int(1.75 * constants.MAX_ADB_DATA)
 
         # Provide the `bulk_read` return values
         read1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
