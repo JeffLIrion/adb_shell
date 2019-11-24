@@ -628,7 +628,7 @@ class AdbDevice(object):
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
         self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
-        command, (mode, size, mtime) = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
+        _, (mode, size, mtime) = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         self._close(adb_info)
 
         return mode, size, mtime
