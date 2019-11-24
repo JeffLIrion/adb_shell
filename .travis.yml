@@ -1,10 +1,11 @@
 language: python
 python:
   - "2.7"
-  - "3.5"
+  - "3.6"
 install:
   - pip install .
-  - pip install flake8 pylint coveralls cryptography mock>=3.0.5
+  - pip install flake8 pylint coveralls cryptography
+  - python --version 2>&1 | grep -q "Python 2" && pip install mock || true
 script:
 - flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
 after_success:

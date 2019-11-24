@@ -498,10 +498,8 @@ class TestAdbDevice(unittest.TestCase):
             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
         ])
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
-            self.device.push(BytesIO(filedata), '/data', mtime=mtime)
-            # TODO: Need to be fixed on travis CI
-            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+        self.device.push(BytesIO(filedata), '/data', mtime=mtime)
+        self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
 
     def test_push_dir(self):
         self.assertTrue(self.device.connect())

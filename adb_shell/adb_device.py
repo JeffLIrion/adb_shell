@@ -193,7 +193,6 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
 
         """
         added_len = self.recv_message_size + data_len
-        _LOGGER.critical("*** can_add_to_send_buffer: self.send_idx = %d, data_len = %d --> %s", self.send_idx, data_len, "True" if self.send_idx + added_len < constants.MAX_ADB_DATA else "False")
         return self.send_idx + added_len < constants.MAX_ADB_DATA
 
 
@@ -581,11 +580,8 @@ class AdbDevice(object):
             progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
             next(progress)
 
-        i = 0
         while True:
-            i += 1
             data = datafile.read(constants.MAX_PUSH_DATA)
-            _LOGGER.critical("*** _push: %d) len(data) = %d", i, len(data))
             if data:
                 self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
@@ -956,7 +952,6 @@ class AdbDevice(object):
             Data and storage for this FileSync transaction
 
         """
-        _LOGGER.critical("*** _filesync_flush: self._write(filesync_info.send_buffer[:%d], adb_info)", filesync_info.send_idx)
         self._write(filesync_info.send_buffer[:filesync_info.send_idx], adb_info)
         filesync_info.send_idx = 0
 
@@ -1102,15 +1097,10 @@ class AdbDevice(object):
             size = len(data)
 
         if not filesync_info.can_add_to_send_buffer(len(data)):
-            _LOGGER.critical("*** _filesync_send: filesync_info.can_add_to_send_buffer(%d) is True", len(data))
             self._filesync_flush(adb_info, filesync_info)
-        else:
-            _LOGGER.critical("_filesync_send: filesync_info.can_add_to_send_buffer(%d) is False", len(data))
 
         buf = struct.pack(b'<2I', constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
-        _LOGGER.critical("*** _filesync_send: filesync_info.send_buffer[%d:%d] = buf", filesync_info.send_idx, filesync_info.send_idx + len(buf))
         filesync_info.send_buffer[filesync_info.send_idx:filesync_info.send_idx + len(buf)] = buf
-        _LOGGER.critical("*** _filesync_send: filesync_info.send_idx changed from %d to %d", filesync_info.send_idx, filesync_info.send_idx + len(buf))
         filesync_info.send_idx += len(buf)
 
     @staticmethod
