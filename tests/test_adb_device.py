@@ -473,8 +473,7 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_read = join_messages([
             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.FAIL).pack()),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.FAIL).pack())
         ])
 
         with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
