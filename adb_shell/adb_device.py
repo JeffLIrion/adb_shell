@@ -631,9 +631,6 @@ class AdbDevice(object):
         command, (mode, size, mtime) = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         self._close(adb_info)
 
-        if command != constants.STAT:
-            raise exceptions.InvalidResponseError('Expected STAT response to STAT, got %s' % command)
-
         return mode, size, mtime
 
     # ======================================================================= #
