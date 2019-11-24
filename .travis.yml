@@ -4,8 +4,7 @@ python:
   - "3.5"
 install:
   - pip install .
-  - pip install flake8 pylint coveralls cryptography
-  - python --version 2>&1 | grep -q "Python 2" && pip install mock || true
+  - pip install flake8 pylint coveralls cryptography mock
 script:
 - flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
 after_success:
