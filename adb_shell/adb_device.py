@@ -193,7 +193,7 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
 
         """
         added_len = self.recv_message_size + data_len
-        _LOGGER.critical("*** can_add_to_send_buffer: self.send_idx = %d, data_len = %d --> %s", self.send_idx, data_len, "True" if self.send_idx + added_len < constants.MAX_ADB_DATA else "False"
+        _LOGGER.critical("*** can_add_to_send_buffer: self.send_idx = %d, data_len = %d --> %s", self.send_idx, data_len, "True" if self.send_idx + added_len < constants.MAX_ADB_DATA else "False")
         return self.send_idx + added_len < constants.MAX_ADB_DATA
 
 
