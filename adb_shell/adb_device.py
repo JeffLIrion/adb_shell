@@ -159,15 +159,15 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
     Attributes
     ----------
     recv_buffer : bytearray
-        TODO
+        A buffer for storing received data
     recv_message_format : bytes
         The FileSync message format
     recv_message_size : int
         The FileSync message size
     send_buffer : bytearray
-        TODO
+        A buffer for storing data to be sent
     send_idx : int
-        TODO
+        The index in ``recv_buffer`` that will be the start of the next data packet sent
 
     """
     def __init__(self, recv_message_format):
@@ -400,8 +400,8 @@ class AdbDevice(object):
 
         Returns
         -------
-        files : TODO
-            TODO
+        files : list[DeviceFile]
+            Filename, mode, size, and mtime info for the files in the directory
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
@@ -427,11 +427,11 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        device_filename : TODO
+        device_filename : str
             Filename on the device to pull.
         dest_file : str, file, io.IOBase, None
             If set, a filename or writable file-like object.
-        progress_callback : TODO, None
+        progress_callback : function, None
             Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
             objects
         timeout_s : float, None
@@ -441,7 +441,7 @@ class AdbDevice(object):
 
         Returns
         -------
-        TODO
+        bytes, bool
             The file data if ``dest_file`` is not set. Otherwise, ``True`` if the destination file exists
 
         Raises
@@ -514,15 +514,15 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        source_file : TODO
+        source_file : str
             Either a filename, a directory or file-like object to push to the device.
-        device_filename : TODO
+        device_filename : str
             Destination on the device to write to.
-        st_mode : TODO, None
+        st_mode : int
             Stat mode for filename
         mtime : int
             Modification time to set on the file.
-        progress_callback : TODO, None
+        progress_callback : function, None
             Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
             objects
         timeout_s : float, None
@@ -606,8 +606,8 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        device_filename : TODO
-            TODO
+        device_filename : str
+            The file on the device for which we will get information.
         timeout_s : float, None
             Expected timeout for any part of the pull.
         total_timeout_s : float
@@ -615,12 +615,12 @@ class AdbDevice(object):
 
         Returns
         -------
-        mode : TODO
-            TODO
-        size : TODO
-            TODO
-        mtime : TODO
-            TODO
+        mode : int
+            The octal permissions for the file
+        size : int
+            The size of the file
+        mtime : int
+            The last modified time for the file
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
@@ -921,8 +921,8 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        data : TODO
-            TODO
+        data : bytes
+            The data that will be sent
         adb_info : _AdbTransactionInfo
             Info and settings for this ADB transaction
 
@@ -939,7 +939,7 @@ class AdbDevice(object):
     #                                                                         #
     # ======================================================================= #
     def _filesync_flush(self, adb_info, filesync_info):
-        """TODO
+        """Write the data in the buffer up to ``filesync_info.send_idx``, then set ``filesync_info.send_idx`` to 0.
 
         Parameters
         ----------
@@ -971,7 +971,7 @@ class AdbDevice(object):
         command_id : bytes
             The received header ID
         tuple
-            TODO
+            The contents of the header
         data : bytearray
             The received data
 

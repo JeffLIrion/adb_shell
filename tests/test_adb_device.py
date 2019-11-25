@@ -25,10 +25,8 @@ _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 def to_int(cmd):
     return sum(c << (i * 8) for i, c in enumerate(bytearray(cmd)))
 
-def join_messages(messages):
-    return b''.join([
-        message.pack() + message.data for message in messages
-    ])
+def join_messages(*messages):
+    return b''.join([message.pack() + message.data for message in messages])
 
 
 class AdbMessageForTesting(AdbMessage):
@@ -125,9 +123,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack()])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.assertEqual(self.device.shell('TEST'), '')
 
@@ -135,11 +132,10 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA')
-        msg3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS')
-        msg4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack(), msg3.data, msg4.pack()])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS'),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
@@ -147,10 +143,9 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1))
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1)),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.device.shell('TEST')
         self.assertTrue(True)
@@ -159,27 +154,22 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA-1) + b'\xe3\x81\x82')
-        msg3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data, msg3.pack()])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA-1) + b'\xe3\x81\x82'),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        res = self.device.shell('TEST')
-        self.assertEqual(u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042', res)
+        self.assertEqual(u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042', self.device.shell('TEST'))
 
     def test_shell_with_multibytes_sequence_over_two_messages(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\xe3')
-        msg3 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\x81\x82')
-        msg4 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data,
-                                                   msg3.pack(), msg3.data, msg4.pack()])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\xe3'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\x81\x82'),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        res = self.device.shell('TEST')
-        self.assertEqual(u'\u3042', res)
+        self.assertEqual(u'\u3042', self.device.shell('TEST'))
 
     def test_shell_multiple_clse(self):
         # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
@@ -213,8 +203,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'))
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
@@ -223,8 +212,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessageForTesting(command=constants.FAIL, arg0=1, arg1=1, data=b'\x00')
-        self.device._handle._bulk_read = msg1.pack()
+        self.device._handle._bulk_read = join_messages(AdbMessageForTesting(command=constants.FAIL, arg0=1, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
             self.assertEqual(self.device.shell('TEST'), '')
@@ -233,8 +221,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'')
-        self.device._handle._bulk_read = msg1.pack()
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
             self.device.shell('TEST', total_timeout_s=-1)
@@ -243,9 +230,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'')
-        msg2 = AdbMessage(command=constants.CLSE, arg0=2, arg1=1, data=b'')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg2.pack()])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                       AdbMessage(command=constants.CLSE, arg0=2, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
             self.device.shell('TEST', total_timeout_s=-1)
@@ -265,9 +251,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS'))
 
         with self.assertRaises(exceptions.InterleavedDataError):
             self.device.shell('TEST')
@@ -277,9 +262,8 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS')
-        self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS'))
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
@@ -367,25 +351,18 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncListMessage(constants.DENT, 1, 2, 3, data=b'file1'),
-                FileSyncListMessage(constants.DENT, 4, 5, 6, data=b'file2'),
-                FileSyncListMessage(constants.DONE, 0, 0, 0)
-            ])),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncListMessage(constants.DENT, 1, 2, 3, data=b'file1'),
+                                                                                                                             FileSyncListMessage(constants.DENT, 4, 5, 6, data=b'file2'),
+                                                                                                                             FileSyncListMessage(constants.DONE, 0, 0, 0))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
-                       data=join_messages([FileSyncMessage(command=constants.LIST, data=b'/dir')])),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.LIST, data=b'/dir'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         expected_result = [DeviceFile(filename=bytearray(b'file1'), mode=1, size=2, mtime=3),
                            DeviceFile(filename=bytearray(b'file2'), mode=4, size=5, mtime=6)]
@@ -400,24 +377,18 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.OKAY, data=b''))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
-                FileSyncMessage(command=constants.DATA, data=filedata),
-                FileSyncMessage(command=constants.DONE, arg0=mtime)
-            ])),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('time.time', return_value=mtime):
             self.device.push(BytesIO(filedata), '/data', mtime=mtime)
@@ -439,24 +410,18 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
-                FileSyncMessage(command=constants.DATA, data=filedata),
-                FileSyncMessage(command=constants.DONE, arg0=mtime)
-            ])),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime, data=b''))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
@@ -470,11 +435,9 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.FAIL).pack())
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.FAIL, data=b''))))
 
         with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
@@ -484,36 +447,27 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_write = b''
 
         mtime = 100
-        filedata = b'0' * int(1.75 * constants.MAX_ADB_DATA)
+        filedata = b'0' * int(3.5 * constants.MAX_PUSH_DATA)
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.OKAY))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
-                FileSyncMessage(command=constants.DATA, data=filedata[0:constants.MAX_PUSH_DATA])
-            ])),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncMessage( command=constants.DATA, data=filedata[0:constants.MAX_PUSH_DATA])
-            ])),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncMessage(command=constants.DATA, data=filedata[0:constants.MAX_PUSH_DATA]),
-                FileSyncMessage( command=constants.DATA, data=filedata[0:1024]),
-                FileSyncMessage(command=constants.DONE, arg0=mtime)
-            ])),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-        ])
+        mpd0, mpd1, mpd2, mpd3 = 0, constants.MAX_PUSH_DATA, 2*constants.MAX_PUSH_DATA, 3*constants.MAX_PUSH_DATA
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata[mpd0:mpd1]))),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata[mpd1:mpd2]))),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata[mpd2:mpd3]),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata[mpd3:]),
+                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.device.push(BytesIO(filedata), '/data', mtime=mtime)
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
@@ -525,15 +479,16 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ] + 2 * [
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.OKAY))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.OKAY))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
         #TODO
@@ -548,26 +503,17 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
-                       data=join_messages([
-                           FileSyncMessage(command=constants.DATA, data=filedata),
-                           FileSyncMessage(command=constants.DONE)
-                       ])),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                             FileSyncMessage(command=constants.DONE))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([
-                FileSyncMessage(command=constants.RECV, data=b'/data')
-            ])),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/data'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.assertEqual(filedata, self.device.pull('/data'))
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
@@ -579,29 +525,17 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(
-                command=constants.WRTE, arg0=1, arg1=1,
-                data=join_messages([
-                    FileSyncMessage(command=constants.DATA, data=filedata),
-                    FileSyncMessage(command=constants.DONE)
-                ])
-            ),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                             FileSyncMessage(command=constants.DONE))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(
-                command=constants.WRTE, arg0=1, arg1=1,
-                data=join_messages([FileSyncMessage(command=constants.RECV, data=b'/data')])
-            ),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/data'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
             self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
@@ -614,29 +548,17 @@ class TestAdbDevice(unittest.TestCase):
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(
-                command=constants.WRTE, arg0=1, arg1=1,
-                data=join_messages([
-                    FileSyncMessage(command=constants.DATA, data=filedata),
-                    FileSyncMessage(command=constants.DONE)
-                ])
-            ),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                             FileSyncMessage(command=constants.DONE))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(
-                command=constants.WRTE, arg0=1, arg1=1,
-                data=join_messages([FileSyncMessage(command=constants.RECV, data=b'/data')])
-            ),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/data'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open()), patch('adb_shell.adb_device.hasattr', return_value=False):
             self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
@@ -650,25 +572,17 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
 
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
-                       data=join_messages([
-                           FileSyncMessage(command=constants.DATA, data=filedata),
-                           FileSyncMessage(command=constants.DONE)
-                       ])),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                             FileSyncMessage(command=constants.DONE))),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
-                       data=join_messages([FileSyncMessage(command=constants.RECV, data=b'/data')])),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/data'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
             self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
@@ -680,25 +594,17 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
 
-        self.device._handle._bulk_read = join_messages([
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
-                       data=join_messages([
-                           FileSyncStatMessage(constants.STAT, 1, 2, 3),
-                           FileSyncStatMessage(constants.DONE, 0, 0, 0)
-                       ])),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncStatMessage(constants.STAT, 1, 2, 3),
+                                                                                                                             FileSyncStatMessage(constants.DONE, 0, 0, 0))),
+                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        expected_bulk_write = join_messages([
-            AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-            AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
-                       data=FileSyncMessage(command=constants.STAT, data=b'/data').pack() + b'/data'),
-            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
-            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
-        ])
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.STAT, data=b'/data'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.assertEqual((1, 2, 3), self.device.stat('/data'))
         self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
@@ -713,10 +619,10 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                        AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([FileSyncStatMessage(constants.FAIL, 1, 2, 3),
-                                                                                                                               FileSyncStatMessage(constants.DONE, 0, 0, 0)]))])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncStatMessage(constants.FAIL, 1, 2, 3),
+                                                                                                                             FileSyncStatMessage(constants.DONE, 0, 0, 0))))
 
         with self.assertRaises(exceptions.AdbCommandFailureException):
             self.device.stat('/data')
@@ -726,10 +632,10 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
-        self.device._handle._bulk_read = join_messages([AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                        AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([FileSyncStatMessage(constants.DENT, 1, 2, 3),
-                                                                                                                               FileSyncStatMessage(constants.DONE, 0, 0, 0)]))])
+        self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncStatMessage(constants.DENT, 1, 2, 3),
+                                                                                                                             FileSyncStatMessage(constants.DONE, 0, 0, 0))))
 
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.stat('/data')

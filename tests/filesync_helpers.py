@@ -70,6 +70,8 @@ class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
         The size of the data
     command : int
         The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+    data : bytes
+        TODO
 
     """
     def __init__(self, command, arg0, arg1, arg2, data=b''):
@@ -114,10 +116,10 @@ class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
         TODO
     arg2 : TODO
         TODO
-    data : bytes
-        The data that will be sent (always empty)
     command : int
         The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+    data : bytes
+        The data that will be sent (always empty)
 
     """
     def __init__(self, command, arg0, arg1, arg2):
