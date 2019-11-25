@@ -705,6 +705,37 @@ class TestAdbDevice(unittest.TestCase):
 
     # ======================================================================= #
     #                                                                         #
+    #                  `filesync` hidden methods tests                        #
+    #                                                                         #
+    # ======================================================================= #
+    def test_filesync_read_adb_command_failure_exceptions(self):
+        self.assertTrue(self.device.connect())
+        self.device._handle._bulk_write = b''
+
+        # Provide the `bulk_read` return values
+        self.device._handle._bulk_read = join_messages([AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                        AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([FileSyncStatMessage(constants.FAIL, 1, 2, 3),
+                                                                                                                               FileSyncStatMessage(constants.DONE, 0, 0, 0)]))])
+
+        with self.assertRaises(exceptions.AdbCommandFailureException):
+            self.device.stat('/data')
+
+    def test_filesync_read_invalid_response_error(self):
+        self.assertTrue(self.device.connect())
+        self.device._handle._bulk_write = b''
+
+        # Provide the `bulk_read` return values
+        self.device._handle._bulk_read = join_messages([AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                        AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages([FileSyncStatMessage(constants.DENT, 1, 2, 3),
+                                                                                                                               FileSyncStatMessage(constants.DONE, 0, 0, 0)]))])
+
+        with self.assertRaises(exceptions.InvalidResponseError):
+            self.device.stat('/data')
+
+    # ======================================================================= #
+    #                                                                         #
     #                      `filesync` error tests                             #
     #                                                                         #
     # ======================================================================= #
