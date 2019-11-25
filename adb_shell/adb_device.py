@@ -452,11 +452,6 @@ class AdbDevice(object):
         """
         if not dest_file:
             dest_file = io.BytesIO()
-        # elif isinstance(dest_file, str):
-        #     dest_file = open(dest_file, 'wb')
-        # elif isinstance(dest_file, file_types):
-        #     pass
-        # else:
 
         if not isinstance(dest_file, file_types + (str,)):
             raise ValueError("dest_file is of unknown type")
