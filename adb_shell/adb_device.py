@@ -1065,7 +1065,10 @@ class AdbDevice(object):
         while True:
             cmd_id, header, data = self._filesync_read(expected_ids + finish_ids, adb_info, filesync_info)
             yield cmd_id, header, data
-            if cmd_id in finish_ids:
+
+            # These lines are not reachable because whenever this method is called and `cmd_id` is in `finish_ids`, the code
+            # either breaks (`list` and `_pull`), returns (`_push`), or raises an exception (`_push`)
+            if cmd_id in finish_ids:  # pragma: no cover
                 break
 
     def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=0):
