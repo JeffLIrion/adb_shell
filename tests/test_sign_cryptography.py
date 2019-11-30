@@ -16,8 +16,7 @@ class TestCryptographySigner(unittest.TestCase):
 
     def test_sign(self):
         """Test that the ``Sign`` method does not raise an exception."""
-        with self.assertRaises(ValueError):
-            self.signer.Sign(b'notadb')
+        self.signer.Sign(b'notadb')
         self.assertTrue(True)
 
     def test_get_public_key(self):
