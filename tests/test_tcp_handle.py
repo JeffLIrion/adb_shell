@@ -43,6 +43,13 @@ class TestTcpHandle(unittest.TestCase):
             with self.assertRaises(TcpTimeoutException):
                 self.handle.bulk_read(4)
 
+    def test_close_oserror(self):
+        """Test that an `OSError` exception is handled when closing the socket.
+
+        """
+        with patch('{}.patchers.FakeSocket.shutdown'.format(__name__), side_effect=OSError):
+            self.handle.close()
+
     def test_bulk_write(self):
         """TODO
 
