@@ -23,7 +23,8 @@ class TestCryptographySigner(unittest.TestCase):
         hash_ctx = hashes.Hash(hashes.SHA1(), default_backend())
         hash_ctx.update(b'notadb')
         data = hash_ctx.finalize()
-        self.assertEqual(data, b'(\x8b\x9e\x88|JY\xb5\x18\x13b_\xe0\xc4\xfb\xa5\x83\xbdx\xfc')
+        # For reference:
+        #   data = b'(\x8b\x9e\x88|JY\xb5\x18\x13b_\xe0\xc4\xfb\xa5\x83\xbdx\xfc'
 
         self.signer.Sign(data)
         self.assertTrue(True)
