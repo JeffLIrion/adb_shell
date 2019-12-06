@@ -70,6 +70,7 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
+from .handle_base import HandleBase
 from .tcp_handle import TcpHandle
 
 
@@ -201,8 +202,7 @@ class AdbDevice(object):
 
     Parameters
     ----------
-    serial : str
-        ``<host>`` or ``<host>:<port>``
+    handle : HandleBase instance
     banner : str, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
@@ -219,12 +219,10 @@ class AdbDevice(object):
         ``self._banner`` converted to a bytearray
     _handle : TcpHandle
         The :class:`~adb_shell.tcp_handle.TcpHandle` instance that is used to connect to the device
-    _serial : str
-        ``<host>`` or ``<host>:<port>``
 
     """
 
-    def __init__(self, serial, banner=None, default_timeout_s=None):
+    def __init__(self, handle, banner=None):
         if banner and isinstance(banner, str):
             self._banner = banner
         else:
@@ -235,11 +233,25 @@ class AdbDevice(object):
 
         self._banner_bytes = bytearray(self._banner, 'utf-8')
 
-        self._serial = serial
-
-        self._handle = TcpHandle(self._serial, default_timeout_s)
+        self._handle = handle
 
         self._available = False
+
+    @classmethod
+    def from_tcp(cls, socket_address, default_timeout_s=None, **kwargs):
+        """
+
+        :param socket_address: string containing hostname/ip and an optional port, separated by ':'
+                e.g.: "192.168.0.13:5555"; "192.168.0.26"
+        :param default_timeout_s: default_timeout in seconds
+        :param kwargs: see __init__ for expected parameters
+        :return:
+        """
+        tcp_handle = TcpHandle.from_socket_address(
+            socket_address,
+            default_timeout_s=default_timeout_s
+        )
+        return cls(tcp_handle, **kwargs)
 
     @property
     def available(self):

@@ -41,18 +41,18 @@ class AdbMessageForTesting(AdbMessage):
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
         with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555')
+            self.device = AdbDevice.from_tcp('IP:5555')
             self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
     def tearDown(self):
         self.assertFalse(self.device._handle._bulk_read)
 
     def test_init(self):
-        device_with_banner = AdbDevice('IP:5555', 'banner')
+        device_with_banner = AdbDevice.from_tcp('IP:5555', banner='banner')
         self.assertEqual(device_with_banner._banner, 'banner')
 
         with patch('socket.gethostname', side_effect=Exception):
-            device_banner_unknown = AdbDevice('IP:5555')
+            device_banner_unknown = AdbDevice.from_tcp('IP:5555')
             self.assertEqual(device_banner_unknown._banner, 'unknown')
 
         self.device._handle._bulk_read = b''
@@ -656,7 +656,7 @@ class TestAdbDevice(unittest.TestCase):
 class TestAdbDeviceWithBanner(TestAdbDevice):
     def setUp(self):
         with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555', 'banner')
+            self.device = AdbDevice.from_tcp('IP:5555', banner='banner')
             self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
 
@@ -664,5 +664,5 @@ class TestAdbDeviceBannerError(TestAdbDevice):
     def setUp(self):
         with patch('socket.gethostname', side_effect=Exception):
             with patchers.patch_tcp_handle:
-                self.device = AdbDevice('IP:5555')
+                self.device = AdbDevice.from_tcp('IP:5555')
                 self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
