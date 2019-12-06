@@ -203,6 +203,8 @@ class AdbDevice(object):
     ----------
     serial : str
         ``<host>`` or ``<host>:<port>``
+    handle : object, None
+        A user-provided handle for communicating with the device; must have methods ``close``, ``connect``, ``bulk_read``, and ``bulk_write``
     banner : str, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
@@ -217,14 +219,14 @@ class AdbDevice(object):
         The hostname of the machine where the Python interpreter is currently running
     _banner_bytes : bytearray
         ``self._banner`` converted to a bytearray
-    _handle : TcpHandle
-        The :class:`~adb_shell.tcp_handle.TcpHandle` instance that is used to connect to the device
+    _handle : TcpHandle, object
+        The :class:`~adb_shell.tcp_handle.TcpHandle` instance that is used to connect to the device *or* a user-provided handle
     _serial : str
         ``<host>`` or ``<host>:<port>``
 
     """
 
-    def __init__(self, serial, banner=None, default_timeout_s=None):
+    def __init__(self, serial, handle=None, banner=None, default_timeout_s=None):
         if banner and isinstance(banner, str):
             self._banner = banner
         else:
@@ -237,7 +239,13 @@ class AdbDevice(object):
 
         self._serial = serial
 
-        self._handle = TcpHandle(self._serial, default_timeout_s)
+        if handle is not None:
+            if not hasattr(handle, 'close') or not callable(handle.close) or not hasattr(handle, 'connect') or not callable(handle.connect) or not hasattr(handle, 'bulk_read') or not callable(handle.bulk_read) or not hasattr(handle, 'bulk_write') or not callable(handle.bulk_write):  # pylint: disable=too-many-boolean-expressions
+                raise exceptions.InvalidHandleError("`handle` must implement the following methods: close, connect, bulk_read, and bulk_write")
+
+            self._handle = handle
+        else:
+            self._handle = TcpHandle(self._serial, default_timeout_s)
 
         self._available = False
 
