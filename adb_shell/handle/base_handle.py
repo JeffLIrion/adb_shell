@@ -14,7 +14,16 @@
 """
 
 
-from abc import ABC, abstractmethod
+try:
+    from abc import ABC, abstractmethod
+except ImportError:  # pragma: no cover
+    from abc import ABCMeta, abstractmethod
+
+    class ABC(object):  # pylint: disable=too-few-public-methods
+        """A Python2-compatible `ABC` class.
+
+        """
+        __metaclass__ = ABCMeta
 
 
 class BaseHandle(ABC):
