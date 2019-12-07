@@ -202,9 +202,7 @@ class AdbDevice(object):
 
     Parameters
     ----------
-    serial : str
-        ``<host>`` or ``<host>:<port>``
-    handle : BaseHandle, None
+    handle : BaseHandle
         A user-provided handle for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
     banner : str, None
         The hostname of the machine where the Python interpreter is currently running; if
@@ -225,14 +223,12 @@ class AdbDevice(object):
         The hostname of the machine where the Python interpreter is currently running
     _banner_bytes : bytearray
         ``self._banner`` converted to a bytearray
-    _handle : BaseHandle, None
+    _handle : BaseHandle
         The handle that is used to connect to the device; must be a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
-    _serial : str
-        ``<host>`` or ``<host>:<port>``
 
     """
 
-    def __init__(self, serial, handle=None, banner=None, default_timeout_s=None):
+    def __init__(self, handle, banner=None, default_timeout_s=None):
         if banner and isinstance(banner, str):
             self._banner = banner
         else:
@@ -243,15 +239,10 @@ class AdbDevice(object):
 
         self._banner_bytes = bytearray(self._banner, 'utf-8')
 
-        self._serial = serial
+        if not isinstance(handle, BaseHandle):
+            raise exceptions.InvalidHandleError("`handle` must be an instance of a subclass of `BaseHandle`")
 
-        if handle is not None:
-            if not isinstance(handle, BaseHandle):
-                raise exceptions.InvalidHandleError("`handle` must be an instance of a subclass of `BaseHandle`")
-
-            self._handle = handle
-        else:
-            self._handle = TcpHandle(self._serial, default_timeout_s)
+        self._handle = handle
 
         self._available = False
 
