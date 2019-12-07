@@ -1,9 +1,9 @@
 import logging
 from io import BytesIO
-
-from mock import mock_open, patch
 import sys
 import unittest
+
+from mock import mock_open, patch
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, DeviceFile
@@ -38,6 +38,15 @@ class AdbMessageForTesting(AdbMessage):
         self.data = data
 
 
+class TestAdbDeviceCustomHandle(unittest.TestCase):
+    def test_init_valid_handle(self):
+        self.device = AdbDevice('IP:5555', handle=patchers.FakeTcpHandle('serial'))
+
+    def test_init_invalid_handle(self):
+        with self.assertRaises(exceptions.InvalidHandleError):
+            self.device = AdbDevice('IP:5555', handle=123)
+
+
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
         with patchers.patch_tcp_handle:
@@ -48,7 +57,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertFalse(self.device._handle._bulk_read)
 
     def test_init(self):
-        device_with_banner = AdbDevice('IP:5555', 'banner')
+        device_with_banner = AdbDevice('IP:5555', banner='banner')
         self.assertEqual(device_with_banner._banner, 'banner')
 
         with patch('socket.gethostname', side_effect=Exception):
@@ -656,7 +665,7 @@ class TestAdbDevice(unittest.TestCase):
 class TestAdbDeviceWithBanner(TestAdbDevice):
     def setUp(self):
         with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555', 'banner')
+            self.device = AdbDevice('IP:5555', banner='banner')
             self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
 

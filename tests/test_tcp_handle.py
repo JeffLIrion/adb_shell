@@ -1,7 +1,9 @@
-from mock import patch
 import unittest
 
-from adb_shell.tcp_handle import TcpHandle, TcpTimeoutException
+from mock import patch
+
+from adb_shell.exceptions import TcpTimeoutException
+from adb_shell.handle.tcp_handle import TcpHandle
 
 from . import patchers
 

@@ -1,5 +1,6 @@
-from mock import patch
 import unittest
+
+from mock import patch
 
 from adb_shell.auth.keygen import get_user_info
 
