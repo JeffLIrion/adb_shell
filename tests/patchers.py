@@ -64,14 +64,14 @@ class FakeTcpHandle(TcpHandle):
 
 
 # `socket` patches
-patch_create_connection = patch('socket.create_connection', return_value=FakeSocket())
+PATCH_CREATE_CONNECTION = patch('socket.create_connection', return_value=FakeSocket())
 
 
 # `select` patches
-patch_select_success = patch('select.select', return_value=(True, True, True))
+PATCH_SELECT_SUCCESS = patch('select.select', return_value=(True, True, True))
 
-patch_select_fail = patch('select.select', return_value=(False, False, False))
+PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
 # `TcpHandle` patches
-patch_tcp_handle = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
+PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)

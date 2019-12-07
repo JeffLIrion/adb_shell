@@ -14,7 +14,7 @@ class TestTcpHandle(unittest.TestCase):
 
         """
         self.handle = TcpHandle('host', '5555')
-        with patchers.patch_create_connection:
+        with patchers.PATCH_CREATE_CONNECTION:
             self.handle.connect()
 
     def tearDown(self):
@@ -26,7 +26,7 @@ class TestTcpHandle(unittest.TestCase):
 
         """
         self.handle.close()
-        with patchers.patch_create_connection:
+        with patchers.PATCH_CREATE_CONNECTION:
             self.handle.connect(timeout_s=1)
             self.assertTrue(True)
 
@@ -37,11 +37,11 @@ class TestTcpHandle(unittest.TestCase):
         # Provide the `recv` return values
         self.handle._connection._recv = b'TEST1TEST2'
 
-        with patchers.patch_select_success:
+        with patchers.PATCH_SELECT_SUCCESS:
             self.assertEqual(self.handle.bulk_read(5), b'TEST1')
             self.assertEqual(self.handle.bulk_read(5), b'TEST2')
 
-        with patchers.patch_select_fail:
+        with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
                 self.handle.bulk_read(4)
 
@@ -56,19 +56,9 @@ class TestTcpHandle(unittest.TestCase):
         """TODO
 
         """
-        with patchers.patch_select_success:
+        with patchers.PATCH_SELECT_SUCCESS:
             self.handle.bulk_write(b'TEST')
 
-        with patchers.patch_select_fail:
+        with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
                 self.handle.bulk_write(b'FAIL')
-
-
-'''class TestTcpHandle2(TestTcpHandle):
-    def setUp(self):
-        """Create a ``TcpHandle`` and connect to a TCP service.
-
-        """
-        self.handle = TcpHandle('IP')
-        with patchers.patch_create_connection:
-            self.handle.connect()'''

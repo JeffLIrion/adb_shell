@@ -6,7 +6,7 @@ import unittest
 from mock import mock_open, patch
 
 from adb_shell import constants, exceptions
-from adb_shell.adb_device import AdbDevice, DeviceFile
+from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
 from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
@@ -46,7 +46,20 @@ class TestAdbDevice(unittest.TestCase):
     def tearDown(self):
         self.assertFalse(self.device._handle._bulk_read)
 
-    def test_init(self):
+    def test_init_tcp(self):
+        with patchers.PATCH_TCP_HANDLE:
+            tcp_device = AdbDeviceTcp('host')
+            tcp_device._handle._bulk_read = self.device._handle._bulk_read
+
+        # Make sure that the `connect()` method works
+        self.assertTrue(tcp_device.connect())
+        self.assertTrue(tcp_device.available)
+
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._handle._bulk_read = b''
+        
+
+    def test_init_banner(self):
         device_with_banner = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner='banner')
         self.assertEqual(device_with_banner._banner, 'banner')
 
@@ -54,6 +67,7 @@ class TestAdbDevice(unittest.TestCase):
             device_banner_unknown = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
             self.assertEqual(device_banner_unknown._banner, 'unknown')
 
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
 
     def test_init_invalid_handle(self):
@@ -66,12 +80,14 @@ class TestAdbDevice(unittest.TestCase):
     def test_available(self):
         self.assertFalse(self.device.available)
 
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
 
     def test_close(self):
         self.assertFalse(self.device.close())
         self.assertFalse(self.device.available)
 
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
 
     # ======================================================================= #
