@@ -63,7 +63,7 @@ class TestAdbDevice(unittest.TestCase):
         device_with_banner = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner='banner')
         self.assertEqual(device_with_banner._banner, b'banner')
 
-        device_with_banner2 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=b'banner2')
+        device_with_banner2 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=bytearray('banner2', 'utf-8'))
         self.assertEqual(device_with_banner2._banner, b'banner2')
 
         with patch('socket.gethostname', side_effect=Exception):

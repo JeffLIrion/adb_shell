@@ -75,9 +75,9 @@ from .handle.tcp_handle import TcpHandle
 
 
 try:
-    file_types = (file, io.IOBase)
-except NameError:
-    file_types = (io.IOBase,)
+    FILE_TYPES = (file, io.IOBase)
+except NameError:  # pragma: no cover
+    FILE_TYPES = (io.IOBase,)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -455,7 +455,7 @@ class AdbDevice(object):
         if not dest_file:
             dest_file = io.BytesIO()
 
-        if not isinstance(dest_file, file_types + (str,)):
+        if not isinstance(dest_file, FILE_TYPES + (str,)):
             raise ValueError("dest_file is of unknown type")
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
@@ -573,7 +573,7 @@ class AdbDevice(object):
         self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
-            total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, file_types) else -1
+            total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, FILE_TYPES) else -1
             progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
             next(progress)
 
@@ -1148,4 +1148,4 @@ class AdbDeviceTcp(AdbDevice):
 
     def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
         handle = TcpHandle(host, port, default_timeout_s)
-        super().__init__(handle, banner)
+        super(AdbDeviceTcp, self).__init__(handle, banner)
