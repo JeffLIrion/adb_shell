@@ -43,8 +43,8 @@ class TcpHandle(BaseHandle):
 
     Parameters
     ----------
-    serial : str, bytes, bytearray
-        Android device serial of the form "host" or "host:port".  (Host may be an IP address or a host name.)
+    host : str
+        Host address of the device; may be an IP address or a host name
     default_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
 
