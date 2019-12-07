@@ -61,11 +61,14 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_init_banner(self):
         device_with_banner = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner='banner')
-        self.assertEqual(device_with_banner._banner, 'banner')
+        self.assertEqual(device_with_banner._banner, b'banner')
+
+        device_with_banner2 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=b'banner2')
+        self.assertEqual(device_with_banner2._banner, b'banner2')
 
         with patch('socket.gethostname', side_effect=Exception):
             device_banner_unknown = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
-            self.assertEqual(device_banner_unknown._banner, 'unknown')
+            self.assertEqual(device_banner_unknown._banner, b'unknown')
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''

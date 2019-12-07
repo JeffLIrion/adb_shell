@@ -204,7 +204,7 @@ class AdbDevice(object):
     ----------
     handle : BaseHandle
         A user-provided handle for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
-    banner : str, None
+    banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
 
@@ -217,25 +217,24 @@ class AdbDevice(object):
     ----------
     _available : bool
         Whether an ADB connection to the device has been established
-    _banner : str
+    _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _banner_bytes : bytearray
-        ``self._banner`` converted to a bytearray
     _handle : BaseHandle
         The handle that is used to connect to the device; must be a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
 
     """
 
     def __init__(self, handle, banner=None):
-        if banner and isinstance(banner, str):
-            self._banner = banner
+        if banner:
+            if isinstance(banner, str):
+                self._banner = bytearray(banner, 'utf-8')
+            else:
+                self._banner = banner
         else:
             try:
-                self._banner = socket.gethostname()
+                self._banner = bytearray(socket.gethostname(), 'utf-8')
             except:  # noqa pylint: disable=bare-except
-                self._banner = 'unknown'
-
-        self._banner_bytes = bytearray(self._banner, 'utf-8')
+                self._banner = bytearray('unknown', 'utf-8')
 
         if not isinstance(handle, BaseHandle):
             raise exceptions.InvalidHandleError("`handle` must be an instance of a subclass of `BaseHandle`")
@@ -312,7 +311,7 @@ class AdbDevice(object):
         self._handle.connect(timeout_s)
 
         # 2. Send a ``b'CNXN'`` message
-        msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner_bytes)
+        msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner)
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         self._send(msg, adb_info)
 
@@ -1132,7 +1131,7 @@ class AdbDeviceTcp(AdbDevice):
         The device port to which we are connecting (default is 5555)
     default_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
-    banner : str, None
+    banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
 
@@ -1140,10 +1139,9 @@ class AdbDeviceTcp(AdbDevice):
     ----------
     _available : bool
         Whether an ADB connection to the device has been established
-    _banner : str
+    
+    _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _banner_bytes : bytearray
-        ``self._banner`` converted to a bytearray
     _handle : TcpHandle
         The handle that is used to connect to the device
 
