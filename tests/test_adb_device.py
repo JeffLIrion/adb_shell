@@ -74,11 +74,11 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_read = b''
 
     def test_init_invalid_handle(self):
-        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
-        self.device._handle._bulk_read = b''
-
         with self.assertRaises(exceptions.InvalidHandleError):
             device = AdbDevice(handle=123)
+
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._handle._bulk_read = b''
 
     def test_available(self):
         self.assertFalse(self.device.available)
