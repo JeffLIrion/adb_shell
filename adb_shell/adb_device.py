@@ -207,8 +207,6 @@ class AdbDevice(object):
     banner : str, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
-    default_timeout_s : float, None
-        Default timeout in seconds for sending and receiving packets, or ``None``; see :class:`~adb_shell.handle.base_handle.BaseHandle`
 
     Raises
     ------
@@ -228,7 +226,7 @@ class AdbDevice(object):
 
     """
 
-    def __init__(self, handle, banner=None, default_timeout_s=None):
+    def __init__(self, handle, banner=None):
         if banner and isinstance(banner, str):
             self._banner = banner
         else:
