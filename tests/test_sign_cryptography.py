@@ -1,9 +1,9 @@
-from mock import patch
 import os
 import unittest
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+from mock import patch
 
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_cryptography import CryptographySigner

@@ -1,9 +1,9 @@
 import logging
 from io import BytesIO
-
-from mock import mock_open, patch
 import sys
 import unittest
+
+from mock import mock_open, patch
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, DeviceFile

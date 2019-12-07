@@ -1,6 +1,7 @@
-from mock import patch
 import os
 import unittest
+
+from mock import patch
 
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pycryptodome import PycryptodomeAuthSigner

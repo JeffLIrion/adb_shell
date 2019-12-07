@@ -2,7 +2,7 @@ from mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage, unpack
-from adb_shell.tcp_handle import TcpHandle
+from adb_shell.handle.tcp_handle import TcpHandle
 
 
 MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')

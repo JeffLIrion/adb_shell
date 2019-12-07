@@ -34,10 +34,11 @@
 import select
 import socket
 
-from .exceptions import TcpTimeoutException
+from .base_handle import BaseHandle
+from ..exceptions import TcpTimeoutException
 
 
-class TcpHandle(object):
+class TcpHandle(BaseHandle):
     """TCP connection object.
 
     Parameters

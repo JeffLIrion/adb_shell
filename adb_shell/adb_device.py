@@ -70,7 +70,8 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
-from .tcp_handle import TcpHandle
+from .handle.base_handle import BaseHandle
+from .handle.tcp_handle import TcpHandle
 
 
 try:
@@ -123,8 +124,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     remote_id : int
         The ID for the recipient
     timeout_s : float, None
-        Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-        and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
+        and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
     total_timeout_s : float
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
@@ -135,8 +136,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     remote_id : int
         The ID for the recipient
     timeout_s : float, None
-        Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-        and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
+        and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
     total_timeout_s : float
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
@@ -203,13 +204,18 @@ class AdbDevice(object):
     ----------
     serial : str
         ``<host>`` or ``<host>:<port>``
-    handle : object, None
-        A user-provided handle for communicating with the device; must have methods ``close``, ``connect``, ``bulk_read``, and ``bulk_write``
+    handle : BaseHandle, None
+        A user-provided handle for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
     banner : str, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
     default_timeout_s : float, None
-        Default timeout in seconds for TCP packets, or ``None``; see :class:`~adb_shell.tcp_handle.TcpHandle`
+        Default timeout in seconds for sending and receiving packets, or ``None``; see :class:`~adb_shell.handle.base_handle.BaseHandle`
+
+    Raises
+    ------
+    adb_shell.exceptions.InvalidHandleError
+        The passed ``handle`` is not an instance of a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
 
     Attributes
     ----------
@@ -219,8 +225,8 @@ class AdbDevice(object):
         The hostname of the machine where the Python interpreter is currently running
     _banner_bytes : bytearray
         ``self._banner`` converted to a bytearray
-    _handle : TcpHandle, object
-        The :class:`~adb_shell.tcp_handle.TcpHandle` instance that is used to connect to the device *or* a user-provided handle
+    _handle : BaseHandle, None
+        The handle that is used to connect to the device; must be a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
     _serial : str
         ``<host>`` or ``<host>:<port>``
 
@@ -240,8 +246,8 @@ class AdbDevice(object):
         self._serial = serial
 
         if handle is not None:
-            if not hasattr(handle, 'close') or not callable(handle.close) or not hasattr(handle, 'connect') or not callable(handle.connect) or not hasattr(handle, 'bulk_read') or not callable(handle.bulk_read) or not hasattr(handle, 'bulk_write') or not callable(handle.bulk_write):  # pylint: disable=too-many-boolean-expressions
-                raise exceptions.InvalidHandleError("`handle` must implement the following methods: close, connect, bulk_read, and bulk_write")
+            if not isinstance(handle, BaseHandle):
+                raise exceptions.InvalidHandleError("`handle` must be an instance of a subclass of `BaseHandle`")
 
             self._handle = handle
         else:
@@ -262,7 +268,7 @@ class AdbDevice(object):
         return self._available
 
     def close(self):
-        """Close the socket connection via :meth:`adb_shell.tcp_handle.TcpHandle.close`.
+        """Close the socket connection via :meth:`adb_shell.handle.base_handle.BaseHandle.close`.
 
         """
         self._available = False
@@ -271,7 +277,7 @@ class AdbDevice(object):
     def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Establish an ADB connection to the device.
 
-        1. Use the handle to establish a socket connection
+        1. Use the handle to establish a connection
         2. Send a ``b'CNXN'`` message
         3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
         4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
@@ -292,8 +298,8 @@ class AdbDevice(object):
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`~adb_shell.auth.sign_pythonrsa.PythonRSASigner`
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
+            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
         auth_timeout_s : float, None
             The time in seconds to wait for a ``b'CNXN'`` authentication response
         total_timeout_s : float
@@ -312,7 +318,7 @@ class AdbDevice(object):
             Invalid auth response from the device
 
         """
-        # 1. Use the handle to establish a socket connection
+        # 1. Use the handle to establish a connection
         self._handle.close()
         self._handle.connect(timeout_s)
 
@@ -375,8 +381,8 @@ class AdbDevice(object):
         command : str
             The shell command that will be sent
         timeout_s : float, None
-            Timeout in seconds for TCP packets, or ``None``; see :meth:`TcpHandle.bulk_read() <adb_shell.tcp_handle.TcpHandle.bulk_read>`
-            and :meth:`TcpHandle.bulk_write() <adb_shell.tcp_handle.TcpHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
+            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
