@@ -38,33 +38,30 @@ class AdbMessageForTesting(AdbMessage):
         self.data = data
 
 
-class TestAdbDeviceCustomHandle(unittest.TestCase):
-    def test_init_valid_handle(self):
-        self.device = AdbDevice('IP:5555', handle=patchers.FakeTcpHandle('serial'))
-
-    def test_init_invalid_handle(self):
-        with self.assertRaises(exceptions.InvalidHandleError):
-            self.device = AdbDevice('IP:5555', handle=123)
-
-
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
-        with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555')
-            self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
+        self.device = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
     def tearDown(self):
         self.assertFalse(self.device._handle._bulk_read)
 
     def test_init(self):
-        device_with_banner = AdbDevice('IP:5555', banner='banner')
+        device_with_banner = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner='banner')
         self.assertEqual(device_with_banner._banner, 'banner')
 
         with patch('socket.gethostname', side_effect=Exception):
-            device_banner_unknown = AdbDevice('IP:5555')
+            device_banner_unknown = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
             self.assertEqual(device_banner_unknown._banner, 'unknown')
 
         self.device._handle._bulk_read = b''
+
+    def test_init_invalid_handle(self):
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._handle._bulk_read = b''
+
+        with self.assertRaises(exceptions.InvalidHandleError):
+            device = AdbDevice(handle=123)
 
     def test_available(self):
         self.assertFalse(self.device.available)
@@ -660,18 +657,3 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.device.pull('device_filename', 123)
-
-
-class TestAdbDeviceWithBanner(TestAdbDevice):
-    def setUp(self):
-        with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555', banner='banner')
-            self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
-
-
-class TestAdbDeviceBannerError(TestAdbDevice):
-    def setUp(self):
-        with patch('socket.gethostname', side_effect=Exception):
-            with patchers.patch_tcp_handle:
-                self.device = AdbDevice('IP:5555')
-                self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)

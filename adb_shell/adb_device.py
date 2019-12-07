@@ -71,7 +71,7 @@ from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .handle.base_handle import BaseHandle
-from .handle.tcp_handle import TcpHandle
+# from .handle.tcp_handle import TcpHandle
 
 
 try:
