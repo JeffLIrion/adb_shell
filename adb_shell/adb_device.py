@@ -268,7 +268,7 @@ class AdbDevice(object):
         return self._available
 
     def close(self):
-        """Close the socket connection via :meth:`adb_shell.handle.base_handle.BaseHandle.close`.
+        """Close the connection via the provided handle's ``close()`` method.
 
         """
         self._available = False
