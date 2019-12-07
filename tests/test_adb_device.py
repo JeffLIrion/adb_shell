@@ -66,6 +66,9 @@ class TestAdbDevice(unittest.TestCase):
         device_with_banner2 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=bytearray('banner2', 'utf-8'))
         self.assertEqual(device_with_banner2._banner, b'banner2')
 
+        device_with_banner3 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=u'banner3')
+        self.assertEqual(device_with_banner3._banner, b'banner3')
+
         with patch('socket.gethostname', side_effect=Exception):
             device_banner_unknown = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
             self.assertEqual(device_banner_unknown._banner, b'unknown')
@@ -134,6 +137,7 @@ class TestAdbDevice(unittest.TestCase):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+            signer.pub_key = u''
 
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
 

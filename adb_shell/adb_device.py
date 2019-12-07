@@ -226,7 +226,7 @@ class AdbDevice(object):
 
     def __init__(self, handle, banner=None):
         if banner:
-            if isinstance(banner, str):
+            if not isinstance(banner, (bytes, bytearray)):
                 self._banner = bytearray(banner, 'utf-8')
             else:
                 self._banner = banner
@@ -350,7 +350,7 @@ class AdbDevice(object):
 
         # 7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
         pubkey = rsa_keys[0].GetPublicKey()
-        if isinstance(pubkey, str):
+        if not isinstance(pubkey, (bytes, bytearray)):
             pubkey = bytearray(pubkey, 'utf-8')
 
         msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
@@ -766,7 +766,7 @@ class AdbDevice(object):
                 raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
 
         else:
-            data = b''
+            data = bytearray()
 
         return command, arg0, arg1, bytes(data)
 
