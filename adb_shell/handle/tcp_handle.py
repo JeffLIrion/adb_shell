@@ -56,7 +56,7 @@ class TcpHandle(BaseHandle):
         Default timeout in seconds for TCP packets, or ``None``
     host : str
         The address of the device
-    port : str
+    port : int
         The device port to which we are connecting (default is 5555)
     serial_number : str
         ``<host>:<port>``
