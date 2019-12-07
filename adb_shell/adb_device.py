@@ -1139,7 +1139,6 @@ class AdbDeviceTcp(AdbDevice):
     ----------
     _available : bool
         Whether an ADB connection to the device has been established
-    
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
     _handle : TcpHandle
