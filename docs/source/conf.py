@@ -26,9 +26,9 @@ copyright = '2019, Jeff Irion and contributors'
 author = 'Jeff Irion'
 
 # The short X.Y version
-version = '0.0.9'
+version = '0.1.0'
 # The full version, including alpha/beta/rc tags
-release = '0.0.9'
+release = '0.1.0'
 
 
 # -- General configuration ---------------------------------------------------
