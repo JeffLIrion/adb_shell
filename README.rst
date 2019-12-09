@@ -10,7 +10,7 @@ adb\_shell
 
 Documentation for this package can be found at https://adb-shell.readthedocs.io/.
 
-This Python package implements ADB shell functionality.  It originated from `python-adb <https://github.com/google/python-adb>`_.
+This Python package implements ADB shell and FileSync functionality.  It originated from `python-adb <https://github.com/google/python-adb>`_.
 
 Installation
 ------------
@@ -27,18 +27,18 @@ Example Usage
 
 .. code-block:: python
 
-   from adb_shell.adb_device import AdbDevice
+   from adb_shell.adb_device import AdbDeviceTcp
    from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
    # Connect (no authentication necessary)
-   device1 = AdbDevice(serial='192.168.0.111:5555', default_timeout_s=9.)
+   device1 = AdbDeviceTcp('192.168.0.111', 5555, default_timeout_s=9.)
    device1.connect(auth_timeout_s=0.1)
 
    # Connect (authentication required)
    with open('path/to/adbkey') as f:
        priv = f.read()
    signer = PythonRSASigner('', priv)
-   device2 = AdbDevice(serial='192.168.0.222:5555', default_timeout_s=9.)
+   device2 = AdbDeviceTcp('192.168.0.222', 5555, default_timeout_s=9.)
    device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
    # Send a shell command

@@ -6,7 +6,7 @@ import unittest
 from mock import mock_open, patch
 
 from adb_shell import constants, exceptions
-from adb_shell.adb_device import AdbDevice, DeviceFile
+from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
 from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
@@ -38,43 +38,62 @@ class AdbMessageForTesting(AdbMessage):
         self.data = data
 
 
-class TestAdbDeviceCustomHandle(unittest.TestCase):
-    def test_init_valid_handle(self):
-        self.device = AdbDevice('IP:5555', handle=patchers.FakeTcpHandle('serial'))
-
-    def test_init_invalid_handle(self):
-        with self.assertRaises(exceptions.InvalidHandleError):
-            self.device = AdbDevice('IP:5555', handle=123)
-
-
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
-        with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555')
-            self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
+        self.device = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
     def tearDown(self):
         self.assertFalse(self.device._handle._bulk_read)
 
-    def test_init(self):
-        device_with_banner = AdbDevice('IP:5555', banner='banner')
-        self.assertEqual(device_with_banner._banner, 'banner')
+    def test_init_tcp(self):
+        with patchers.PATCH_TCP_HANDLE:
+            tcp_device = AdbDeviceTcp('host')
+            tcp_device._handle._bulk_read = self.device._handle._bulk_read
+
+        # Make sure that the `connect()` method works
+        self.assertTrue(tcp_device.connect())
+        self.assertTrue(tcp_device.available)
+
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._handle._bulk_read = b''
+        
+
+    def test_init_banner(self):
+        device_with_banner = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner='banner')
+        self.assertEqual(device_with_banner._banner, b'banner')
+
+        device_with_banner2 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=bytearray('banner2', 'utf-8'))
+        self.assertEqual(device_with_banner2._banner, b'banner2')
+
+        device_with_banner3 = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner=u'banner3')
+        self.assertEqual(device_with_banner3._banner, b'banner3')
 
         with patch('socket.gethostname', side_effect=Exception):
-            device_banner_unknown = AdbDevice('IP:5555')
-            self.assertEqual(device_banner_unknown._banner, 'unknown')
+            device_banner_unknown = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555))
+            self.assertEqual(device_banner_unknown._banner, b'unknown')
 
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._handle._bulk_read = b''
+
+    def test_init_invalid_handle(self):
+        with self.assertRaises(exceptions.InvalidHandleError):
+            device = AdbDevice(handle=123)
+
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
 
     def test_available(self):
         self.assertFalse(self.device.available)
 
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
 
     def test_close(self):
         self.assertFalse(self.device.close())
         self.assertFalse(self.device.available)
 
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
 
     # ======================================================================= #
@@ -118,6 +137,7 @@ class TestAdbDevice(unittest.TestCase):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+            signer.pub_key = u''
 
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
 
@@ -660,18 +680,3 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.device.pull('device_filename', 123)
-
-
-class TestAdbDeviceWithBanner(TestAdbDevice):
-    def setUp(self):
-        with patchers.patch_tcp_handle:
-            self.device = AdbDevice('IP:5555', banner='banner')
-            self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
-
-
-class TestAdbDeviceBannerError(TestAdbDevice):
-    def setUp(self):
-        with patch('socket.gethostname', side_effect=Exception):
-            with patchers.patch_tcp_handle:
-                self.device = AdbDevice('IP:5555')
-                self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST)
