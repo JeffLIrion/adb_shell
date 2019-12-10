@@ -13,7 +13,7 @@ class TestTcpHandle(unittest.TestCase):
         """Create a ``TcpHandle`` and connect to a TCP service.
 
         """
-        self.handle = TcpHandle('host', '5555')
+        self.handle = TcpHandle('host', 5555)
         with patchers.PATCH_CREATE_CONNECTION:
             self.handle.connect()
 
