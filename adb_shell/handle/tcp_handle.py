@@ -98,6 +98,14 @@ class TcpHandle(BaseHandle):
             # https://docs.python.org/3/library/socket.html#socket.socket.settimeout
             self._connection.setblocking(0)
 
+    @property
+    def socket_address(self):
+        """
+        Get socket address string, i.e.: "<host>:<port>"
+        :return:
+        """
+        return '{}:{}'.format(self._host, self._port)
+
     def bulk_read(self, numbytes, timeout_s=None):
         """Receive data from the socket.
 
@@ -124,7 +132,7 @@ class TcpHandle(BaseHandle):
         if readable:
             return self._connection.recv(numbytes)
 
-        msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
+        msg = 'Reading from {} timed out ({} seconds)'.format(self.socket_address, timeout)
         raise TcpTimeoutException(msg)
 
     def bulk_write(self, data, timeout_s=None):
@@ -153,5 +161,5 @@ class TcpHandle(BaseHandle):
         if writeable:
             return self._connection.send(data)
 
-        msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, timeout)
+        msg = 'Sending data to {} timed out after {} seconds. No data was sent.'.format(self.socket_address, timeout)
         raise TcpTimeoutException(msg)

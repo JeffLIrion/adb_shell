@@ -21,6 +21,16 @@ class TestTcpHandle(unittest.TestCase):
         """Close the socket connection."""
         self.handle.close()
 
+    def test_socket_address(self):
+        """
+        Verify socket_address property works as intended
+        :return:
+        """
+        self.assertEqual(
+            self.handle.socket_address,
+            'host:5555'
+        )
+
     def test_connect_with_timeout(self):
         """TODO
 
