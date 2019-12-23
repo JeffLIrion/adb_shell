@@ -58,7 +58,7 @@
 """
 
 
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from contextlib import contextmanager
 import io
 import logging
@@ -70,6 +70,7 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
+#from .adb_transaction import AdbTransaction
 from .handle.base_handle import BaseHandle
 from .handle.tcp_handle import TcpHandle
 
@@ -143,6 +144,7 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
 
     """
     def __init__(self, local_id, remote_id, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        self.finished = False
         self.local_id = local_id
         self.remote_id = remote_id
         self.timeout_s = timeout_s
@@ -221,6 +223,10 @@ class AdbDevice(object):
         The hostname of the machine where the Python interpreter is currently running
     _handle : BaseHandle
         The handle that is used to connect to the device; must be a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
+    _read_dict : defaultdict
+        A dictionary where the keys are local IDs and the values are lists of the return values from :meth:`AdbDevice._read`
+    _local_id : int
+        The current local ID, which is in the range ``[1, 2^32 - 1]``
 
     """
 
@@ -240,7 +246,8 @@ class AdbDevice(object):
             raise exceptions.InvalidHandleError("`handle` must be an instance of a subclass of `BaseHandle`")
 
         self._handle = handle
-
+        self._local_id = 1
+        self._read_dict = defaultdict(list)
         self._available = False
 
     @property
@@ -316,7 +323,9 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
-        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
+        #cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
+        self._read([constants.AUTH, constants.CNXN], adb_info)
+        cmd, arg0, arg1, banner = self._read_dict[adb_info.local_id][0]
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
@@ -341,7 +350,9 @@ class AdbDevice(object):
             self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
+            #cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
+            self._read([constants.CNXN, constants.AUTH], adb_info)
+            cmd, arg0, _, banner = self._read_dict[adb_info.local_id][-1]
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
@@ -357,7 +368,9 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         adb_info.timeout_s = auth_timeout_s
-        cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
+        #cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
+        self._read([constants.CNXN], adb_info)
+        del self._read_dict[adb_info.local_id]
         self._available = True
         return True  # return banner
 
@@ -381,7 +394,12 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info)).decode('utf8')
+        response_list = self._streaming_command(b'shell', command.encode('utf8'), adb_info)
+        try:
+            del self._read_dict[adb_info.local_id]
+        except:
+            pass
+        return b''.join(response_list).decode('utf8')
 
     # ======================================================================= #
     #                                                                         #
@@ -690,10 +708,12 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
-        adb_info.local_id = 1
+        adb_info.local_id = self._local_id
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         self._send(msg, adb_info)
-        _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
+        #_, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
+        self._read([constants.OKAY], adb_info)
+        _, adb_info.remote_id, their_local_id, _ = self._read_dict[adb_info.local_id][-1]
 
         if adb_info.local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
@@ -768,6 +788,7 @@ class AdbDevice(object):
         else:
             data = bytearray()
 
+        self._read_dict[adb_info.local_id].append((command, arg0, arg1, bytes(data)))
         return command, arg0, arg1, bytes(data)
 
     def _read_until(self, expected_cmds, adb_info):
@@ -804,11 +825,17 @@ class AdbDevice(object):
         """
         start = time.time()
 
+        read_dict_len = len(self._read_dict[adb_info.local_id])
         while True:
-            cmd, remote_id2, local_id2, data = self._read(expected_cmds, adb_info)
+            self._read(expected_cmds, adb_info)
 
-            if local_id2 not in (0, adb_info.local_id):
-                raise exceptions.InterleavedDataError("We don't support multiple streams...")
+            # If the read packet had a different local ID, skip the code below and read another packet
+            rdl = len(self._read_dict[adb_info.local_id])
+            if read_dict_len == rdl:
+                continue
+
+            read_dict_len = rdl
+            cmd, remote_id2, local_id2, data = self._read_dict[adb_info.local_id][read_dict_len - 1]
 
             if remote_id2 in (0, adb_info.remote_id):
                 break
