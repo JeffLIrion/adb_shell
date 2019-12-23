@@ -70,7 +70,7 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
-#from .adb_transaction import AdbTransaction
+# from .adb_transaction import AdbTransaction
 from .handle.base_handle import BaseHandle
 from .handle.tcp_handle import TcpHandle
 
@@ -323,7 +323,7 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
-        #cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
+        # cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
         self._read([constants.AUTH, constants.CNXN], adb_info)
         cmd, arg0, arg1, banner = self._read_dict[adb_info.local_id][0]
 
@@ -350,7 +350,7 @@ class AdbDevice(object):
             self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            #cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
+            # cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
             self._read([constants.CNXN, constants.AUTH], adb_info)
             cmd, arg0, _, banner = self._read_dict[adb_info.local_id][-1]
 
@@ -368,7 +368,7 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         adb_info.timeout_s = auth_timeout_s
-        #cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
+        # cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
         self._read([constants.CNXN], adb_info)
         del self._read_dict[adb_info.local_id]
         self._available = True
@@ -397,7 +397,7 @@ class AdbDevice(object):
         response_list = self._streaming_command(b'shell', command.encode('utf8'), adb_info)
         try:
             del self._read_dict[adb_info.local_id]
-        except:
+        except KeyError:
             pass
         return b''.join(response_list).decode('utf8')
 
@@ -711,7 +711,7 @@ class AdbDevice(object):
         adb_info.local_id = self._local_id
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         self._send(msg, adb_info)
-        #_, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
+        # _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
         self._read([constants.OKAY], adb_info)
         _, adb_info.remote_id, their_local_id, _ = self._read_dict[adb_info.local_id][-1]
 
