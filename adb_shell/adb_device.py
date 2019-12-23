@@ -708,6 +708,10 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
+        self._local_id += 1
+        if self._local_id == 0xffffffff:  # TODO: make this a constant
+            self._local_id = 1
+
         adb_info.local_id = self._local_id
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         self._send(msg, adb_info)
