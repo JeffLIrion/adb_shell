@@ -835,7 +835,7 @@ class AdbDevice(object):
                 continue
 
             read_dict_len = rdl
-            cmd, remote_id2, local_id2, data = self._read_dict[adb_info.local_id][read_dict_len - 1]
+            cmd, remote_id2, _, data = self._read_dict[adb_info.local_id][read_dict_len - 1]
 
             if remote_id2 in (0, adb_info.remote_id):
                 break
