@@ -866,8 +866,11 @@ class AdbDevice(object):
                 del self._msg_buffer[idx]
 
             if time.time() - start > adb_info.total_timeout_s:
-                msg = self._msg_buffer[-1]
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, msg.command, (adb_info.timeout_s, adb_info.total_timeout_s))
+                if self._msg_buffer:
+                    cmd = self._msg_buffer[-1].cmd
+                else:
+                    cmd = None
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
 
     def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
