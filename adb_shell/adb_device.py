@@ -778,6 +778,78 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
+            msg = self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
+            _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
+            cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
+            command = constants.WIRE_TO_ID.get(cmd)
+
+            if not command:
+                raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
+
+            if command in expected_cmds:
+                break
+
+            if time.time() - start > adb_info.total_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
+
+        if data_length > 0:
+            data = bytearray()
+            while data_length > 0:
+                temp = self._handle.bulk_read(data_length, adb_info.timeout_s)
+                _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
+
+                data += temp
+                data_length -= len(temp)
+
+            actual_checksum = checksum(data)
+            if actual_checksum != data_checksum:
+                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+
+        else:
+            data = bytearray()
+
+        return command, arg0, arg1, bytes(data)
+
+    def _read_new(self, expected_cmds, adb_info):
+        """Receive a response from the device.
+
+        1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
+        2. If ``cmd`` is not a recognized command in :const:`adb_shell.constants.WIRE_TO_ID`, raise an exception
+        3. If the time has exceeded ``total_timeout_s``, raise an exception
+        4. Read ``data_length`` bytes from the device
+        5. If the checksum of the read data does not match ``data_checksum``, raise an exception
+        6. Return ``command``, ``arg0``, ``arg1``, and ``bytes(data)``
+
+
+        Parameters
+        ----------
+        expected_cmds : list[bytes]
+            We will read packets until we encounter one whose "command" field is in ``expected_cmds``
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+
+        Returns
+        -------
+        command : bytes
+            The received command, which is in :const:`adb_shell.constants.WIRE_TO_ID` and must be in ``expected_cmds``
+        arg0 : int
+            TODO
+        arg1 : int
+            TODO
+        bytes
+            The data that was read
+
+        Raises
+        ------
+        adb_shell.exceptions.InvalidCommandError
+            Unknown command *or* never got one of the expected responses.
+        adb_shell.exceptions.InvalidChecksumError
+            Received checksum does not match the expected checksum.
+
+        """
+        start = time.time()
+
+        while True:
             self._read_into_buffer(adb_info)
 
             idx = 0
