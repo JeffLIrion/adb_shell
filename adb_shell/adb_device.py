@@ -854,10 +854,10 @@ class AdbDevice(object):
 
             idx = 0
             for msg in self._msg_buffer:
-                if msg.arg0 not in (0, adb_info.local_id):
-                    # TODO: handle duplicate CLSE commands
-                    idx += 1
-                    continue
+                # if msg.arg0 not in (0, adb_info.local_id):
+                #     # TODO: handle duplicate CLSE commands
+                #     idx += 1
+                #     continue
 
                 if msg.command in expected_cmds:
                     ret = self._msg_buffer.pop(idx)
