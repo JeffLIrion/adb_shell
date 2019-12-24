@@ -101,7 +101,8 @@ def unpack(message):
     try:
         cmd, arg0, arg1, data_length, data_checksum, _ = struct.unpack(constants.MESSAGE_FORMAT, message)
     except struct.error as e:
-        raise ValueError('Unable to unpack ADB command. (length={})'.format(len(message)), constants.MESSAGE_FORMAT, message, e)
+        print(message)
+        raise ValueError('Unable to unpack ADB command. (length={}, message={})'.format(len(message), message), constants.MESSAGE_FORMAT, message, e)
 
     return cmd, arg0, arg1, data_length, data_checksum
 
@@ -126,17 +127,14 @@ class AdbMessage(object):
         Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
     arg1 : int
         Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.MAX_ADB_DATA`
-    command : int
-        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.ID_TO_WIRE`
+    command : bytes
+        A command
     data : bytes
         The data that will be sent
-    magic : int
-        ``self.command`` with its bits flipped; in other words, ``self.command + self.magic == 2**32 - 1``
 
     """
     def __init__(self, command, arg0, arg1, data=b''):
-        self.command = constants.ID_TO_WIRE[command]
-        self.magic = self.command ^ 0xFFFFFFFF
+        self.command = command
         self.arg0 = arg0
         self.arg1 = arg1
         self.data = data
@@ -150,7 +148,9 @@ class AdbMessage(object):
             The message packed into the format required by ADB
 
         """
-        return struct.pack(constants.MESSAGE_FORMAT, self.command, self.arg0, self.arg1, len(self.data), self.checksum, self.magic)
+        # The last field is ``self.command`` with its bits flipped.  FYI: ``command_int + (command_int ^ 0xFFFFFFFF) == 2**32 - 1``
+        command_int = constants.ID_TO_WIRE[self.command]
+        return struct.pack(constants.MESSAGE_FORMAT, command_int, self.arg0, self.arg1, len(self.data), self.checksum, command_int ^ 0xFFFFFFFF)
 
     @property
     def checksum(self):

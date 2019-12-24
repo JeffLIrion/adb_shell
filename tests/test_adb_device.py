@@ -1,5 +1,6 @@
 import logging
 from io import BytesIO
+import struct
 import sys
 import unittest
 
@@ -31,11 +32,15 @@ def join_messages(*messages):
 
 class AdbMessageForTesting(AdbMessage):
     def __init__(self, command, arg0=None, arg1=None, data=b''):
-        self.command = to_int(command)
-        self.magic = self.command ^ 0xFFFFFFFF
+        self.command = command
+        #self.magic = self.command ^ 0xFFFFFFFF
         self.arg0 = arg0
         self.arg1 = arg1
         self.data = data
+
+    def pack(self):
+        command_int = to_int(self.command)
+        return struct.pack(constants.MESSAGE_FORMAT, command_int, self.arg0, self.arg1, len(self.data), self.checksum, command_int ^ 0xFFFFFFFF)
 
 
 class TestAdbDevice(unittest.TestCase):

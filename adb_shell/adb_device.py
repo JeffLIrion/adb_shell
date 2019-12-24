@@ -58,7 +58,7 @@
 """
 
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from contextlib import contextmanager
 import io
 import logging
@@ -70,7 +70,6 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
-# from .adb_transaction import AdbTransaction
 from .handle.base_handle import BaseHandle
 from .handle.tcp_handle import TcpHandle
 
@@ -223,8 +222,8 @@ class AdbDevice(object):
         The hostname of the machine where the Python interpreter is currently running
     _handle : BaseHandle
         The handle that is used to connect to the device; must be a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
-    _read_dict : defaultdict
-        A dictionary where the keys are local IDs and the values are lists of the return values from :meth:`AdbDevice._read`
+    _msg_buffer : list[AdbMessage]
+        TODO
     _local_id : int
         The current local ID, which is in the range ``[1, 2^32 - 1]``
 
@@ -247,7 +246,7 @@ class AdbDevice(object):
 
         self._handle = handle
         self._local_id = 1
-        self._read_dict = defaultdict(list)
+        self._msg_buffer = []
         self._available = False
 
     @property
@@ -323,9 +322,7 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
-        # cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
-        self._read([constants.AUTH, constants.CNXN], adb_info)
-        cmd, arg0, arg1, banner = self._read_dict[adb_info.local_id][0]
+        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
@@ -350,9 +347,7 @@ class AdbDevice(object):
             self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            # cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
-            self._read([constants.CNXN, constants.AUTH], adb_info)
-            cmd, arg0, _, banner = self._read_dict[adb_info.local_id][-1]
+            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
@@ -368,9 +363,7 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         adb_info.timeout_s = auth_timeout_s
-        # cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
         self._read([constants.CNXN], adb_info)
-        del self._read_dict[adb_info.local_id]
         self._available = True
         return True  # return banner
 
@@ -394,12 +387,7 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        response_list = self._streaming_command(b'shell', command.encode('utf8'), adb_info)
-        try:
-            del self._read_dict[adb_info.local_id]
-        except KeyError:
-            pass
-        return b''.join(response_list).decode('utf8')
+        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info)).decode('utf8')
 
     # ======================================================================= #
     #                                                                         #
@@ -708,19 +696,48 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
-        self._local_id += 1
+        self._local_id += 1*0
         if self._local_id == 0xffffffff:  # TODO: make this a constant
             self._local_id = 1
 
         adb_info.local_id = self._local_id
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         self._send(msg, adb_info)
-        # _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
-        self._read([constants.OKAY], adb_info)
-        _, adb_info.remote_id, their_local_id, _ = self._read_dict[adb_info.local_id][-1]
+        _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
 
         if adb_info.local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
+
+    def _read_into_buffer(self, adb_info):
+        """TODO
+
+        """
+        msg = self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
+        _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
+
+        cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
+        command = constants.WIRE_TO_ID.get(cmd)
+        if not command:
+            raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
+
+        if data_length > 0:
+            data = bytearray()
+            while data_length > 0:
+                temp = self._handle.bulk_read(data_length, adb_info.timeout_s)
+                _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
+
+                data += temp
+                data_length -= len(temp)
+
+            actual_checksum = checksum(data)
+            if actual_checksum != data_checksum:
+                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+
+        else:
+            data = bytearray()
+
+        self._msg_buffer.append(AdbMessage(command, arg0, arg1, bytes(data)))
+        
 
     def _read(self, expected_cmds, adb_info):
         """Receive a response from the device.
@@ -762,38 +779,23 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            msg = self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
-            _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
-            cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
-            command = constants.WIRE_TO_ID.get(cmd)
+            self._read_into_buffer(adb_info)
 
-            if not command:
-                raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
+            idx = 0
+            for msg in self._msg_buffer:
+                if msg.arg0 not in (0, adb_info.local_id):
+                    # TODO: handle duplicate CLSE commands
+                    idx += 1
+                    continue
 
-            if command in expected_cmds:
-                break
+                if msg.command in expected_cmds:
+                    ret = self._msg_buffer.pop(idx)
+                    return ret.command, ret.arg0, ret.arg1, ret.data
+
+                del self._msg_buffer[idx]
 
             if time.time() - start > adb_info.total_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
-
-        if data_length > 0:
-            data = bytearray()
-            while data_length > 0:
-                temp = self._handle.bulk_read(data_length, adb_info.timeout_s)
-                _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
-
-                data += temp
-                data_length -= len(temp)
-
-            actual_checksum = checksum(data)
-            if actual_checksum != data_checksum:
-                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
-
-        else:
-            data = bytearray()
-
-        self._read_dict[adb_info.local_id].append((command, arg0, arg1, bytes(data)))
-        return command, arg0, arg1, bytes(data)
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, msg.command, (adb_info.timeout_s, adb_info.total_timeout_s))
 
     def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
@@ -829,17 +831,8 @@ class AdbDevice(object):
         """
         start = time.time()
 
-        read_dict_len = len(self._read_dict[adb_info.local_id])
         while True:
-            self._read(expected_cmds, adb_info)
-
-            # If the read packet had a different local ID, skip the code below and read another packet
-            rdl = len(self._read_dict[adb_info.local_id])
-            if read_dict_len == rdl:
-                continue
-
-            read_dict_len = rdl
-            cmd, remote_id2, _, data = self._read_dict[adb_info.local_id][read_dict_len - 1]
+            cmd, remote_id2, _, data = self._read(expected_cmds, adb_info)
 
             if remote_id2 in (0, adb_info.remote_id):
                 break
