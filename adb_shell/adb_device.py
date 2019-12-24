@@ -738,7 +738,7 @@ class AdbDevice(object):
 
         self._msg_buffer.append(AdbMessage(command, arg0, arg1, bytes(data)))
 
-    def _read(self, expected_cmds, adb_info):
+    def _read_old(self, expected_cmds, adb_info):
         """Receive a response from the device.
 
         1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
@@ -810,7 +810,7 @@ class AdbDevice(object):
 
         return command, arg0, arg1, bytes(data)
 
-    def _read_new(self, expected_cmds, adb_info):
+    def _read(self, expected_cmds, adb_info):
         """Receive a response from the device.
 
         1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
