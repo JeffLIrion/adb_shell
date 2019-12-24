@@ -696,7 +696,7 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
-        self._local_id += 1*0
+        self._local_id += 0
         if self._local_id == 0xffffffff:  # TODO: make this a constant
             self._local_id = 1
 
@@ -737,7 +737,6 @@ class AdbDevice(object):
             data = bytearray()
 
         self._msg_buffer.append(AdbMessage(command, arg0, arg1, bytes(data)))
-        
 
     def _read(self, expected_cmds, adb_info):
         """Receive a response from the device.
@@ -795,6 +794,7 @@ class AdbDevice(object):
                 del self._msg_buffer[idx]
 
             if time.time() - start > adb_info.total_timeout_s:
+                msg = self._msg_buffer[-1]
                 raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, msg.command, (adb_info.timeout_s, adb_info.total_timeout_s))
 
     def _read_until(self, expected_cmds, adb_info):
