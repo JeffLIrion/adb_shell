@@ -361,7 +361,7 @@ class AdbDevice(object):
         self._available = True
         return True  # return banner
 
-    def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, raw=False):
         """Send an ADB shell command to the device.
 
         Parameters
@@ -381,7 +381,8 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info)).decode('utf8')
+        output = b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info))
+        return output if raw else output.decode('utf8')
 
     # ======================================================================= #
     #                                                                         #
