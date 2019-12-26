@@ -385,7 +385,7 @@ class AdbDevice(object):
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         if decode:
             return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info)).decode('utf8')
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info))       
+        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info))
 
     # ======================================================================= #
     #                                                                         #
