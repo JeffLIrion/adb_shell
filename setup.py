@@ -8,6 +8,7 @@ setup(
     version='0.1.0',
     description='A Python implementation of ADB with shell and FileSync functionality.',
     long_description=readme,
+    keywords=['adb', 'android'],
     url='https://github.com/JeffLIrion/adb_shell',
     author='Jeff Irion',
     author_email='jefflirion@users.noreply.github.com',
