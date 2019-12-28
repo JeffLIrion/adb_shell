@@ -15,6 +15,7 @@ setup(
     install_requires=['cryptography', 'pyasn1', 'rsa'],
     tests_require=['pycryptodome'],
     classifiers=['Operating System :: OS Independent',
+                 'License :: OSI Approved :: Apache Software License',
                  'Programming Language :: Python :: 3',
                  'Programming Language :: Python :: 2'],
     test_suite='tests'
