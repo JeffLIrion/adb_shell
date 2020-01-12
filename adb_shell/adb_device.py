@@ -55,6 +55,8 @@
     * :meth:`AdbDevice.shell`
     * :meth:`AdbDevice.stat`
 
+* :class:`AdbDeviceTcp`
+
 """
 
 
