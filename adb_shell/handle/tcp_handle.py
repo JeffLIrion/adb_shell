@@ -22,9 +22,8 @@
 
 * :class:`TcpHandle`
 
-    * :attr:`TcpHandle.available`
-    * :attr:`TcpHandle.bulk_read`
-    * :attr:`TcpHandle.bulk_write`
+    * :meth:`TcpHandle.bulk_read`
+    * :meth:`TcpHandle.bulk_write`
     * :meth:`TcpHandle.close`
     * :meth:`TcpHandle.connect`
 

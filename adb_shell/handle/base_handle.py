@@ -6,8 +6,8 @@
 
 * :class:`BaseHandle`
 
-    * :attr:`BaseHandle.bulk_read`
-    * :attr:`BaseHandle.bulk_write`
+    * :meth:`BaseHandle.bulk_read`
+    * :meth:`BaseHandle.bulk_write`
     * :meth:`BaseHandle.close`
     * :meth:`BaseHandle.connect`
 
