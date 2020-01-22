@@ -22,13 +22,13 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'adb_shell'
-copyright = '2019, Jeff Irion and contributors'
+copyright = '2020, Jeff Irion and contributors'
 author = 'Jeff Irion'
 
 # The short X.Y version
-version = '0.1.0'
+version = '0.1.1'
 # The full version, including alpha/beta/rc tags
-release = '0.1.0'
+release = '0.1.1'
 
 
 # -- General configuration ---------------------------------------------------

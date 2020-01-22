@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Jeff Irion and contributors
+# Copyright (c) 2020 Jeff Irion and contributors
 #
 # This file is part of the adb-shell package.  It incorporates work
 # covered by the following license notice:
@@ -83,5 +83,41 @@ class PushFailedError(Exception):
 
 class TcpTimeoutException(Exception):
     """TCP connection timed read/write operation exceeded the allowed time.
+
+    """
+
+
+class UsbDeviceNotFoundError(Exception):
+    """TODO
+
+    """
+
+
+class UsbReadFailedError(Exception):
+    """TODO
+
+    Parameters
+    ----------
+    msg : str
+        The error message
+    usb_error : libusb1.USBError
+        An exception from ``libusb1``
+
+    Attributes
+    ----------
+    usb_error : libusb1.USBError
+        An exception from ``libusb1``
+
+    """
+    def __init__(self, msg, usb_error):
+        super(UsbReadFailedError, self).__init__(msg)
+        self.usb_error = usb_error
+
+    def __str__(self):
+        return '%s: %s' % (super(UsbReadFailedError, self).__str__(), str(self.usb_error))
+
+
+class UsbWriteFailedError(Exception):
+    """:meth:`adb_shell.handle.usb_handle.UsbHandle.bulk_write` failed.
 
     """

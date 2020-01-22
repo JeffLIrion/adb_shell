@@ -2,18 +2,17 @@ import unittest
 
 from mock import patch
 
-from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.handle.tcp_handle import TcpHandle
+from adb_shell.handle.usb_handle import UsbHandle
 
 from . import patchers
 
 
-class TestTcpHandle(unittest.TestCase):
+class TestUsbHandle(unittest.TestCase):
     def setUp(self):
-        """Create a ``TcpHandle`` and connect to a TCP service.
+        """Create a ``UsbHandle`` and do something...
 
         """
-        self.handle = TcpHandle('host', 5555)
+        self.handle = UsbHandle('TODO', 'TODO')
         with patchers.PATCH_CREATE_CONNECTION:
             self.handle.connect()
 
@@ -25,6 +24,9 @@ class TestTcpHandle(unittest.TestCase):
         """TODO
 
         """
+        if True:
+            return
+
         self.handle.close()
         with patchers.PATCH_CREATE_CONNECTION:
             self.handle.connect(timeout_s=1)
@@ -34,6 +36,9 @@ class TestTcpHandle(unittest.TestCase):
         """TODO
 
         """
+        if True:
+            return
+
         # Provide the `recv` return values
         self.handle._connection._recv = b'TEST1TEST2'
 
@@ -45,17 +50,13 @@ class TestTcpHandle(unittest.TestCase):
             with self.assertRaises(TcpTimeoutException):
                 self.handle.bulk_read(4)
 
-    def test_close_oserror(self):
-        """Test that an `OSError` exception is handled when closing the socket.
-
-        """
-        with patch('{}.patchers.FakeSocket.shutdown'.format(__name__), side_effect=OSError):
-            self.handle.close()
-
     def test_bulk_write(self):
         """TODO
 
         """
+        if True:
+            return
+
         with patchers.PATCH_SELECT_SUCCESS:
             self.handle.bulk_write(b'TEST')
 

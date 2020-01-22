@@ -1,10 +1,15 @@
 language: python
 python:
   - "2.7"
-  - "3.6"
+  - "3.7"
+addons:
+  apt:
+    packages:
+      - swig
+      - libusb-1.0-0-dev
 install:
   - pip install .
-  - pip install flake8 pylint coveralls cryptography
+  - pip install flake8 pylint coveralls cryptography libusb1>=1.0.16
   - python --version 2>&1 | grep -q "Python 2" && pip install mock || true
 script:
 - flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
