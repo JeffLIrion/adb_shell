@@ -74,6 +74,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .handle.base_handle import BaseHandle
 from .handle.tcp_handle import TcpHandle
+from .handle.usb_handle import UsbHandle
 
 
 try:
@@ -860,7 +861,7 @@ class AdbDevice(object):
         while True:
             cmd, data = self._read_until([constants.CLSE, constants.WRTE], adb_info)
 
-            if cmd == constants.CLSE:
+            if bytes(cmd) == constants.CLSE:
                 msg = AdbMessage(constants.CLSE, adb_info.local_id, adb_info.remote_id)
                 self._send(msg, adb_info)
                 break
@@ -1155,3 +1156,32 @@ class AdbDeviceTcp(AdbDevice):
     def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
         handle = TcpHandle(host, port, default_timeout_s)
         super(AdbDeviceTcp, self).__init__(handle, banner)
+
+
+class AdbDeviceUsb(AdbDevice):
+    """A class with methods for connecting to a device via TCP and executing ADB commands.
+
+    Parameters
+    ----------
+    serial : str
+        The USB device serial ID
+    default_timeout_s : float, None
+        Default timeout in seconds for TCP packets, or ``None``
+    banner : str, bytes, None
+        The hostname of the machine where the Python interpreter is currently running; if
+        it is not provided, it will be determined via ``socket.gethostname()``
+
+    Attributes
+    ----------
+    _available : bool
+        Whether an ADB connection to the device has been established
+    _banner : bytearray, bytes
+        The hostname of the machine where the Python interpreter is currently running
+    _handle : TcpHandle
+        The handle that is used to connect to the device
+
+    """
+
+    def __init__(self, serial, default_timeout_s=None, banner=None):
+        handle = UsbHandle.from_serial(serial)
+        super(AdbDeviceUsb, self).__init__(handle, banner)

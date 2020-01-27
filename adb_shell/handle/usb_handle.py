@@ -32,6 +32,7 @@ import logging
 import platform
 import re
 import threading
+import warnings
 import weakref
 
 import libusb1
@@ -54,6 +55,10 @@ DEFAULT_TIMEOUT_S = 10
 SYSFS_PORT_SPLIT_RE = re.compile("[,/:.-]")
 
 _LOGGER = logging.getLogger(__name__)
+
+CLASS = usb1.CLASS_VENDOR_SPEC
+SUBCLASS = 0x42
+PROTOCOL = 0x01
 
 
 def get_interface(setting):
@@ -161,7 +166,12 @@ class UsbHandle(BaseHandle):
     _HANDLE_CACHE = weakref.WeakValueDictionary()
     _HANDLE_CACHE_LOCK = threading.Lock()
 
-    def __init__(self, device, setting, usb_info=None, timeout_s=None):
+    def __init__(
+            self,
+            device: usb1.USBDevice,
+            setting: usb1.USBInterfaceSetting,
+            usb_info=None, timeout_s=None
+    ):
         """Initialize USB Handle."""
         self._setting = setting
         self._device = device
@@ -199,6 +209,39 @@ class UsbHandle(BaseHandle):
 
         """
 
+        read_endpoint = None
+        write_endpoint = None
+
+        for endpoint in self._setting.iterEndpoints():
+            address = endpoint.getAddress()
+            if address & usb1.ENDPOINT_DIR_MASK:
+                read_endpoint = address
+                max_read_packet_len = endpoint.getMaxPacketSize()
+            else:
+                write_endpoint = address
+
+        assert read_endpoint is not None
+        assert write_endpoint is not None
+
+        handle = self._device.open()
+        iface_number = self._setting.getNumber()
+        try:
+            if (platform.system() != 'Windows'
+                    and handle.kernelDriverActive(iface_number)):
+                handle.detachKernelDriver(iface_number)
+        except usb1.USBErrorNotFound as e:
+            warnings.warn('Kernel driver not found for interface: %s.', iface_number)
+
+        # # When this object is deleted, make sure it's closed.
+        # weakref.ref(self, self.close)
+
+        self._handle = handle
+        self._read_endpoint = read_endpoint
+        self._write_endpoint = write_endpoint
+        self._interface_number = iface_number
+
+        self._handle.claimInterface(self._interface_number)
+
     def bulk_read(self, numbytes, timeout_s=None):
         """Receive data from the USB device.
 
@@ -226,7 +269,7 @@ class UsbHandle(BaseHandle):
             # python-libusb1 > 1.6 exposes bytearray()s now instead of bytes/str.
             # To support older and newer versions, we ensure everything's bytearray()
             # from here on out.
-            return bytearray(self._handle.bulk_read(self._read_endpoint, numbytes, timeout=self._timeout(timeout_s)))
+            return bytearray(self._handle.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout(timeout_s)))
         except libusb1.USBError as e:
             raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
 
@@ -315,7 +358,7 @@ class UsbHandle(BaseHandle):
             TODO
 
         """
-        return timeout_s * 1000 if timeout_s is not None else self._timeout_s * 1000
+        return int(timeout_s * 1000 if timeout_s is not None else self._timeout_s * 1000)
 
     def _flush_buffers(self):
         """TODO
@@ -422,6 +465,10 @@ class UsbHandle(BaseHandle):
 
         """
         return lambda device: device.serial_number == serial
+
+    @classmethod
+    def _device_is_available(cls):
+        return interface_matcher(CLASS, SUBCLASS, PROTOCOL)
 
     # ======================================================================= #
     #                                                                         #
@@ -547,3 +594,9 @@ class UsbHandle(BaseHandle):
             return next(cls._find_devices(setting_matcher, device_matcher=device_matcher, **kwargs))
         except StopIteration:
             raise exceptions.UsbDeviceNotFoundError('No device available, or it is in the wrong configuration.')
+
+    @classmethod
+    def from_serial(cls, serial):
+        return cls._find_first(
+            cls._device_is_available(),
+            device_matcher=cls._serial_matcher(serial))
