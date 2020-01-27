@@ -27,7 +27,7 @@ Example Usage
 
 .. code-block:: python
 
-   from adb_shell.adb_device import AdbDeviceTcp
+   from adb_shell.adb_device import AdbDeviceTcp, AdbDeviceUsb
    from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
    # Connect (no authentication necessary)
@@ -35,12 +35,20 @@ Example Usage
    device1.connect(auth_timeout_s=0.1)
 
    # Connect (authentication required)
-   with open('path/to/adbkey') as f:
+   with open('path/to/adbkey', 'rb') as f:
        priv = f.read()
    signer = PythonRSASigner('', priv)
    device2 = AdbDeviceTcp('192.168.0.222', 5555, default_timeout_s=9.)
    device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
+   # Connect via USB (requires adb-shell[usb])
+   with open('path/to/adbkey', 'rb') as f:
+       priv = f.read()
+   signer = PythonRSASigner('', priv)
+   device3 = AdbDeviceUsb('ab78c6ef')
+   device3.connect(rsa_keys=[signer], auth_timeout_s=0.1)
+
    # Send a shell command
    response1 = device1.shell('echo TEST1')
    response2 = device2.shell('echo TEST2')
+   response3 = device3.shell('echo TEST3')
