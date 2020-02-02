@@ -41,7 +41,7 @@ Example Usage
    device2 = AdbDeviceTcp('192.168.0.222', 5555, default_timeout_s=9.)
    device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
-   # Connect via USB (requires adb-shell[usb])
+   # Connect via USB (package must be installed via `pip install adb-shell[usb])`
    with open('path/to/adbkey', 'rb') as f:
        priv = f.read()
    signer = PythonRSASigner('', priv)
