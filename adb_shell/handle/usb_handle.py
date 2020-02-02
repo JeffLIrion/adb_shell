@@ -35,14 +35,7 @@ import threading
 import warnings
 import weakref
 
-import libusb1
 import usb1
-
-try:
-    from libusb1 import LIBUSB_ERROR_NOT_FOUND, LIBUSB_ERROR_TIMEOUT  # pylint: disable=ungrouped-imports
-except ImportError:  # pragma: no cover
-    LIBUSB_ERROR_NOT_FOUND = 'LIBUSB_ERROR_NOT_FOUND'
-    LIBUSB_ERROR_TIMEOUT = 'LIBUSB_ERROR_TIMEOUT'
 
 from .base_handle import BaseHandle
 
@@ -188,7 +181,7 @@ class UsbHandle(BaseHandle):
         try:
             self._handle.releaseInterface(self._interface_number)
             self._handle.close()
-        except libusb1.USBError:
+        except usb1.USBError:
             _LOGGER.info('USBError while closing handle %s: ', self.usb_info, exc_info=True)
         finally:
             self._handle = None
@@ -263,7 +256,7 @@ class UsbHandle(BaseHandle):
             # To support older and newer versions, we ensure everything's bytearray()
             # from here on out.
             return bytes(self._handle.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout(timeout_s)))
-        except libusb1.USBError as e:
+        except usb1.USBError as e:
             raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
 
     def bulk_write(self, data, timeout_s=None):
@@ -295,7 +288,7 @@ class UsbHandle(BaseHandle):
         try:
             return self._handle.bulkWrite(self._write_endpoint, data, timeout=self._timeout(timeout_s))
 
-        except libusb1.USBError as e:
+        except usb1.USBError as e:
             raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
 
     def _open(self):
@@ -314,7 +307,7 @@ class UsbHandle(BaseHandle):
 
         for endpoint in self._setting.iterEndpoints():
             address = endpoint.getAddress()
-            if address & libusb1.USB_ENDPOINT_DIR_MASK:
+            if address & usb1.USB_ENDPOINT_DIR_MASK:
                 self._read_endpoint = address
                 self._max_read_packet_len = endpoint.getMaxPacketSize()
             else:
@@ -328,11 +321,8 @@ class UsbHandle(BaseHandle):
         try:
             if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
                 handle.detachKernelDriver(iface_number)
-        except libusb1.USBError as e:
-            if e.value == LIBUSB_ERROR_NOT_FOUND:
-                _LOGGER.warning('Kernel driver not found for interface: %s.', iface_number)
-            else:
-                raise
+        except usb1.USBErrorNotFound as e:  # pylint: disable=no-member
+            warnings.warn('Kernel driver not found for interface: %s.', iface_number)
         handle.claimInterface(iface_number)
         self._handle = handle
         self._interface_number = iface_number
@@ -366,7 +356,7 @@ class UsbHandle(BaseHandle):
             try:
                 self.bulk_read(self._max_read_packet_len, timeout_s=10)
             except exceptions.UsbReadFailedError as e:
-                if e.usb_error.value == LIBUSB_ERROR_TIMEOUT:
+                if isinstance(e.usb_error, usb1.USBErrorTimeout):  # pylint: disable=no-member
                     break
                 raise
 
@@ -411,7 +401,7 @@ class UsbHandle(BaseHandle):
         """
         try:
             sn = self.serial_number
-        except libusb1.USBError:
+        except usb1.USBError:
             sn = ''
         if sn and sn != self._usb_info:
             return '%s %s' % (self._usb_info, sn)
