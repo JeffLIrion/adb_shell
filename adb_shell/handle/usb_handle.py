@@ -255,9 +255,9 @@ class UsbHandle(BaseHandle):
             # python-libusb1 > 1.6 exposes bytearray()s now instead of bytes/str.
             # To support older and newer versions, we ensure everything's bytearray()
             # from here on out.
-            return bytes(self._handle.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout(timeout_s)))
+            return bytes(self._handle.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout_ms(timeout_s)))
         except usb1.USBError as e:
-            raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
+            raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout_ms(timeout_s)), e)
 
     def bulk_write(self, data, timeout_s=None):
         """Send data to the USB device.
@@ -286,10 +286,10 @@ class UsbHandle(BaseHandle):
             raise exceptions.UsbWriteFailedError('This handle has been closed, probably due to another being opened.', None)
 
         try:
-            return self._handle.bulkWrite(self._write_endpoint, data, timeout=self._timeout(timeout_s))
+            return self._handle.bulkWrite(self._write_endpoint, data, timeout=self._timeout_ms(timeout_s))
 
         except usb1.USBError as e:
-            raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
+            raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout_ms(timeout_s)), e)
 
     def _open(self):
         """Opens the USB device for this setting, and claims the interface.
@@ -332,7 +332,7 @@ class UsbHandle(BaseHandle):
         # When this object is deleted, make sure it's closed.
         weakref.ref(self, self.Close)
 
-    def _timeout(self, timeout_s):
+    def _timeout_ms(self, timeout_s):
         """TODO
 
         Returns
@@ -341,7 +341,7 @@ class UsbHandle(BaseHandle):
             TODO
 
         """
-        return int(timeout_s * 1000 if timeout_s is not None else self._timeout_s * 1000)
+        return int(timeout_s * 1000 if timeout_s is not None else self._default_timeout_s * 1000)
 
     def _flush_buffers(self):
         """TODO
