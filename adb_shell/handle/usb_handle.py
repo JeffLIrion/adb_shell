@@ -169,7 +169,7 @@ class UsbHandle(BaseHandle):
         self._write_endpoint = None
 
         self._usb_info = usb_info or ''
-        self._default_timeout_s = default_timeout_s if default_timeout_s else DEFAULT_TIMEOUT_S
+        self._default_timeout_s = default_timeout_s if default_timeout_s is not None else DEFAULT_TIMEOUT_S
         self._max_read_packet_len = 0
 
     def close(self):
