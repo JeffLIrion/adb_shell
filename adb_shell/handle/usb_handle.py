@@ -579,12 +579,14 @@ class UsbHandle(BaseHandle):
             raise exceptions.UsbDeviceNotFoundError('No device available, or it is in the wrong configuration.')
 
     @classmethod
-    def from_serial(cls, serial, default_timeout_s=None):
+    def find_adb(cls, serial=None, port_path=None, default_timeout_s=None):
         """TODO
 
         Parameters
         ----------
         serial : TODO
+            TODO
+        port_path : TODO
             TODO
         default_timeout_s : TODO, None
             Default timeout of commands in seconds.
@@ -595,4 +597,9 @@ class UsbHandle(BaseHandle):
             TODO
 
         """
-        return cls._find_first(interface_matcher(CLASS, SUBCLASS, PROTOCOL), device_matcher=cls._serial_matcher(serial), default_timeout_s=default_timeout_s)
+        return cls._find(
+            interface_matcher(CLASS, SUBCLASS, PROTOCOL),
+            serial=serial,
+            port_path=port_path,
+            default_timeout_s=default_timeout_s
+        )

@@ -1192,9 +1192,9 @@ class AdbDeviceUsb(AdbDevice):
 
     """
 
-    def __init__(self, serial, default_timeout_s=None, banner=None):
+    def __init__(self, serial=None, port_path=None, default_timeout_s=None, banner=None):
         if UsbHandle is None:
             raise exceptions.InvalidHandleError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
 
-        handle = UsbHandle.from_serial(serial, default_timeout_s)
+        handle = UsbHandle.find_adb(serial, port_path, default_timeout_s)
         super(AdbDeviceUsb, self).__init__(handle, banner)
