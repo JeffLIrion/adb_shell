@@ -44,6 +44,7 @@
     * :meth:`AdbDevice._read_until`
     * :meth:`AdbDevice._read_until_close`
     * :meth:`AdbDevice._send`
+    * :meth:`AdbDevice._service`
     * :meth:`AdbDevice._streaming_command`
     * :meth:`AdbDevice._write`
     * :attr:`AdbDevice.available`
@@ -393,8 +394,8 @@ class AdbDevice(object):
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         if decode:
-            return b''.join(self._streaming_command(service.encode('utf8'), command.encode('utf8'), adb_info)).decode('utf8')
-        return b''.join(self._streaming_command(service.encode('utf8'), command.encode('utf8'), adb_info))
+            return b''.join(self._streaming_command(service, command, adb_info)).decode('utf8')
+        return b''.join(self._streaming_command(service, command, adb_info))
 
     def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device.
