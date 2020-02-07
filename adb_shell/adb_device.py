@@ -363,6 +363,39 @@ class AdbDevice(object):
         self._available = True
         return True  # return banner
 
+    # ======================================================================= #
+    #                                                                         #
+    #                                 Services                                #
+    #                                                                         #
+    # ======================================================================= #
+    def _service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+        """Send an ADB command to the device.
+
+        Parameters
+        ----------
+        service : bytes
+            The ADB service to talk to (e.g., ``b'shell'``)
+        command : bytes
+            The command that will be sent
+        timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
+            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
+        total_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        decode : bool
+            Whether to decode the output to utf8 before returning
+
+        Returns
+        -------
+        bytes, str
+            The output of the ADB command as a string if ``decode`` is True, otherwise as bytes.
+
+        """
+        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        if decode:
+            return b''.join(self._streaming_command(service.encode('utf8'), command.encode('utf8'), adb_info)).decode('utf8')
+        return b''.join(self._streaming_command(service.encode('utf8'), command.encode('utf8'), adb_info))
+
     def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device.
 
@@ -381,13 +414,10 @@ class AdbDevice(object):
         Returns
         -------
         bytes, str
-            The output of the ADB shell command as string if decode is True, otherwise as bytes.
+            The output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        if decode:
-            return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info)).decode('utf8')
-        return b''.join(self._streaming_command(b'shell', command.encode('utf8'), adb_info))
+        return self._service(b'shell', command.encode('utf8'), adb_info, decode)
 
     # ======================================================================= #
     #                                                                         #
