@@ -417,7 +417,7 @@ class AdbDevice(object):
             The output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        return self._service(b'shell', command.encode('utf8'), adb_info, decode)
+        return self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
 
     # ======================================================================= #
     #                                                                         #
