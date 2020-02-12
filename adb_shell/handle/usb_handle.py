@@ -321,7 +321,7 @@ class UsbHandle(BaseHandle):
         try:
             if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
                 handle.detachKernelDriver(iface_number)
-        except usb1.USBErrorNotFound as e:  # pylint: disable=no-member
+        except usb1.USBErrorNotFound:  # pylint: disable=no-member
             warnings.warn('Kernel driver not found for interface: %s.', iface_number)
         handle.claimInterface(iface_number)
         self._handle = handle
