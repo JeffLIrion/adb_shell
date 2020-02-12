@@ -1,7 +1,7 @@
 from mock import patch
 
 from adb_shell import constants
-from adb_shell.adb_message import AdbMessage, unpack
+from adb_shell.adb_message import AdbMessage
 from adb_shell.handle.tcp_handle import TcpHandle
 
 
@@ -49,7 +49,7 @@ class FakeTcpHandle(TcpHandle):
     def close(self):
         self._connection = None
 
-    def connect(self, auth_timeout_s=None):
+    def connect(self, timeout_s=None):
         self._connection = True
 
     def bulk_read(self, numbytes, timeout_s=None):
