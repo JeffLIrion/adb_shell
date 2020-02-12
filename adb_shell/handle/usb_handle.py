@@ -32,16 +32,10 @@ import logging
 import platform
 import re
 import threading
+import warnings
 import weakref
 
-import libusb1
 import usb1
-
-try:
-    from libusb1 import LIBUSB_ERROR_NOT_FOUND, LIBUSB_ERROR_TIMEOUT  # pylint: disable=ungrouped-imports
-except ImportError:  # pragma: no cover
-    LIBUSB_ERROR_NOT_FOUND = 'LIBUSB_ERROR_NOT_FOUND'
-    LIBUSB_ERROR_TIMEOUT = 'LIBUSB_ERROR_TIMEOUT'
 
 from .base_handle import BaseHandle
 
@@ -54,6 +48,10 @@ DEFAULT_TIMEOUT_S = 10
 SYSFS_PORT_SPLIT_RE = re.compile("[,/:.-]")
 
 _LOGGER = logging.getLogger(__name__)
+
+CLASS = usb1.CLASS_VENDOR_SPEC  # pylint: disable=no-member
+SUBCLASS = 0x42
+PROTOCOL = 0x01
 
 
 def get_interface(setting):
@@ -127,17 +125,19 @@ class UsbHandle(BaseHandle):
 
     Parameters
     ----------
-    device : TODO
+    default_timeout_s : TODO, None
+        Timeout in seconds for all I/O.
+    device : usb1.USBDevice
         libusb_device to connect to.
-    setting : TODO
+    setting : usb1.USBInterfaceSetting
         libusb setting with the correct endpoints to communicate with.
     usb_info : TODO, None
         String describing the usb path/serial/device, for debugging.
-    timeout_s : TODO, None
-        Timeout in seconds for all I/O.
 
     Attributes
     ----------
+    _default_timeout_s : TODO, None
+        Timeout in seconds for all I/O.
     _device : TODO
         libusb_device to connect to.
     _handle : TODO
@@ -150,8 +150,6 @@ class UsbHandle(BaseHandle):
         TODO
     _setting : TODO
         libusb setting with the correct endpoints to communicate with.
-    _timeout_s : TODO, None
-        Timeout in seconds for all I/O.
     _usb_info : TODO
         String describing the usb path/serial/device, for debugging.
     _write_endpoint : TODO, None
@@ -161,8 +159,7 @@ class UsbHandle(BaseHandle):
     _HANDLE_CACHE = weakref.WeakValueDictionary()
     _HANDLE_CACHE_LOCK = threading.Lock()
 
-    def __init__(self, device, setting, usb_info=None, timeout_s=None):
-        """Initialize USB Handle."""
+    def __init__(self, device, setting, usb_info=None, default_timeout_s=None):
         self._setting = setting
         self._device = device
         self._handle = None
@@ -172,7 +169,7 @@ class UsbHandle(BaseHandle):
         self._write_endpoint = None
 
         self._usb_info = usb_info or ''
-        self._timeout_s = timeout_s if timeout_s else DEFAULT_TIMEOUT_S
+        self._default_timeout_s = default_timeout_s if default_timeout_s is not None else DEFAULT_TIMEOUT_S
         self._max_read_packet_len = 0
 
     def close(self):
@@ -184,7 +181,7 @@ class UsbHandle(BaseHandle):
         try:
             self._handle.releaseInterface(self._interface_number)
             self._handle.close()
-        except libusb1.USBError:
+        except usb1.USBError:
             _LOGGER.info('USBError while closing handle %s: ', self.usb_info, exc_info=True)
         finally:
             self._handle = None
@@ -198,6 +195,38 @@ class UsbHandle(BaseHandle):
             Set the timeout on the socket instance
 
         """
+
+        read_endpoint = None
+        write_endpoint = None
+
+        for endpoint in self._setting.iterEndpoints():
+            address = endpoint.getAddress()
+            if address & usb1.ENDPOINT_DIR_MASK:  # pylint: disable=no-member
+                read_endpoint = address
+                # max_read_packet_len = endpoint.getMaxPacketSize()
+            else:
+                write_endpoint = address
+
+        assert read_endpoint is not None
+        assert write_endpoint is not None
+
+        handle = self._device.open()
+        iface_number = self._setting.getNumber()
+        try:
+            if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
+                handle.detachKernelDriver(iface_number)
+        except usb1.USBErrorNotFound:  # pylint: disable=no-member
+            warnings.warn('Kernel driver not found for interface: %s.', iface_number)
+
+        # # When this object is deleted, make sure it's closed.
+        # weakref.ref(self, self.close)
+
+        self._handle = handle
+        self._read_endpoint = read_endpoint
+        self._write_endpoint = write_endpoint
+        self._interface_number = iface_number
+
+        self._handle.claimInterface(self._interface_number)
 
     def bulk_read(self, numbytes, timeout_s=None):
         """Receive data from the USB device.
@@ -226,9 +255,9 @@ class UsbHandle(BaseHandle):
             # python-libusb1 > 1.6 exposes bytearray()s now instead of bytes/str.
             # To support older and newer versions, we ensure everything's bytearray()
             # from here on out.
-            return bytearray(self._handle.bulk_read(self._read_endpoint, numbytes, timeout=self._timeout(timeout_s)))
-        except libusb1.USBError as e:
-            raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
+            return bytes(self._handle.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout_ms(timeout_s)))
+        except usb1.USBError as e:
+            raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout_ms(timeout_s)), e)
 
     def bulk_write(self, data, timeout_s=None):
         """Send data to the USB device.
@@ -257,10 +286,10 @@ class UsbHandle(BaseHandle):
             raise exceptions.UsbWriteFailedError('This handle has been closed, probably due to another being opened.', None)
 
         try:
-            return self._handle.bulkWrite(self._write_endpoint, data, timeout=self._timeout(timeout_s))
+            return self._handle.bulkWrite(self._write_endpoint, data, timeout=self._timeout_ms(timeout_s))
 
-        except libusb1.USBError as e:
-            raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout(timeout_s)), e)
+        except usb1.USBError as e:
+            raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout_ms(timeout_s)), e)
 
     def _open(self):
         """Opens the USB device for this setting, and claims the interface.
@@ -278,7 +307,7 @@ class UsbHandle(BaseHandle):
 
         for endpoint in self._setting.iterEndpoints():
             address = endpoint.getAddress()
-            if address & libusb1.USB_ENDPOINT_DIR_MASK:
+            if address & usb1.USB_ENDPOINT_DIR_MASK:
                 self._read_endpoint = address
                 self._max_read_packet_len = endpoint.getMaxPacketSize()
             else:
@@ -292,11 +321,8 @@ class UsbHandle(BaseHandle):
         try:
             if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
                 handle.detachKernelDriver(iface_number)
-        except libusb1.USBError as e:
-            if e.value == LIBUSB_ERROR_NOT_FOUND:
-                _LOGGER.warning('Kernel driver not found for interface: %s.', iface_number)
-            else:
-                raise
+        except usb1.USBErrorNotFound as e:  # pylint: disable=no-member
+            warnings.warn('Kernel driver not found for interface: %s.', iface_number)
         handle.claimInterface(iface_number)
         self._handle = handle
         self._interface_number = iface_number
@@ -306,7 +332,7 @@ class UsbHandle(BaseHandle):
         # When this object is deleted, make sure it's closed.
         weakref.ref(self, self.Close)
 
-    def _timeout(self, timeout_s):
+    def _timeout_ms(self, timeout_s):
         """TODO
 
         Returns
@@ -315,7 +341,7 @@ class UsbHandle(BaseHandle):
             TODO
 
         """
-        return timeout_s * 1000 if timeout_s is not None else self._timeout_s * 1000
+        return int(timeout_s * 1000 if timeout_s is not None else self._default_timeout_s * 1000)
 
     def _flush_buffers(self):
         """TODO
@@ -330,7 +356,7 @@ class UsbHandle(BaseHandle):
             try:
                 self.bulk_read(self._max_read_packet_len, timeout_s=10)
             except exceptions.UsbReadFailedError as e:
-                if e.usb_error.value == LIBUSB_ERROR_TIMEOUT:
+                if isinstance(e.usb_error, usb1.USBErrorTimeout):  # pylint: disable=no-member
                     break
                 raise
 
@@ -375,7 +401,7 @@ class UsbHandle(BaseHandle):
         """
         try:
             sn = self.serial_number
-        except libusb1.USBError:
+        except usb1.USBError:
             sn = ''
         if sn and sn != self._usb_info:
             return '%s %s' % (self._usb_info, sn)
@@ -429,7 +455,7 @@ class UsbHandle(BaseHandle):
     #                                                                         #
     # ======================================================================= #
     @classmethod
-    def _find(cls, setting_matcher, port_path=None, serial=None, timeout_s=None):
+    def _find(cls, setting_matcher, port_path=None, serial=None, default_timeout_s=None):
         """Gets the first device that matches according to the keyword args.
 
         Parameters
@@ -440,7 +466,7 @@ class UsbHandle(BaseHandle):
             TODO
         serial : TODO, None
             TODO
-        timeout_s : TODO, None
+        default_timeout_s : TODO, None
             TODO
 
         Returns
@@ -458,10 +484,10 @@ class UsbHandle(BaseHandle):
         else:
             device_matcher = None
             usb_info = 'first'
-        return cls._find_first(setting_matcher, device_matcher, usb_info=usb_info, timeout_s=timeout_s)
+        return cls._find_first(setting_matcher, device_matcher, usb_info=usb_info, default_timeout_s=default_timeout_s)
 
     @classmethod
-    def _find_and_open(cls, setting_matcher, port_path=None, serial=None, timeout_s=None):
+    def _find_and_open(cls, setting_matcher, port_path=None, serial=None, default_timeout_s=None):
         """TODO
 
         Parameters
@@ -472,7 +498,7 @@ class UsbHandle(BaseHandle):
             TODO
         serial : TODO, None
             TODO
-        timeout_s : TODO, None
+        default_timeout_s : TODO, None
             TODO
 
         Returns
@@ -481,13 +507,13 @@ class UsbHandle(BaseHandle):
             TODO
 
         """
-        dev = cls._find(setting_matcher, port_path=port_path, serial=serial, timeout_s=timeout_s)
+        dev = cls._find(setting_matcher, port_path=port_path, serial=serial, default_timeout_s=default_timeout_s)
         dev._open()  # pylint: disable=protected-access
         dev._flush_buffers()  # pylint: disable=protected-access
         return dev
 
     @classmethod
-    def _find_devices(cls, setting_matcher, device_matcher=None, usb_info='', timeout_s=None):
+    def _find_devices(cls, setting_matcher, device_matcher=None, usb_info='', default_timeout_s=None):
         """_find and yield the devices that match.
 
         Parameters
@@ -500,7 +526,7 @@ class UsbHandle(BaseHandle):
             valid. ``None`` to match any device.
         usb_info : str
             Info string describing device(s).
-        timeout_s : TODO, None
+        default_timeout_s : TODO, None
             Default timeout of commands in seconds.
 
         Yields
@@ -515,22 +541,26 @@ class UsbHandle(BaseHandle):
             if setting is None:
                 continue
 
-            handle = cls(device, setting, usb_info=usb_info, timeout_s=timeout_s)
+            handle = cls(device, setting, usb_info=usb_info, default_timeout_s=default_timeout_s)
             if device_matcher is None or device_matcher(handle):
                 yield handle
 
     @classmethod
-    def _find_first(cls, setting_matcher, device_matcher=None, **kwargs):
+    def _find_first(cls, setting_matcher, device_matcher=None, usb_info='', default_timeout_s=None):
         """Find and return the first matching device.
 
         Parameters
         ----------
         setting_matcher : TODO
-            See :meth:`UsbHandle._find_devices`.
+            Function that returns the setting to use given a ``usb1.USBDevice``, or ``None``
+            if the device doesn't have a valid setting.
         device_matcher : TODO
-            See :meth:`UsbHandle._find_devices`.
-        **kwargs : TODO
-            See :meth:`UsbHandle._find_devices`.
+            Function that returns ``True`` if the given ``UsbHandle`` is
+            valid. ``None`` to match any device.
+        usb_info : str
+            Info string describing device(s).
+        default_timeout_s : TODO, None
+            Default timeout of commands in seconds.
 
         Returns
         -------
@@ -544,6 +574,32 @@ class UsbHandle(BaseHandle):
 
         """
         try:
-            return next(cls._find_devices(setting_matcher, device_matcher=device_matcher, **kwargs))
+            return next(cls._find_devices(setting_matcher, device_matcher=device_matcher, usb_info=usb_info, default_timeout_s=default_timeout_s))
         except StopIteration:
             raise exceptions.UsbDeviceNotFoundError('No device available, or it is in the wrong configuration.')
+
+    @classmethod
+    def find_adb(cls, serial=None, port_path=None, default_timeout_s=None):
+        """TODO
+
+        Parameters
+        ----------
+        serial : TODO
+            TODO
+        port_path : TODO
+            TODO
+        default_timeout_s : TODO, None
+            Default timeout of commands in seconds.
+
+        Returns
+        -------
+        UsbHandle
+            TODO
+
+        """
+        return cls._find(
+            interface_matcher(CLASS, SUBCLASS, PROTOCOL),
+            serial=serial,
+            port_path=port_path,
+            default_timeout_s=default_timeout_s
+        )
