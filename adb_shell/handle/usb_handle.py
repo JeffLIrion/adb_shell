@@ -307,7 +307,7 @@ class UsbHandle(BaseHandle):
 
         for endpoint in self._setting.iterEndpoints():
             address = endpoint.getAddress()
-            if address & usb1.USB_ENDPOINT_DIR_MASK:
+            if address & usb1.USB_ENDPOINT_DIR_MASK:  # pylint: disable=no-member
                 self._read_endpoint = address
                 self._max_read_packet_len = endpoint.getMaxPacketSize()
             else:
