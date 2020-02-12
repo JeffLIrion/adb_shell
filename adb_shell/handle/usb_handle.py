@@ -307,7 +307,7 @@ class UsbHandle(BaseHandle):
 
         for endpoint in self._setting.iterEndpoints():
             address = endpoint.getAddress()
-            if address & usb1.USB_ENDPOINT_DIR_MASK:
+            if address & usb1.USB_ENDPOINT_DIR_MASK:  # pylint: disable=no-member
                 self._read_endpoint = address
                 self._max_read_packet_len = endpoint.getMaxPacketSize()
             else:
@@ -321,7 +321,7 @@ class UsbHandle(BaseHandle):
         try:
             if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
                 handle.detachKernelDriver(iface_number)
-        except usb1.USBErrorNotFound as e:  # pylint: disable=no-member
+        except usb1.USBErrorNotFound:  # pylint: disable=no-member
             warnings.warn('Kernel driver not found for interface: %s.', iface_number)
         handle.claimInterface(iface_number)
         self._handle = handle
