@@ -143,6 +143,22 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertTrue(self.device.connect([signer]))
 
+    def test_connect_with_new_key_and_callback(self):
+        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+            keygen('tests/adbkey')
+            signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+            signer.pub_key = u''
+
+        self._callback_invoked = False
+        def auth_callback(device):
+            self._callback_invoked = True
+
+        self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
+
+        self.assertTrue(self.device.connect([signer], auth_callback=auth_callback))
+        self.assertTrue(self._callback_invoked)
+
+
     # ======================================================================= #
     #                                                                         #
     #                              `shell` tests                              #
