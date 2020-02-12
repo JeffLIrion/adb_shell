@@ -295,7 +295,7 @@ class AdbDevice(object):
             The time in seconds to wait for a ``b'CNXN'`` authentication response
         total_timeout_s : float
             The total time in seconds to wait for expected commands in :meth:`AdbDevice._read`
-        auth_callback : func, None
+        auth_callback : function, None
             Function callback invoked when the connection needs to be accepted on the device
 
         Returns
