@@ -265,7 +265,7 @@ class AdbDevice(object):
         self._available = False
         self._handle.close()
 
-    def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, auth_callback=None):
         """Establish an ADB connection to the device.
 
         1. Use the handle to establish a connection
@@ -295,6 +295,8 @@ class AdbDevice(object):
             The time in seconds to wait for a ``b'CNXN'`` authentication response
         total_timeout_s : float
             The total time in seconds to wait for expected commands in :meth:`AdbDevice._read`
+        auth_callback : function, None
+            Function callback invoked when the connection needs to be accepted on the device
 
         Returns
         -------
@@ -355,6 +357,9 @@ class AdbDevice(object):
         pubkey = rsa_keys[0].GetPublicKey()
         if not isinstance(pubkey, (bytes, bytearray)):
             pubkey = bytearray(pubkey, 'utf-8')
+
+        if auth_callback is not None:
+            auth_callback(self)
 
         msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
         self._send(msg, adb_info)
