@@ -46,6 +46,7 @@
     * :meth:`AdbDevice._send`
     * :meth:`AdbDevice._service`
     * :meth:`AdbDevice._streaming_command`
+    * :meth:`AdbDevice._streaming_service`
     * :meth:`AdbDevice._write`
     * :attr:`AdbDevice.available`
     * :meth:`AdbDevice.close`
@@ -55,6 +56,7 @@
     * :meth:`AdbDevice.push`
     * :meth:`AdbDevice.shell`
     * :meth:`AdbDevice.stat`
+    * :meth:`AdbDevice.streaming_shell`
 
 * :class:`AdbDeviceTcp`
 
