@@ -429,9 +429,11 @@ class AdbDevice(object):
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         stream = self._streaming_command(service, command, adb_info)
         if decode:
-            yield from (line.decode('utf8') for line in stream)
+            for line in (line.decode('utf8') for line in stream):
+                yield line
         else:
-            yield from stream
+            for line in stream:
+                yield line
 
     def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device.
@@ -477,7 +479,8 @@ class AdbDevice(object):
             The line-by-line output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        yield from self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
+        for line in self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
+            yield line
 
     # ======================================================================= #
     #                                                                         #
