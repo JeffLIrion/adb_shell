@@ -398,13 +398,12 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        stream = self._streaming_command(service, command, adb_info)
         if decode:
-            return b''.join(stream).decode('utf8')
-        return b''.join(stream)
+            return b''.join(self._streaming_command(service, command, adb_info)).decode('utf8')
+        return b''.join(self._streaming_command(service, command, adb_info))
 
     def _streaming_service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
-        """Send an ADB command to the device.
+        """Send an ADB command to the device, yielding each line of output.
 
         Parameters
         ----------
@@ -429,7 +428,7 @@ class AdbDevice(object):
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         stream = self._streaming_command(service, command, adb_info)
         if decode:
-            for line in (line.decode('utf8') for line in stream):
+            for line in (stream_line.decode('utf8') for stream_line in stream):
                 yield line
         else:
             for line in stream:
@@ -459,7 +458,7 @@ class AdbDevice(object):
         return self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
 
     def streaming_shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
-        """Send an ADB shell command to the device.
+        """Send an ADB shell command to the device, yielding each line of output.
 
         Parameters
         ----------

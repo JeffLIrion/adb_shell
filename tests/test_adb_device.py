@@ -399,6 +399,40 @@ class TestAdbDevice(unittest.TestCase):
 
     # ======================================================================= #
     #                                                                         #
+    #                      `streaming_shell` tests                            #
+    #                                                                         #
+    # ======================================================================= #
+    def test_streaming_shell_decode(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._handle._bulk_read = join_messages(
+            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'ABC'),
+            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'123'),
+        )
+
+        generator = self.device.streaming_shell('TEST', decode=True)
+        self.assertEqual('ABC', next(generator))
+        self.assertEqual('123', next(generator))
+
+    def test_streaming_shell_dont_decode(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._handle._bulk_read = join_messages(
+            AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'ABC'),
+            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'123'),
+        )
+
+        generator = self.device.streaming_shell('TEST', decode=False)
+        self.assertEqual(b'ABC', next(generator))
+        self.assertEqual(b'123', next(generator))
+
+
+    # ======================================================================= #
+    #                                                                         #
     #                         `filesync` tests                                #
     #                                                                         #
     # ======================================================================= #
