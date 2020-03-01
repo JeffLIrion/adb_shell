@@ -13,6 +13,8 @@ assignees: ''
 
 ### Log
 
+<!--A log from when the issue occurred-->
+
 To enable debug logging in Python:
 
 ```python
