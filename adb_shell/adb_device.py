@@ -237,7 +237,7 @@ class AdbDevice(object):
                 raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
 
             # 6.2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
-            signed_token = rsa_key.Sign(banner)
+            signed_token = rsa_key.Sign(banner) + b'\0'
             msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
             self._send(msg, adb_info)
 
