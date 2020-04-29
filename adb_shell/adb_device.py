@@ -457,6 +457,9 @@ class AdbDevice(object):
             The output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         return self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
 
     def streaming_shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
@@ -480,6 +483,9 @@ class AdbDevice(object):
             The line-by-line output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         for line in self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
             yield line
 
@@ -506,6 +512,9 @@ class AdbDevice(object):
             Filename, mode, size, and mtime info for the files in the directory
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
         self._open(b'sync:', adb_info)
@@ -552,6 +561,9 @@ class AdbDevice(object):
             If ``dest_file`` is of unknown type.
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         if not dest_file:
             dest_file = io.BytesIO()
 
@@ -628,6 +640,9 @@ class AdbDevice(object):
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         if isinstance(source_file, str):
             if os.path.isdir(source_file):
                 self.shell("mkdir " + device_filename, timeout_s, total_timeout_s)
@@ -720,12 +735,15 @@ class AdbDevice(object):
             The last modified time for the file
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         self._open(b'sync:', adb_info)
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
         self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
-        _, (mode, size, mtime) = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
+        _, (mode, size, mtime), _ = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         self._close(adb_info)
 
         return mode, size, mtime
@@ -1069,8 +1087,8 @@ class AdbDevice(object):
             The received header ID
         tuple
             The contents of the header
-        data : bytearray
-            The received data
+        data : bytearray, None
+            The received data, or ``None`` if ``read_data`` is False
 
         Raises
         ------
@@ -1100,7 +1118,7 @@ class AdbDevice(object):
             raise exceptions.InvalidResponseError('Expected one of %s, got %s' % (expected_ids, command_id))
 
         if not read_data:
-            return command_id, header[1:]
+            return command_id, header[1:], None
 
         # Header is (ID, ..., size).
         size = header[-1]
