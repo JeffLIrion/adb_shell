@@ -743,7 +743,7 @@ class AdbDevice(object):
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
         self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
-        _, (mode, size, mtime) = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
+        _, (mode, size, mtime), _ = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         self._close(adb_info)
 
         return mode, size, mtime
@@ -1087,8 +1087,8 @@ class AdbDevice(object):
             The received header ID
         tuple
             The contents of the header
-        data : bytearray
-            The received data
+        data : bytearray, None
+            The received data, or ``None`` if ``read_data`` is False
 
         Raises
         ------
@@ -1118,7 +1118,7 @@ class AdbDevice(object):
             raise exceptions.InvalidResponseError('Expected one of %s, got %s' % (expected_ids, command_id))
 
         if not read_data:
-            return command_id, header[1:]
+            return command_id, header[1:], None
 
         # Header is (ID, ..., size).
         size = header[-1]
