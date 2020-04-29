@@ -457,6 +457,9 @@ class AdbDevice(object):
             The output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         return self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
 
     def streaming_shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
@@ -480,6 +483,9 @@ class AdbDevice(object):
             The line-by-line output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         for line in self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
             yield line
 
@@ -506,6 +512,9 @@ class AdbDevice(object):
             Filename, mode, size, and mtime info for the files in the directory
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
         self._open(b'sync:', adb_info)
@@ -552,6 +561,9 @@ class AdbDevice(object):
             If ``dest_file`` is of unknown type.
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         if not dest_file:
             dest_file = io.BytesIO()
 
@@ -628,6 +640,9 @@ class AdbDevice(object):
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         if isinstance(source_file, str):
             if os.path.isdir(source_file):
                 self.shell("mkdir " + device_filename, timeout_s, total_timeout_s)
@@ -720,6 +735,9 @@ class AdbDevice(object):
             The last modified time for the file
 
         """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         self._open(b'sync:', adb_info)
 

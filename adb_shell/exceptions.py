@@ -32,6 +32,12 @@ class AdbCommandFailureException(Exception):
     """
 
 
+class AdbConnectionError(Exception):
+    """ADB command not sent because a connection to the device has not been established.
+
+    """
+
+
 class DeviceAuthError(Exception):
     """Device authentication failed.
 

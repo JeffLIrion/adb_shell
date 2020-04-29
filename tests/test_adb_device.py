@@ -46,6 +46,27 @@ class TestAdbDevice(unittest.TestCase):
     def tearDown(self):
         self.assertFalse(self.device._handle._bulk_read)
 
+    def test_adb_connection_error(self):
+        with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.shell('FAIL')
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            ''.join(self.device.streaming_shell('FAIL'))
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.list('FAIL')
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.push('FAIL', 'FAIL')
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.pull('FAIL', 'FAIL')
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.stat('FAIL')
+
+        self.device._handle._bulk_read = b''
+
     def test_init_tcp(self):
         with patchers.PATCH_TCP_HANDLE:
             tcp_device = AdbDeviceTcp('host')
