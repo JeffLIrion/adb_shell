@@ -428,7 +428,7 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        stream = self._streaming_command(service, command, adb_info)
+        stream = await self._streaming_command(service, command, adb_info)
         if decode:
             for line in (stream_line.decode('utf8') for stream_line in stream):
                 yield line
@@ -436,7 +436,7 @@ class AdbDevice(object):
             for line in stream:
                 yield line
 
-    def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device.
 
         Parameters
@@ -460,9 +460,9 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        return self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
+        return await self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
 
-    def streaming_shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def streaming_shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device, yielding each line of output.
 
         Parameters
@@ -486,7 +486,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        for line in self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
+        for line in await self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
             yield line
 
     # ======================================================================= #
@@ -494,7 +494,7 @@ class AdbDevice(object):
     #                                 FileSync                                #
     #                                                                         #
     # ======================================================================= #
-    def list(self, device_path, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def list(self, device_path, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Return a directory listing of the given path.
 
         Parameters
@@ -517,23 +517,23 @@ class AdbDevice(object):
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
-        self._open(b'sync:', adb_info)
+        await self._open(b'sync:', adb_info)
 
-        self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
+        await self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
         files = []
 
-        for cmd_id, header, filename in self._filesync_read_until([constants.DENT], [constants.DONE], adb_info, filesync_info):
+        for cmd_id, header, filename in await self._filesync_read_until([constants.DENT], [constants.DONE], adb_info, filesync_info):
             if cmd_id == constants.DONE:
                 break
 
             mode, size, mtime = header
             files.append(DeviceFile(filename, mode, size, mtime))
 
-        self._close(adb_info)
+        await self._close(adb_info)
 
         return files
 
-    def pull(self, device_filename, dest_file=None, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def pull(self, device_filename, dest_file=None, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Pull a file from the device.
 
         Parameters
@@ -574,9 +574,9 @@ class AdbDevice(object):
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT)
 
         with _open(dest_file, 'wb') as dest:
-            self._open(b'sync:', adb_info)
-            self._pull(device_filename, dest, progress_callback, adb_info, filesync_info)
-            self._close(adb_info)
+            await self._open(b'sync:', adb_info)
+            await self._pull(device_filename, dest, progress_callback, adb_info, filesync_info)
+            await self._close(adb_info)
 
             if isinstance(dest, io.BytesIO):
                 return dest.getvalue()
@@ -587,7 +587,7 @@ class AdbDevice(object):
             # We don't know what the path is, so we just assume it exists.
             return True
 
-    def _pull(self, filename, dest, progress_callback, adb_info, filesync_info):
+    async def _pull(self, filename, dest, progress_callback, adb_info, filesync_info):
         """Pull a file from the device into the file-like ``dest_file``.
 
         Parameters
@@ -605,12 +605,12 @@ class AdbDevice(object):
 
         """
         if progress_callback:
-            total_bytes = self.stat(filename)[1]
+            total_bytes = await self.stat(filename)[1]
             progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
             next(progress)
 
-        self._filesync_send(constants.RECV, adb_info, filesync_info, data=filename)
-        for cmd_id, _, data in self._filesync_read_until([constants.DATA], [constants.DONE], adb_info, filesync_info):
+        await self._filesync_send(constants.RECV, adb_info, filesync_info, data=filename)
+        async for cmd_id, _, data in self._filesync_read_until([constants.DATA], [constants.DONE], adb_info, filesync_info):
             if cmd_id == constants.DONE:
                 break
 
@@ -618,7 +618,7 @@ class AdbDevice(object):
             if progress_callback:
                 progress.send(len(data))
 
-    def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Push a file or directory to the device.
 
         Parameters
@@ -645,21 +645,21 @@ class AdbDevice(object):
 
         if isinstance(source_file, str):
             if os.path.isdir(source_file):
-                self.shell("mkdir " + device_filename, timeout_s, total_timeout_s)
+                await self.shell("mkdir " + device_filename, timeout_s, total_timeout_s)
                 for f in os.listdir(source_file):
-                    self.push(os.path.join(source_file, f), device_filename + '/' + f, progress_callback=progress_callback)
+                    await self.push(os.path.join(source_file, f), device_filename + '/' + f, progress_callback=progress_callback)
                 return
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT)
 
         with _open(source_file, 'rb') as source:
-            self._open(b'sync:', adb_info)
-            self._push(source, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
+            await self._open(b'sync:', adb_info)
+            await self._push(source, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
-        self._close(adb_info)
+        await self._close(adb_info)
 
-    def _push(self, datafile, filename, st_mode, mtime, progress_callback, adb_info, filesync_info):
+    async def _push(self, datafile, filename, st_mode, mtime, progress_callback, adb_info, filesync_info):
         """Push a file-like object to the device.
 
         Parameters
@@ -713,7 +713,7 @@ class AdbDevice(object):
 
             raise exceptions.PushFailedError(data)
 
-    def stat(self, device_filename, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def stat(self, device_filename, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         """Get a file's ``stat()`` information.
 
         Parameters
@@ -739,12 +739,12 @@ class AdbDevice(object):
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        self._open(b'sync:', adb_info)
+        await self._open(b'sync:', adb_info)
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
-        self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
-        _, (mode, size, mtime), _ = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
-        self._close(adb_info)
+        await self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
+        _, (mode, size, mtime), _ = await self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
+        await self._close(adb_info)
 
         return mode, size, mtime
 
@@ -753,7 +753,7 @@ class AdbDevice(object):
     #                              Hidden Methods                             #
     #                                                                         #
     # ======================================================================= #
-    def _close(self, adb_info):
+    async def _close(self, adb_info):
         """Send a ``b'CLSE'`` message.
 
         .. warning::
@@ -768,8 +768,8 @@ class AdbDevice(object):
 
         """
         msg = AdbMessage(constants.CLSE, adb_info.local_id, adb_info.remote_id)
-        self._send(msg, adb_info)
-        self._read_until([constants.CLSE], adb_info)
+        await self._send(msg, adb_info)
+        await self._read_until([constants.CLSE], adb_info)
 
     def _okay(self, adb_info):
         """Send an ``b'OKAY'`` mesage.
