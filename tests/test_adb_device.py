@@ -1,9 +1,9 @@
+import asyncio
 import logging
 from io import BytesIO
 import sys
 import unittest
-
-from mock import mock_open, patch
+from unittest.mock import mock_open, patch
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
@@ -20,6 +20,10 @@ from .keygen_stub import open_priv_pub
 _LOGGER = logging.getLogger('adb_shell.adb_device')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
+
+
+def _await(coro):
+    return asyncio.get_event_loop().run_until_complete(coro)
 
 
 def to_int(cmd):

@@ -46,19 +46,21 @@ class FakeTcpHandle(TcpHandle):
         self._bulk_read = b''
         self._bulk_write = b''
 
-    def close(self):
-        self._connection = None
+    async def close(self):
+        self._reader = None
+        self._writer = None
 
-    def connect(self, auth_timeout_s=None):
-        self._connection = True
+    async def connect(self, auth_timeout_s=None):
+        self._reader = True
+        self._writer = True
 
-    def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, timeout_s=None):
         num = min(numbytes, constants.MAX_ADB_DATA)
         ret = self._bulk_read[:num]
         self._bulk_read = self._bulk_read[num:]
         return ret
 
-    def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, timeout_s=None):
         self._bulk_write += data
         return len(data)
 

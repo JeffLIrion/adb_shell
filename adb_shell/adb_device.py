@@ -260,14 +260,14 @@ class AdbDevice(object):
         """
         return self._available
 
-    def close(self):
+    async def close(self):
         """Close the connection via the provided handle's ``close()`` method.
 
         """
         self._available = False
-        self._handle.close()
+        await self._handle.close()
 
-    def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, auth_callback=None):
+    async def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, auth_callback=None):
         """Establish an ADB connection to the device.
 
         1. Use the handle to establish a connection
@@ -314,16 +314,16 @@ class AdbDevice(object):
 
         """
         # 1. Use the handle to establish a connection
-        self._handle.close()
-        self._handle.connect(timeout_s)
+        await self._handle.close()
+        await self._handle.connect(timeout_s)
 
         # 2. Send a ``b'CNXN'`` message
         msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner)
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        self._send(msg, adb_info)
+        await self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
-        cmd, arg0, arg1, banner = self._read([constants.AUTH, constants.CNXN], adb_info)
+        cmd, arg0, arg1, banner = await self._read([constants.AUTH, constants.CNXN], adb_info)
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
@@ -332,23 +332,23 @@ class AdbDevice(object):
 
         # 5. If no ``rsa_keys`` are provided, raise an exception
         if not rsa_keys:
-            self._handle.close()
+            await self._handle.close()
             raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
 
         # 6. Loop through our keys, signing the last ``banner`` that we received
         for rsa_key in rsa_keys:
             # 6.1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
             if arg0 != constants.AUTH_TOKEN:
-                self._handle.close()
+                await self._handle.close()
                 raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
 
             # 6.2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
             signed_token = rsa_key.Sign(banner)
             msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
-            self._send(msg, adb_info)
+            await self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
+            cmd, arg0, _, banner = await self._read([constants.CNXN, constants.AUTH], adb_info)
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
@@ -364,10 +364,10 @@ class AdbDevice(object):
             auth_callback(self)
 
         msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
-        self._send(msg, adb_info)
+        await self._send(msg, adb_info)
 
         adb_info.timeout_s = auth_timeout_s
-        cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
+        cmd, arg0, _, banner = await self._read([constants.CNXN], adb_info)
         self._available = True
         return True  # return banner
 
@@ -376,7 +376,7 @@ class AdbDevice(object):
     #                                 Services                                #
     #                                                                         #
     # ======================================================================= #
-    def _service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def _service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB command to the device.
 
         Parameters
@@ -401,10 +401,10 @@ class AdbDevice(object):
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         if decode:
-            return b''.join(self._streaming_command(service, command, adb_info)).decode('utf8')
-        return b''.join(self._streaming_command(service, command, adb_info))
+            return b''.join(await self._streaming_command(service, command, adb_info)).decode('utf8')
+        return b''.join(await self._streaming_command(service, command, adb_info))
 
-    def _streaming_service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def _streaming_service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB command to the device, yielding each line of output.
 
         Parameters
