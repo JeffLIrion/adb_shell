@@ -15,6 +15,7 @@ setup(
     packages=['adb_shell', 'adb_shell.auth', 'adb_shell.handle'],
     install_requires=['cryptography', 'pyasn1', 'rsa'],
     tests_require=['pycryptodome'],
+    python_requires='>=3.6',
     classifiers=['Operating System :: OS Independent',
                  'License :: OSI Approved :: Apache Software License',
                  'Programming Language :: Python :: 3',

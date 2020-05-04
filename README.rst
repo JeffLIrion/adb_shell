@@ -32,15 +32,15 @@ Example Usage
 
    # Connect (no authentication necessary)
    device1 = AdbDeviceTcp('192.168.0.111', 5555, default_timeout_s=9.)
-   device1.connect(auth_timeout_s=0.1)
+   await device1.connect(auth_timeout_s=0.1)
 
    # Connect (authentication required)
    with open('path/to/adbkey') as f:
        priv = f.read()
    signer = PythonRSASigner('', priv)
    device2 = AdbDeviceTcp('192.168.0.222', 5555, default_timeout_s=9.)
-   device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
+   await device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
    # Send a shell command
-   response1 = device1.shell('echo TEST1')
-   response2 = device2.shell('echo TEST2')
+   response1 = await device1.shell('echo TEST1')
+   response2 = await device2.shell('echo TEST2')
