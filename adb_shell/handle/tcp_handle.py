@@ -38,7 +38,7 @@ from .base_handle import BaseHandle
 from ..exceptions import TcpTimeoutException
 
 
-class TcpHandleAsync(BaseHandle):
+class TcpHandle(BaseHandle):
     """TCP connection object.
 
     Parameters

@@ -50,41 +50,41 @@ class TestAdbDevice(unittest.TestCase):
     def tearDown(self):
         self.assertFalse(self.device._handle._bulk_read)
 
-    '''def test_adb_connection_error(self):
+    def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):
-            self.device.shell('FAIL')
+            _await(self.device.shell('FAIL'))
 
-        with self.assertRaises(exceptions.AdbConnectionError):
-            ''.join(self.device.streaming_shell('FAIL'))
-
-        with self.assertRaises(exceptions.AdbConnectionError):
-            self.device.list('FAIL')
+        # with self.assertRaises(exceptions.AdbConnectionError):
+        #     _await(''.join(self.device.streaming_shell('FAIL')))
 
         with self.assertRaises(exceptions.AdbConnectionError):
-            self.device.push('FAIL', 'FAIL')
+            _await(self.device.list('FAIL'))
 
         with self.assertRaises(exceptions.AdbConnectionError):
-            self.device.pull('FAIL', 'FAIL')
+            _await(self.device.push('FAIL', 'FAIL'))
 
         with self.assertRaises(exceptions.AdbConnectionError):
-            self.device.stat('FAIL')
+            _await(self.device.pull('FAIL', 'FAIL'))
 
-        self.device._handle._bulk_read = b'''
+        with self.assertRaises(exceptions.AdbConnectionError):
+            _await(self.device.stat('FAIL'))
 
-    async def test_init_tcp(self):
+        self.device._handle._bulk_read = b''
+
+    def test_init_tcp(self):
         with patchers.PATCH_TCP_HANDLE:
             tcp_device = AdbDeviceTcp('host')
             tcp_device._handle._bulk_read = self.device._handle._bulk_read
 
         # Make sure that the `connect()` method works
-        self.assertTrue(await tcp_device.connect())
+        self.assertTrue(_await(tcp_device.connect()))
         self.assertTrue(tcp_device.available)
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._handle._bulk_read = b''
         
 
-    '''def test_init_banner(self):
+    def test_init_banner(self):
         device_with_banner = AdbDevice(handle=patchers.FakeTcpHandle('host', 5555), banner='banner')
         self.assertEqual(device_with_banner._banner, b'banner')
 
@@ -115,7 +115,7 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_read = b''
 
     def test_close(self):
-        self.assertFalse(self.device.close())
+        self.assertFalse(_await(self.device.close()))
         self.assertFalse(self.device.available)
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
@@ -127,13 +127,13 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_connect(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.assertTrue(self.device.available)
 
     def test_connect_no_keys(self):
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH[:2])
         with self.assertRaises(exceptions.DeviceAuthError):
-            self.device.connect()
+            _await(self.device.connect())
 
         self.assertFalse(self.device.available)
 
@@ -145,7 +145,7 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_INVALID)
 
         with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.connect([signer])
+            _await(self.device.connect([signer]))
 
         self.assertFalse(self.device.available)
 
@@ -156,7 +156,7 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH)
 
-        self.assertTrue(self.device.connect([signer]))
+        self.assertTrue(_await(self.device.connect([signer])))
 
     def test_connect_with_new_key(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
@@ -166,7 +166,7 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
 
-        self.assertTrue(self.device.connect([signer]))
+        self.assertTrue(_await(self.device.connect([signer])))
 
     def test_connect_with_new_key_and_callback(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
@@ -180,7 +180,7 @@ class TestAdbDevice(unittest.TestCase):
 
         self.device._handle._bulk_read = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
 
-        self.assertTrue(self.device.connect([signer], auth_callback=auth_callback))
+        self.assertTrue(_await(self.device.connect([signer], auth_callback=auth_callback)))
         self.assertTrue(self._callback_invoked)
 
 
@@ -190,16 +190,16 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_shell_no_return(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(self.device.shell('TEST'), '')
+        self.assertEqual(_await(self.device.shell('TEST')), '')
 
     def test_shell_return_pass(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -207,10 +207,10 @@ class TestAdbDevice(unittest.TestCase):
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS'),
                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(self.device.shell('TEST'), 'PASS')
+        self.assertEqual(_await(self.device.shell('TEST')), 'PASS')
 
     def test_shell_dont_decode(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -218,31 +218,31 @@ class TestAdbDevice(unittest.TestCase):
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS'),
                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(self.device.shell('TEST', decode=False), b'PASS')
+        self.assertEqual(_await(self.device.shell('TEST', decode=False)), b'PASS')
 
     def test_shell_data_length_exceeds_max(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1)),
                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.device.shell('TEST')
+        _await(self.device.shell('TEST'))
         self.assertTrue(True)
 
     def test_shell_multibytes_sequence_exceeds_max(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA-1) + b'\xe3\x81\x82'),
                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042', self.device.shell('TEST'))
+        self.assertEqual(_await(self.device.shell('TEST')), u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042')
 
     def test_shell_with_multibytes_sequence_over_two_messages(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -250,11 +250,11 @@ class TestAdbDevice(unittest.TestCase):
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\x81\x82'),
                                                        AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(u'\u3042', self.device.shell('TEST'))
+        self.assertEqual(_await(self.device.shell('TEST')), u'\u3042')
 
     def test_shell_multiple_clse(self):
         # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'')
@@ -272,8 +272,8 @@ class TestAdbDevice(unittest.TestCase):
                                                    msg2.data,
                                                    msg3.pack()])
 
-        self.device.shell("dumpsys power | grep 'Display Power' | grep -q 'state=ON' && echo -e '1\\c' && dumpsys power | grep mWakefulness | grep -q Awake && echo -e '1\\c' && dumpsys audio | grep paused | grep -qv 'Buffer Queue' && echo -e '1\\c' || (dumpsys audio | grep started | grep -qv 'Buffer Queue' && echo '2\\c' || echo '0\\c') && dumpsys power | grep Locks | grep 'size=' && CURRENT_APP=$(dumpsys window windows | grep mCurrentFocus) && CURRENT_APP=${CURRENT_APP#*{* * } && CURRENT_APP=${CURRENT_APP%%/*} && echo $CURRENT_APP && (dumpsys media_session | grep -A 100 'Sessions Stack' | grep -A 100 $CURRENT_APP | grep -m 1 'state=PlaybackState {' || echo) && dumpsys audio | grep '\\- STREAM_MUSIC:' -A 12")
-        self.assertEqual(self.device.shell('TEST'), 'PASS')
+        _await(self.device.shell("dumpsys power | grep 'Display Power' | grep -q 'state=ON' && echo -e '1\\c' && dumpsys power | grep mWakefulness | grep -q Awake && echo -e '1\\c' && dumpsys audio | grep paused | grep -qv 'Buffer Queue' && echo -e '1\\c' || (dumpsys audio | grep started | grep -qv 'Buffer Queue' && echo '2\\c' || echo '0\\c') && dumpsys power | grep Locks | grep 'size=' && CURRENT_APP=$(dumpsys window windows | grep mCurrentFocus) && CURRENT_APP=${CURRENT_APP#*{* * } && CURRENT_APP=${CURRENT_APP%%/*} && echo $CURRENT_APP && (dumpsys media_session | grep -A 100 'Sessions Stack' | grep -A 100 $CURRENT_APP | grep -m 1 'state=PlaybackState {' || echo) && dumpsys audio | grep '\\- STREAM_MUSIC:' -A 12"))
+        self.assertEqual(_await(self.device.shell('TEST')), 'PASS')
 
     # ======================================================================= #
     #                                                                         #
@@ -281,44 +281,44 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_shell_error_local_id(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'))
 
         with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.shell('TEST')
+            _await(self.device.shell('TEST'))
 
     def test_shell_error_unknown_command(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessageForTesting(command=constants.FAIL, arg0=1, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
-            self.assertEqual(self.device.shell('TEST'), '')
+            self.assertEqual(_await(self.device.shell('TEST')), '')
 
     def test_shell_error_timeout(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
-            self.device.shell('TEST', total_timeout_s=-1)
+            _await(self.device.shell('TEST', total_timeout_s=-1))
 
     def test_shell_error_timeout_multiple_clse(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                                        AdbMessage(command=constants.CLSE, arg0=2, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
-            self.device.shell('TEST', total_timeout_s=-1)
+            _await(self.device.shell('TEST', total_timeout_s=-1))
 
     def test_shell_error_checksum(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
@@ -326,28 +326,28 @@ class TestAdbDevice(unittest.TestCase):
         self.device._handle._bulk_read = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data[:-1] + b'0'])
 
         with self.assertRaises(exceptions.InvalidChecksumError):
-            self.device.shell('TEST')
+            _await(self.device.shell('TEST'))
 
     def test_shell_error_local_id2(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS'))
 
         with self.assertRaises(exceptions.InterleavedDataError):
-            self.device.shell('TEST')
-            self.device.shell('TEST')
+            _await(self.device.shell('TEST'))
+            _await(self.device.shell('TEST'))
 
     def test_shell_error_remote_id2(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                        AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS'))
 
         with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.shell('TEST')
+            _await(self.device.shell('TEST'))
 
     def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
@@ -408,19 +408,19 @@ class TestAdbDevice(unittest.TestCase):
                                                    msg1.data,
                                                    msg2.pack()])
 
-        self.assertTrue(self.device.connect([signer]))
+        self.assertTrue(_await(self.device.connect([signer])))
 
-        self.device.shell('Android TV update command')
+        _await(self.device.shell('Android TV update command'))
         
-        self.assertTrue(self.device.connect([signer]))
-        self.device.shell('Android TV update command')
-        self.device.shell('Android TV update command')
-        self.assertTrue(self.device.connect([signer]))
-        self.device.shell('Android TV update command')
-        self.device.shell('Android TV update command')
-        self.assertTrue(self.device.connect([signer]))
-        self.device.shell('Android TV update command')
-        self.device.shell('Android TV update command')
+        self.assertTrue(_await(self.device.connect([signer])))
+        _await(self.device.shell('Android TV update command'))
+        _await(self.device.shell('Android TV update command'))
+        self.assertTrue(_await(self.device.connect([signer])))
+        _await(self.device.shell('Android TV update command'))
+        _await(self.device.shell('Android TV update command'))
+        self.assertTrue(_await(self.device.connect([signer])))
+        _await(self.device.shell('Android TV update command'))
+        _await(self.device.shell('Android TV update command'))
 
     # ======================================================================= #
     #                                                                         #
@@ -428,7 +428,7 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_streaming_shell_decode(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(
@@ -437,12 +437,12 @@ class TestAdbDevice(unittest.TestCase):
             AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'123'),
         )
 
-        generator = self.device.streaming_shell('TEST', decode=True)
-        self.assertEqual('ABC', next(generator))
-        self.assertEqual('123', next(generator))
+        async_generator = self.device.streaming_shell('TEST', decode=True)
+        self.assertEqual(_await(async_generator.__anext__()), 'ABC')
+        self.assertEqual(_await(async_generator.__anext__()), '123')
 
     def test_streaming_shell_dont_decode(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         # Provide the `bulk_read` return values
         self.device._handle._bulk_read = join_messages(
@@ -451,9 +451,9 @@ class TestAdbDevice(unittest.TestCase):
             AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'123'),
         )
 
-        generator = self.device.streaming_shell('TEST', decode=False)
-        self.assertEqual(b'ABC', next(generator))
-        self.assertEqual(b'123', next(generator))
+        async_generator = self.device.streaming_shell('TEST', decode=False)
+        self.assertEqual(_await(async_generator.__anext__()), b'ABC')
+        self.assertEqual(_await(async_generator.__anext__()), b'123')
 
 
     # ======================================================================= #
@@ -462,7 +462,7 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_list(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
@@ -482,11 +482,11 @@ class TestAdbDevice(unittest.TestCase):
         expected_result = [DeviceFile(filename=bytearray(b'file1'), mode=1, size=2, mtime=3),
                            DeviceFile(filename=bytearray(b'file2'), mode=4, size=5, mtime=6)]
 
-        self.assertEqual(expected_result, self.device.list('/dir'))
-        self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+        self.assertEqual(_await(self.device.list('/dir')), expected_result)
+        self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def _test_push(self, mtime):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -506,8 +506,8 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('time.time', return_value=mtime):
-            self.device.push(BytesIO(filedata), '/data', mtime=mtime)
-            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+            _await(self.device.push(BytesIO(filedata), '/data', mtime=mtime))
+            self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
         return True
 
@@ -518,7 +518,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self._test_push(0))
 
     def test_push_file(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         mtime = 100
@@ -539,11 +539,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
-            self.device.push('TEST_FILE', '/data', mtime=mtime)
-            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+            _await(self.device.push('TEST_FILE', '/data', mtime=mtime))
+            self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def test_push_fail(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         mtime = 100
@@ -555,10 +555,10 @@ class TestAdbDevice(unittest.TestCase):
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.FAIL, data=b''))))
 
         with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
-            self.device.push('TEST_FILE', '/data', mtime=mtime)
+            _await(self.device.push('TEST_FILE', '/data', mtime=mtime))
 
     def test_push_big_file(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         mtime = 100
@@ -584,11 +584,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.device.push(BytesIO(filedata), '/data', mtime=mtime)
-        self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+        _await(self.device.push(BytesIO(filedata), '/data', mtime=mtime))
+        self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def test_push_dir(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
 
         mtime = 100
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -609,10 +609,10 @@ class TestAdbDevice(unittest.TestCase):
         #TODO
 
         with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
-            self.device.push('TEST_DIR/', '/data', mtime=mtime)
+            _await(self.device.push('TEST_DIR/', '/data', mtime=mtime))
 
     def test_pull(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -630,11 +630,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(filedata, self.device.pull('/data'))
-        self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+        self.assertEqual(_await(self.device.pull('/data')), filedata)
+        self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def test_pull_file(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -653,11 +653,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
-            self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
-            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+            self.assertTrue(_await(self.device.pull('/data', 'TEST_FILE')))
+            self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def test_pull_file_return_true(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -676,11 +676,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open()), patch('adb_shell.adb_device.hasattr', return_value=False):
-            self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
-            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+            self.assertTrue(_await(self.device.pull('/data', 'TEST_FILE')))
+            self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def test_pull_big_file(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         filedata = b'0' * int(1.5 * constants.MAX_ADB_DATA)
@@ -700,11 +700,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
-            self.assertTrue(self.device.pull('/data', 'TEST_FILE'))
-            self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+            self.assertTrue(_await(self.device.pull('/data', 'TEST_FILE')))
+            self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     def test_stat(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
@@ -721,8 +721,8 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual((1, 2, 3), self.device.stat('/data'))
-        self.assertEqual(expected_bulk_write, self.device._handle._bulk_write)
+        self.assertEqual(_await(self.device.stat('/data')), (1, 2, 3))
+        self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
     # ======================================================================= #
     #                                                                         #
@@ -730,7 +730,7 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_filesync_read_adb_command_failure_exceptions(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
@@ -740,10 +740,10 @@ class TestAdbDevice(unittest.TestCase):
                                                                                                                              FileSyncStatMessage(constants.DONE, 0, 0, 0))))
 
         with self.assertRaises(exceptions.AdbCommandFailureException):
-            self.device.stat('/data')
+            _await(self.device.stat('/data'))
 
     def test_filesync_read_invalid_response_error(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         # Provide the `bulk_read` return values
@@ -753,7 +753,7 @@ class TestAdbDevice(unittest.TestCase):
                                                                                                                              FileSyncStatMessage(constants.DONE, 0, 0, 0))))
 
         with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.stat('/data')
+            _await(self.device.stat('/data'))
 
     # ======================================================================= #
     #                                                                         #
@@ -761,8 +761,8 @@ class TestAdbDevice(unittest.TestCase):
     #                                                                         #
     # ======================================================================= #
     def test_pull_value_error(self):
-        self.assertTrue(self.device.connect())
+        self.assertTrue(_await(self.device.connect()))
         self.device._handle._bulk_write = b''
 
         with self.assertRaises(ValueError):
-            self.device.pull('device_filename', 123)'''
+            _await(self.device.pull('device_filename', 123))

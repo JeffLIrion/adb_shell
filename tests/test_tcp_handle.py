@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.handle.tcp_handle_async import TcpHandleAsync
+from adb_shell.handle.tcp_handle import TcpHandle
 
 from . import patchers
 
@@ -17,7 +17,7 @@ class TestTcpHandle(unittest.TestCase):
         """Create a ``TcpHandle`` and connect to a TCP service.
 
         """
-        self.handle = TcpHandleAsync('host', 5555)
+        self.handle = TcpHandle('host', 5555)
         #with patchers.PATCH_CREATE_CONNECTION:
         #    self.handle.connect()
 

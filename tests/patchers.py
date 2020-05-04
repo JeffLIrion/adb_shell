@@ -2,7 +2,7 @@ from mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage, unpack
-from adb_shell.handle.tcp_handle_async import TcpHandleAsync
+from adb_shell.handle.tcp_handle import TcpHandle
 
 
 MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
@@ -40,9 +40,9 @@ class FakeSocket(object):
         pass
 
 
-class FakeTcpHandleAsync(TcpHandleAsync):
+class FakeTcpHandle(TcpHandle):
     def __init__(self, *args, **kwargs):
-        TcpHandleAsync.__init__(self, *args, **kwargs)
+        TcpHandle.__init__(self, *args, **kwargs)
         self._bulk_read = b''
         self._bulk_write = b''
 
@@ -76,4 +76,4 @@ PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
 # `TcpHandle` patches
-PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpHandleAsync', FakeTcpHandleAsync)
+PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)

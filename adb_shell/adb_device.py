@@ -63,6 +63,7 @@
 """
 
 
+import asyncio
 from collections import namedtuple
 from contextlib import contextmanager
 import io
@@ -76,7 +77,7 @@ from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .handle.base_handle import BaseHandle
-from .handle.tcp_handle_async import TcpHandleAsync
+from .handle.tcp_handle import TcpHandle
 
 
 try:
@@ -237,6 +238,7 @@ class AdbDevice(object):
                 self._banner = banner
         else:
             try:
+                # TODO: make this async / don't do I/O
                 self._banner = bytearray(socket.gethostname(), 'utf-8')
             except:  # noqa pylint: disable=bare-except
                 self._banner = bytearray('unknown', 'utf-8')
@@ -401,8 +403,8 @@ class AdbDevice(object):
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
         if decode:
-            return b''.join(await self._streaming_command(service, command, adb_info)).decode('utf8')
-        return b''.join(await self._streaming_command(service, command, adb_info))
+            return b''.join([x async for x in self._streaming_command(service, command, adb_info)]).decode('utf8')
+        return b''.join([x async for x in self._streaming_command(service, command, adb_info)])
 
     async def _streaming_service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB command to the device, yielding each line of output.
@@ -428,12 +430,12 @@ class AdbDevice(object):
 
         """
         adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
-        stream = await self._streaming_command(service, command, adb_info)
+        stream = self._streaming_command(service, command, adb_info)
         if decode:
-            for line in (stream_line.decode('utf8') for stream_line in stream):
+            async for line in (stream_line.decode('utf8') async for stream_line in stream):
                 yield line
         else:
-            for line in stream:
+            async for line in stream:
                 yield line
 
     async def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
@@ -486,7 +488,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        for line in await self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
+        async for line in self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
             yield line
 
     # ======================================================================= #
@@ -522,7 +524,7 @@ class AdbDevice(object):
         await self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
         files = []
 
-        for cmd_id, header, filename in await self._filesync_read_until([constants.DENT], [constants.DONE], adb_info, filesync_info):
+        async for cmd_id, header, filename in self._filesync_read_until([constants.DENT], [constants.DONE], adb_info, filesync_info):
             if cmd_id == constants.DONE:
                 break
 
@@ -685,7 +687,7 @@ class AdbDevice(object):
         """
         fileinfo = ('{},{}'.format(filename, int(st_mode))).encode('utf-8')
 
-        self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
+        await self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
             total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, FILE_TYPES) else -1
@@ -695,7 +697,7 @@ class AdbDevice(object):
         while True:
             data = datafile.read(constants.MAX_PUSH_DATA)
             if data:
-                self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
+                await self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
                 if progress_callback:
                     progress.send(len(data))
@@ -706,8 +708,8 @@ class AdbDevice(object):
             mtime = int(time.time())
 
         # DONE doesn't send data, but it hides the last bit of data in the size field.
-        self._filesync_send(constants.DONE, adb_info, filesync_info, size=mtime)
-        for cmd_id, _, data in self._filesync_read_until([], [constants.OKAY, constants.FAIL], adb_info, filesync_info):
+        await self._filesync_send(constants.DONE, adb_info, filesync_info, size=mtime)
+        async for cmd_id, _, data in self._filesync_read_until([], [constants.OKAY, constants.FAIL], adb_info, filesync_info):
             if cmd_id == constants.OKAY:
                 return
 
@@ -1265,5 +1267,5 @@ class AdbDeviceTcp(AdbDevice):
     """
 
     def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
-        handle = TcpHandleAsync(host, port, default_timeout_s)
+        handle = TcpHandle(host, port, default_timeout_s)
         super(AdbDeviceTcp, self).__init__(handle, banner)
