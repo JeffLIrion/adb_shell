@@ -74,8 +74,12 @@ class TcpHandle(BaseHandle):
         """Close the socket connection.
 
         """
-        self._writer.close()
-        await self._writer.wait_closed()
+        if self._writer:
+            try:
+                self._writer.close()
+                await self._writer.wait_closed()
+            except OSError:
+                pass
 
         self._reader = None
         self._writer = None

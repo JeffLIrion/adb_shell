@@ -7,9 +7,37 @@ from adb_shell.handle.tcp_handle import TcpHandle
 
 from . import patchers
 
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    from unittest.mock import MagicMock
+
+    class AsyncMock(MagicMock):
+        async def __call__(self, *args, **kwargs):
+            return super(AsyncMock, self).__call__(*args, **kwargs)
+
 
 def _await(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
+
+
+class FakeStreamWriter:
+    def close(self):
+        pass
+
+    async def wait_closed(self):
+        pass
+
+    def write(self, data):
+        pass
+
+    async def drain(self):
+        pass
+
+
+class FakeStreamReader:
+    async def read(self, numbytes):
+        return b'TEST'
 
 
 class TestTcpHandle(unittest.TestCase):
@@ -21,56 +49,57 @@ class TestTcpHandle(unittest.TestCase):
         #with patchers.PATCH_CREATE_CONNECTION:
         #    self.handle.connect()
 
-    def test_dummy(self):
-        self.assertTrue(True)
+    '''def tearDown(self):
+        """Close the socket connection."""
+        self.handle.close()'''
+
+    def test_close(self):
+        _await(self.handle.close())
+
+    def test_connect(self):
+        with patch('asyncio.open_connection', return_value=(True, True), new_callable=AsyncMock):
+            _await(self.handle.connect())
 
     def test_connect_close(self):
-        with self.assertRaises(OSError):
+        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
             _await(self.handle.connect())
-            _await(self.handle.close())
+            self.assertIsNotNone(self.handle._writer)
 
-'''    def tearDown(self):
-        """Close the socket connection."""
-        self.handle.close()
+        _await(self.handle.close())
+        self.assertIsNone(self.handle._reader)
+        self.assertIsNone(self.handle._writer)
+
+    def test_connect_close_catch_oserror(self):
+        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+            _await(self.handle.connect())
+            self.assertIsNotNone(self.handle._writer)
+
+        with patch('{}.FakeStreamWriter.close'.format(__name__), side_effect=OSError):
+            _await(self.handle.close())
+            self.assertIsNone(self.handle._reader)
+            self.assertIsNone(self.handle._writer)
 
     def test_connect_with_timeout(self):
-        """TODO
-
-        """
-        self.handle.close()
-        with patchers.PATCH_CREATE_CONNECTION:
-            self.handle.connect(timeout_s=1)
-            self.assertTrue(True)
+        with self.assertRaises(TcpTimeoutException):
+            with patch('asyncio.open_connection', side_effect=asyncio.TimeoutError, new_callable=AsyncMock):
+                _await(self.handle.connect())
 
     def test_bulk_read(self):
-        """TODO
+        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+            _await(self.handle.connect())
 
-        """
-        # Provide the `recv` return values
-        self.handle._connection._recv = b'TEST1TEST2'
+        self.assertEqual(_await(self.handle.bulk_read(4)), b'TEST')
 
-        with patchers.PATCH_SELECT_SUCCESS:
-            self.assertEqual(self.handle.bulk_read(5), b'TEST1')
-            self.assertEqual(self.handle.bulk_read(5), b'TEST2')
-
-        with patchers.PATCH_SELECT_FAIL:
-            with self.assertRaises(TcpTimeoutException):
-                self.handle.bulk_read(4)
-
-    def test_close_oserror(self):
-        """Test that an `OSError` exception is handled when closing the socket.
-
-        """
-        with patch('{}.patchers.FakeSocket.shutdown'.format(__name__), side_effect=OSError):
-            self.handle.close()
+        with self.assertRaises(TcpTimeoutException):
+            with patch('{}.FakeStreamReader.read'.format(__name__), side_effect=asyncio.TimeoutError):
+                _await(self.handle.bulk_read(4))
 
     def test_bulk_write(self):
-        """TODO
+        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+            _await(self.handle.connect())
 
-        """
-        with patchers.PATCH_SELECT_SUCCESS:
-            self.handle.bulk_write(b'TEST')
+        self.assertEqual(_await(self.handle.bulk_write(b'TEST')), 4)
 
-        with patchers.PATCH_SELECT_FAIL:
-            with self.assertRaises(TcpTimeoutException):
-                self.handle.bulk_write(b'FAIL')'''
+        with self.assertRaises(TcpTimeoutException):
+            with patch('{}.FakeStreamWriter.write'.format(__name__), side_effect=asyncio.TimeoutError):
+                _await(self.handle.bulk_write(b'TEST'))
