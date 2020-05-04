@@ -30,6 +30,7 @@
 """
 
 
+import asyncio
 import select
 import socket
 
@@ -37,7 +38,7 @@ from .base_handle import BaseHandle
 from ..exceptions import TcpTimeoutException
 
 
-class TcpHandle(BaseHandle):
+class TcpHandleAsync(BaseHandle):
     """TCP connection object.
 
     Parameters
@@ -59,6 +60,10 @@ class TcpHandle(BaseHandle):
         The address of the device; may be an IP address or a host name
     _port : int
         The device port to which we are connecting (default is 5555)
+    _reader : TODO, None
+        TODO
+    _writer : TODO, None
+        TODO
 
     """
     def __init__(self, host, port=5555, default_timeout_s=None):
@@ -66,22 +71,20 @@ class TcpHandle(BaseHandle):
         self._port = port
         self._default_timeout_s = default_timeout_s
 
-        self._connection = None
+        self._reader = None
+        self._writer = None
 
-    def close(self):
+    async def close(self):
         """Close the socket connection.
 
         """
-        if self._connection:
-            try:
-                self._connection.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
+        self._writer.close()
+        await self._writer.wait_closed()
 
-            self._connection.close()
-            self._connection = None
+        self._reader = None
+        self._writer = None
 
-    def connect(self, timeout_s=None):
+    async def connect(self, timeout_s=None):
         """Create a socket connection to the device.
 
         Parameters
@@ -91,13 +94,14 @@ class TcpHandle(BaseHandle):
 
         """
         timeout = self._default_timeout_s if timeout_s is None else timeout_s
-        self._connection = socket.create_connection((self._host, self._port), timeout=timeout)
-        if timeout:
-            # Put the socket in non-blocking mode
-            # https://docs.python.org/3/library/socket.html#socket.socket.settimeout
-            self._connection.setblocking(0)
 
-    def bulk_read(self, numbytes, timeout_s=None):
+        try:
+            self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), timeout)
+        except asyncio.TimeoutError:
+            msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
+            raise TcpTimeoutException(msg)
+
+    async def bulk_read(self, numbytes, timeout_s=None):
         """Receive data from the socket.
 
         Parameters
@@ -117,16 +121,16 @@ class TcpHandle(BaseHandle):
         TcpTimeoutException
             Reading timed out.
 
-        """
+        """        
         timeout = self._default_timeout_s if timeout_s is None else timeout_s
-        readable, _, _ = select.select([self._connection], [], [], timeout)
-        if readable:
-            return self._connection.recv(numbytes)
 
-        msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
-        raise TcpTimeoutException(msg)
+        try:
+            return await asyncio.wait_for(self._reader.read(numbytes), timeout)
+        except asyncio.TimeoutError:
+            msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
+            raise TcpTimeoutException(msg)
 
-    def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, timeout_s=None):
         """Send data to the socket.
 
         Parameters
@@ -148,9 +152,11 @@ class TcpHandle(BaseHandle):
 
         """
         timeout = self._default_timeout_s if timeout_s is None else timeout_s
-        _, writeable, _ = select.select([], [self._connection], [], timeout)
-        if writeable:
-            return self._connection.send(data)
 
-        msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, timeout)
-        raise TcpTimeoutException(msg)
+        try:
+            self._writer.write(data)
+            await asyncio.wait_for(self._writer.drain(), timeout)
+            return len(data)
+        except asyncio.TimeoutError:
+            msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, timeout)
+            raise TcpTimeoutException(msg)

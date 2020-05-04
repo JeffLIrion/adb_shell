@@ -76,7 +76,7 @@ from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .handle.base_handle import BaseHandle
-from .handle.tcp_handle import TcpHandle
+from .handle.tcp_handle_async import TcpHandleAsync
 
 
 try:
@@ -771,7 +771,7 @@ class AdbDevice(object):
         await self._send(msg, adb_info)
         await self._read_until([constants.CLSE], adb_info)
 
-    def _okay(self, adb_info):
+    async def _okay(self, adb_info):
         """Send an ``b'OKAY'`` mesage.
 
         Parameters
@@ -781,9 +781,9 @@ class AdbDevice(object):
 
         """
         msg = AdbMessage(constants.OKAY, adb_info.local_id, adb_info.remote_id)
-        self._send(msg, adb_info)
+        await self._send(msg, adb_info)
 
-    def _open(self, destination, adb_info):
+    async def _open(self, destination, adb_info):
         """Opens a new connection to the device via an ``b'OPEN'`` message.
 
         1. :meth:`~AdbDevice._send` an ``b'OPEN'`` command to the device that specifies the ``local_id``
@@ -810,13 +810,13 @@ class AdbDevice(object):
         """
         adb_info.local_id = 1
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
-        self._send(msg, adb_info)
-        _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
+        await self._send(msg, adb_info)
+        _, adb_info.remote_id, their_local_id, _ = await self._read([constants.OKAY], adb_info)
 
         if adb_info.local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
 
-    def _read(self, expected_cmds, adb_info):
+    async def _read(self, expected_cmds, adb_info):
         """Receive a response from the device.
 
         1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
@@ -856,7 +856,7 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            msg = self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
+            msg = await self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
             _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
@@ -873,7 +873,7 @@ class AdbDevice(object):
         if data_length > 0:
             data = bytearray()
             while data_length > 0:
-                temp = self._handle.bulk_read(data_length, adb_info.timeout_s)
+                temp = await self._handle.bulk_read(data_length, adb_info.timeout_s)
                 _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
 
                 data += temp
@@ -888,7 +888,7 @@ class AdbDevice(object):
 
         return command, arg0, arg1, bytes(data)
 
-    def _read_until(self, expected_cmds, adb_info):
+    async def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
 
         1. Read data via :meth:`AdbDevice._read`
@@ -923,7 +923,7 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            cmd, remote_id2, local_id2, data = self._read(expected_cmds, adb_info)
+            cmd, remote_id2, local_id2, data = await self._read(expected_cmds, adb_info)
 
             if local_id2 not in (0, adb_info.local_id):
                 raise exceptions.InterleavedDataError("We don't support multiple streams...")
@@ -941,11 +941,11 @@ class AdbDevice(object):
 
         # Acknowledge write packets
         if cmd == constants.WRTE:
-            self._okay(adb_info)
+            await self._okay(adb_info)
 
         return cmd, data
 
-    def _read_until_close(self, adb_info):
+    async def _read_until_close(self, adb_info):
         """Yield packets until a ``b'CLSE'`` packet is received.
 
         1. Read the ``cmd`` and ``data`` fields from a ``b'CLSE'`` or ``b'WRTE'`` packet via :meth:`AdbDevice._read_until`
@@ -970,16 +970,16 @@ class AdbDevice(object):
 
         """
         while True:
-            cmd, data = self._read_until([constants.CLSE, constants.WRTE], adb_info)
+            cmd, data = await self._read_until([constants.CLSE, constants.WRTE], adb_info)
 
             if cmd == constants.CLSE:
                 msg = AdbMessage(constants.CLSE, adb_info.local_id, adb_info.remote_id)
-                self._send(msg, adb_info)
+                await self._send(msg, adb_info)
                 break
 
             yield data
 
-    def _send(self, msg, adb_info):
+    async def _send(self, msg, adb_info):
         """Send a message to the device.
 
         1. Send the message header (:meth:`adb_shell.adb_message.AdbMessage.pack <AdbMessage.pack>`)
@@ -995,11 +995,11 @@ class AdbDevice(object):
 
         """
         _LOGGER.debug("bulk_write: %s", repr(msg.pack()))
-        self._handle.bulk_write(msg.pack(), adb_info.timeout_s)
+        await self._handle.bulk_write(msg.pack(), adb_info.timeout_s)
         _LOGGER.debug("bulk_write: %s", repr(msg.data))
-        self._handle.bulk_write(msg.data, adb_info.timeout_s)
+        await self._handle.bulk_write(msg.data, adb_info.timeout_s)
 
-    def _streaming_command(self, service, command, adb_info):
+    async def _streaming_command(self, service, command, adb_info):
         """One complete set of USB packets for a single command.
 
         1. :meth:`~AdbDevice._open` a new connection to the device, where the ``destination`` parameter is ``service:command``
@@ -1026,12 +1026,12 @@ class AdbDevice(object):
             The responses from the service.
 
         """
-        self._open(b'%s:%s' % (service, command), adb_info)
+        await self._open(b'%s:%s' % (service, command), adb_info)
 
-        for data in self._read_until_close(adb_info):
+        async for data in self._read_until_close(adb_info):
             yield data
 
-    def _write(self, data, adb_info):
+    async def _write(self, data, adb_info):
         """Write a packet and expect an Ack.
 
         Parameters
@@ -1043,17 +1043,17 @@ class AdbDevice(object):
 
         """
         msg = AdbMessage(constants.WRTE, adb_info.local_id, adb_info.remote_id, data)
-        self._send(msg, adb_info)
+        await self._send(msg, adb_info)
 
         # Expect an ack in response.
-        self._read_until([constants.OKAY], adb_info)
+        await self._read_until([constants.OKAY], adb_info)
 
     # ======================================================================= #
     #                                                                         #
     #                         FileSync Hidden Methods                         #
     #                                                                         #
     # ======================================================================= #
-    def _filesync_flush(self, adb_info, filesync_info):
+    async def _filesync_flush(self, adb_info, filesync_info):
         """Write the data in the buffer up to ``filesync_info.send_idx``, then set ``filesync_info.send_idx`` to 0.
 
         Parameters
@@ -1064,10 +1064,10 @@ class AdbDevice(object):
             Data and storage for this FileSync transaction
 
         """
-        self._write(filesync_info.send_buffer[:filesync_info.send_idx], adb_info)
+        await self._write(filesync_info.send_buffer[:filesync_info.send_idx], adb_info)
         filesync_info.send_idx = 0
 
-    def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
+    async def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
         """Read ADB messages and return FileSync packets.
 
         Parameters
@@ -1099,10 +1099,10 @@ class AdbDevice(object):
 
         """
         if filesync_info.send_idx:
-            self._filesync_flush(adb_info, filesync_info)
+            await self._filesync_flush(adb_info, filesync_info)
 
         # Read one filesync packet off the recv buffer.
-        header_data = self._filesync_read_buffered(filesync_info.recv_message_size, adb_info, filesync_info)
+        header_data = await self._filesync_read_buffered(filesync_info.recv_message_size, adb_info, filesync_info)
         header = struct.unpack(filesync_info.recv_message_format, header_data)
         # Header is (ID, ...).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
@@ -1122,11 +1122,11 @@ class AdbDevice(object):
 
         # Header is (ID, ..., size).
         size = header[-1]
-        data = self._filesync_read_buffered(size, adb_info, filesync_info)
+        data = await self._filesync_read_buffered(size, adb_info, filesync_info)
 
         return command_id, header[1:-1], data
 
-    def _filesync_read_buffered(self, size, adb_info, filesync_info):
+    async def _filesync_read_buffered(self, size, adb_info, filesync_info):
         """Read ``size`` bytes of data from ``self.recv_buffer``.
 
         Parameters
@@ -1146,14 +1146,14 @@ class AdbDevice(object):
         """
         # Ensure recv buffer has enough data.
         while len(filesync_info.recv_buffer) < size:
-            _, data = self._read_until([constants.WRTE], adb_info)
+            _, data = await self._read_until([constants.WRTE], adb_info)
             filesync_info.recv_buffer += data
 
         result = filesync_info.recv_buffer[:size]
         filesync_info.recv_buffer = filesync_info.recv_buffer[size:]
         return result
 
-    def _filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info):
+    async def _filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info):
         """Useful wrapper around :meth:`AdbDevice._filesync_read`.
 
         Parameters
@@ -1178,7 +1178,7 @@ class AdbDevice(object):
 
         """
         while True:
-            cmd_id, header, data = self._filesync_read(expected_ids + finish_ids, adb_info, filesync_info)
+            cmd_id, header, data = await self._filesync_read(expected_ids + finish_ids, adb_info, filesync_info)
             yield cmd_id, header, data
 
             # These lines are not reachable because whenever this method is called and `cmd_id` is in `finish_ids`, the code
@@ -1186,7 +1186,7 @@ class AdbDevice(object):
             if cmd_id in finish_ids:  # pragma: no cover
                 break
 
-    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=0):
+    async def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=0):
         """Send/buffer FileSync packets.
 
         Packets are buffered and only flushed when this connection is read from. All
@@ -1212,7 +1212,7 @@ class AdbDevice(object):
             size = len(data)
 
         if not filesync_info.can_add_to_send_buffer(len(data)):
-            self._filesync_flush(adb_info, filesync_info)
+            await self._filesync_flush(adb_info, filesync_info)
 
         buf = struct.pack(b'<2I', constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
         filesync_info.send_buffer[filesync_info.send_idx:filesync_info.send_idx + len(buf)] = buf
@@ -1265,5 +1265,5 @@ class AdbDeviceTcp(AdbDevice):
     """
 
     def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
-        handle = TcpHandle(host, port, default_timeout_s)
+        handle = TcpHandleAsync(host, port, default_timeout_s)
         super(AdbDeviceTcp, self).__init__(handle, banner)
