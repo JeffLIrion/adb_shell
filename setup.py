@@ -18,7 +18,6 @@ setup(
     python_requires='>=3.6',
     classifiers=['Operating System :: OS Independent',
                  'License :: OSI Approved :: Apache Software License',
-                 'Programming Language :: Python :: 3',
-                 'Programming Language :: Python :: 2'],
+                 'Programming Language :: Python :: 3'],
     test_suite='tests'
 )
