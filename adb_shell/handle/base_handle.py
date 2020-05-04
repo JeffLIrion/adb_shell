@@ -32,13 +32,13 @@ class BaseHandle(ABC):
     """
 
     @abstractmethod
-    def close(self):
+    async def close(self):
         """Close the connection.
 
         """
 
     @abstractmethod
-    def connect(self, timeout_s=None):
+    async def connect(self, timeout_s=None):
         """Create a connection to the device.
 
         Parameters
@@ -49,7 +49,7 @@ class BaseHandle(ABC):
         """
 
     @abstractmethod
-    def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, timeout_s=None):
         """Read data from the device.
 
         Parameters
@@ -67,7 +67,7 @@ class BaseHandle(ABC):
         """
 
     @abstractmethod
-    def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, timeout_s=None):
         """Send data to the device.
 
         Parameters
