@@ -63,7 +63,6 @@
 """
 
 
-import asyncio
 from collections import namedtuple
 from contextlib import contextmanager
 import io

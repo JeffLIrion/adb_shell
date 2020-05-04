@@ -31,8 +31,6 @@
 
 
 import asyncio
-import select
-import socket
 
 from .base_handle import BaseHandle
 from ..exceptions import TcpTimeoutException
@@ -121,7 +119,7 @@ class TcpHandle(BaseHandle):
         TcpTimeoutException
             Reading timed out.
 
-        """        
+        """
         timeout = self._default_timeout_s if timeout_s is None else timeout_s
 
         try:
