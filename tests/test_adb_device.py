@@ -54,8 +54,9 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.AdbConnectionError):
             _await(self.device.shell('FAIL'))
 
-        # with self.assertRaises(exceptions.AdbConnectionError):
-        #     _await(''.join(self.device.streaming_shell('FAIL')))
+        with self.assertRaises(exceptions.AdbConnectionError):
+            async_generator = self.device.streaming_shell('FAIL')
+            _await(async_generator.__anext__())
 
         with self.assertRaises(exceptions.AdbConnectionError):
             _await(self.device.list('FAIL'))
