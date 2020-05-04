@@ -50,17 +50,15 @@ class TcpHandle(BaseHandle):
 
     Attributes
     ----------
-    _connection : socket.socket, None
-        A socket connection to the device
     _default_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
     _host : str
         The address of the device; may be an IP address or a host name
     _port : int
         The device port to which we are connecting (default is 5555)
-    _reader : TODO, None
+    _reader : StreamReader, None
         TODO
-    _writer : TODO, None
+    _writer : StreamWriter, None
         TODO
 
     """
