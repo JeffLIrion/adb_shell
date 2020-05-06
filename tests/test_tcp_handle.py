@@ -21,6 +21,13 @@ def _await(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
+def awaiter(func):
+    def sync_func(*args, **kwargs):
+        return _await(func(*args, **kwargs))
+
+    return sync_func
+
+
 class FakeStreamWriter:
     def close(self):
         pass
@@ -55,6 +62,10 @@ class TestTcpHandle(unittest.TestCase):
 
     def test_close(self):
         _await(self.handle.close())
+
+    @awaiter
+    async def test_close2(self):
+        await self.handle.close()
 
     def test_connect(self):
         with patch('asyncio.open_connection', return_value=(True, True), new_callable=AsyncMock):
