@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from mock import patch
+from unittest.mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_device import AdbDevice

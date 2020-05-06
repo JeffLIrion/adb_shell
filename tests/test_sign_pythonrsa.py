@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from mock import patch
+from unittest.mock import patch
 
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
