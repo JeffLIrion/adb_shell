@@ -1,6 +1,6 @@
 import unittest
 
-from adb_shell import constants, exceptions
+from aio_adb_shell import constants, exceptions
 
 
 class TestInvalidCommandError(unittest.TestCase):

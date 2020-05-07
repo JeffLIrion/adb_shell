@@ -5,11 +5,11 @@ import sys
 import unittest
 from unittest.mock import mock_open, patch
 
-from adb_shell import constants, exceptions
-from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
-from adb_shell.adb_message import AdbMessage
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_pythonrsa import PythonRSASigner
+from aio_adb_shell import constants, exceptions
+from aio_adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
+from aio_adb_shell.adb_message import AdbMessage
+from aio_adb_shell.auth.keygen import keygen
+from aio_adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
 from .async_wrapper import awaiter
@@ -18,7 +18,7 @@ from .keygen_stub import open_priv_pub
 
 
 # https://stackoverflow.com/a/7483862
-_LOGGER = logging.getLogger('adb_shell.adb_device')
+_LOGGER = logging.getLogger('aio_adb_shell.adb_device')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
@@ -145,7 +145,7 @@ class TestAdbDevice(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_key_invalid_response(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('aio_adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -158,7 +158,7 @@ class TestAdbDevice(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('aio_adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -168,7 +168,7 @@ class TestAdbDevice(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_new_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('aio_adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
             signer.pub_key = u''
@@ -179,7 +179,7 @@ class TestAdbDevice(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_new_key_and_callback(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('aio_adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
             signer.pub_key = u''
@@ -270,7 +270,7 @@ class TestAdbDevice(unittest.TestCase):
 
     @awaiter
     async def test_shell_multiple_clse(self):
-        # https://github.com/JeffLIrion/adb_shell/issues/15#issuecomment-536795938
+        # https://github.com/JeffLIrion/aio_adb_shell/issues/15#issuecomment-536795938
         self.assertTrue(await self.device.connect())
 
         # Provide the `bulk_read` return values
@@ -375,8 +375,8 @@ class TestAdbDevice(unittest.TestCase):
 
     @awaiter
     async def test_issue29(self):
-        # https://github.com/JeffLIrion/adb_shell/issues/29
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        # https://github.com/JeffLIrion/aio_adb_shell/issues/29
+        with patch('aio_adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -569,7 +569,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
+        with patch('aio_adb_shell.adb_device.open', mock_open(read_data=filedata)):
             await self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
@@ -586,7 +586,7 @@ class TestAdbDevice(unittest.TestCase):
                                                        AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                                        AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.FAIL, data=b''))))
 
-        with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
+        with self.assertRaises(exceptions.PushFailedError), patch('aio_adb_shell.adb_device.open', mock_open(read_data=filedata)):
             await self.device.push('TEST_FILE', '/data', mtime=mtime)
 
     @awaiter
@@ -642,7 +642,7 @@ class TestAdbDevice(unittest.TestCase):
         # Expected `bulk_write` values
         #TODO
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
+        with patch('aio_adb_shell.adb_device.open', mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
             await self.device.push('TEST_DIR/', '/data', mtime=mtime)
 
     @awaiter
@@ -688,7 +688,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
+        with patch('aio_adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
             self.assertTrue(await self.device.pull('/data', 'TEST_FILE'))
             self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
@@ -712,7 +712,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open()), patch('adb_shell.adb_device.hasattr', return_value=False):
+        with patch('aio_adb_shell.adb_device.open', mock_open()), patch('aio_adb_shell.adb_device.hasattr', return_value=False):
             self.assertTrue(await self.device.pull('/data', 'TEST_FILE'))
             self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 
@@ -737,7 +737,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
+        with patch('aio_adb_shell.adb_device.open', mock_open()), patch('os.path.exists', return_value=True):
             self.assertTrue(await self.device.pull('/data', 'TEST_FILE'))
             self.assertEqual(self.device._handle._bulk_write, expected_bulk_write)
 

@@ -1,11 +1,11 @@
 adb\_shell
 ==========
 
-.. image:: https://travis-ci.com/JeffLIrion/adb_shell.svg?branch=master
-   :target: https://travis-ci.com/JeffLIrion/adb_shell
+.. image:: https://travis-ci.com/JeffLIrion/aio_adb_shell.svg?branch=master
+   :target: https://travis-ci.com/JeffLIrion/aio_adb_shell
 
-.. image:: https://coveralls.io/repos/github/JeffLIrion/adb_shell/badge.svg?branch=master
-   :target: https://coveralls.io/github/JeffLIrion/adb_shell?branch=master
+.. image:: https://coveralls.io/repos/github/JeffLIrion/aio_adb_shell/badge.svg?branch=master
+   :target: https://coveralls.io/github/JeffLIrion/aio_adb_shell?branch=master
 
 
 Documentation for this package can be found at https://adb-shell.readthedocs.io/.
@@ -27,8 +27,8 @@ Example Usage
 
 .. code-block:: python
 
-   from adb_shell.adb_device import AdbDeviceTcp
-   from adb_shell.auth.sign_pythonrsa import PythonRSASigner
+   from aio_adb_shell.adb_device import AdbDeviceTcp
+   from aio_adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
    # Connect (no authentication necessary)
    device1 = AdbDeviceTcp('192.168.0.111', 5555, default_timeout_s=9.)

@@ -3,15 +3,15 @@ import unittest
 
 from unittest.mock import patch
 
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_pycryptodome import PycryptodomeAuthSigner
+from aio_adb_shell.auth.keygen import keygen
+from aio_adb_shell.auth.sign_pycryptodome import PycryptodomeAuthSigner
 
 from .keygen_stub import open_priv_pub
 
 
 class TestPycryptodomeAuthSigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.auth.sign_pycryptodome.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('aio_adb_shell.auth.sign_pycryptodome.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             self.signer = PycryptodomeAuthSigner('tests/adbkey')
 

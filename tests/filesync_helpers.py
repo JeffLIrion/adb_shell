@@ -1,6 +1,6 @@
 import struct
 
-from adb_shell import constants
+from aio_adb_shell import constants
 
 
 class FileSyncMessage(object):  # pylint: disable=too-few-public-methods
@@ -20,7 +20,7 @@ class FileSyncMessage(object):  # pylint: disable=too-few-public-methods
     arg0 : int
         TODO
     command : int
-        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+        The input parameter ``command`` converted to an integer via :const:`aio_adb_shell.constants.FILESYNC_ID_TO_WIRE`
     data : bytes
         The data that will be sent
 
@@ -69,7 +69,7 @@ class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
     arg3 : int
         The size of the data
     command : int
-        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+        The input parameter ``command`` converted to an integer via :const:`aio_adb_shell.constants.FILESYNC_ID_TO_WIRE`
     data : bytes
         TODO
 
@@ -117,7 +117,7 @@ class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
     arg2 : TODO
         TODO
     command : int
-        The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.FILESYNC_ID_TO_WIRE`
+        The input parameter ``command`` converted to an integer via :const:`aio_adb_shell.constants.FILESYNC_ID_TO_WIRE`
     data : bytes
         The data that will be sent (always empty)
 

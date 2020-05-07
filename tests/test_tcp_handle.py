@@ -2,8 +2,8 @@ import asyncio
 import unittest
 from unittest.mock import patch
 
-from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.handle.tcp_handle import TcpHandle
+from aio_adb_shell.exceptions import TcpTimeoutException
+from aio_adb_shell.handle.tcp_handle import TcpHandle
 
 from . import patchers
 from .async_wrapper import awaiter

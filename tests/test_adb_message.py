@@ -3,9 +3,9 @@ import unittest
 
 from unittest.mock import patch
 
-from adb_shell import constants
-from adb_shell.adb_device import AdbDevice
-from adb_shell.adb_message import AdbMessage, checksum, unpack
+from aio_adb_shell import constants
+from aio_adb_shell.adb_device import AdbDevice
+from aio_adb_shell.adb_message import AdbMessage, checksum, unpack
 
 
 def from_int(n):

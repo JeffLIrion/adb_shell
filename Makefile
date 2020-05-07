@@ -8,7 +8,7 @@ release:
 .PHONY: docs
 docs:
 	rm -rf docs/build/html
-	@cd docs && sphinx-apidoc -f -e -o source/ ../adb_shell/
+	@cd docs && sphinx-apidoc -f -e -o source/ ../aio_adb_shell/
 	@cd docs && make html && make html
 
 .PHONY: doxygen
@@ -22,16 +22,16 @@ test:
 
 .PHONY: coverage
 coverage:
-	coverage run --source adb_shell setup.py test && coverage html && coverage report -m
+	coverage run --source aio_adb_shell setup.py test && coverage html && coverage report -m
 
 .PHONY: tdd
 tdd:
-	coverage run --source adb_shell setup.py test && coverage report -m
+	coverage run --source aio_adb_shell setup.py test && coverage report -m
 
 .PHONY: lint
 lint:
-	flake8 adb_shell/ && pylint adb_shell/
+	flake8 aio_adb_shell/ && pylint aio_adb_shell/
 
 .PHONY: alltests
 alltests:
-	flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
+	flake8 aio_adb_shell/ && pylint aio_adb_shell/ && coverage run --source aio_adb_shell setup.py test && coverage report -m

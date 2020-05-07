@@ -1,7 +1,7 @@
-adb\_shell.auth.sign\_cryptography module
+aio\_adb\_shell.handle.tcp\_handle module
 =========================================
 
-.. automodule:: adb_shell.auth.sign_cryptography
+.. automodule:: aio_adb_shell.handle.tcp_handle
    :members:
    :undoc-members:
    :show-inheritance:

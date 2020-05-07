@@ -5,8 +5,8 @@ python:
   - "3.8"
 install:
   - pip install .
-  - pip install flake8 pylint coveralls cryptography
+  - pip install flake8 pylint coveralls cryptography pycryptodome
 script:
-- flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
+- flake8 aio_adb_shell/ && pylint aio_adb_shell/ && coverage run --source aio_adb_shell setup.py test && coverage report -m
 after_success:
 - coveralls

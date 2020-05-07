@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
-from adb_shell import constants
-from adb_shell.adb_message import AdbMessage, unpack
-from adb_shell.handle.tcp_handle import TcpHandle
+from aio_adb_shell import constants
+from aio_adb_shell.adb_message import AdbMessage, unpack
+from aio_adb_shell.handle.tcp_handle import TcpHandle
 
 
 MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
@@ -76,4 +76,4 @@ PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
 # `TcpHandle` patches
-PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
+PATCH_TCP_HANDLE = patch('aio_adb_shell.adb_device.TcpHandle', FakeTcpHandle)

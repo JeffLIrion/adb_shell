@@ -2,7 +2,7 @@
 *.idea
 *.pyc
 **/__pycache__/
-adb_shell.egg-info
+aio_adb_shell.egg-info
 
 # Build files
 build/

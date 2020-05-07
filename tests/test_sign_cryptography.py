@@ -5,15 +5,15 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from unittest.mock import patch
 
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_cryptography import CryptographySigner
+from aio_adb_shell.auth.keygen import keygen
+from aio_adb_shell.auth.sign_cryptography import CryptographySigner
 
 from .keygen_stub import open_priv_pub
 
 
 class TestCryptographySigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.auth.sign_cryptography.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('aio_adb_shell.auth.sign_cryptography.open', open_priv_pub), patch('aio_adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             self.signer = CryptographySigner('tests/adbkey')
 

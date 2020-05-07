@@ -31,11 +31,11 @@ To enable debug logging in Home Assistant:
 logger:
   default: warning  # or whatever
     logs:
-      adb_shell: debug
+      aio_adb_shell: debug
 ```
 
 #### Approach 2: `logger.set_level` service
 
 ```yaml
-adb_shell: debug
+aio_adb_shell: debug
 ```
