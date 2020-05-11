@@ -623,3 +623,25 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             port_path=port_path,
             default_transport_timeout_s=default_transport_timeout_s
         )
+
+    @classmethod
+    def find_all_adb_devices(cls, default_transport_timeout_s=None):
+        """
+        Find all ADB devices attached via USB.
+
+        Parameters
+        ----------
+        default_transport_timeout_s : TODO, None
+            Default timeout of commands in seconds.
+
+        Returns
+        -------
+        generator
+            A generator which yields each ADB device attached via USB.
+
+        """
+        for dev in cls._find_devices(
+            interface_matcher(CLASS, SUBCLASS, PROTOCOL),
+            default_transport_timeout_s=default_transport_timeout_s,
+        ):
+            yield dev
