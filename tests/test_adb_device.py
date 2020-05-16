@@ -54,6 +54,9 @@ class TestAdbDevice(unittest.TestCase):
             ''.join(self.device.streaming_shell('FAIL'))
 
         with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.root()
+
+        with self.assertRaises(exceptions.AdbConnectionError):
             self.device.list('FAIL')
 
         with self.assertRaises(exceptions.AdbConnectionError):
@@ -451,6 +454,18 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(b'ABC', next(generator))
         self.assertEqual(b'123', next(generator))
 
+
+    # ======================================================================= #
+    #                                                                         #
+    #                               `root` test                               #
+    #                                                                         #
+    # ======================================================================= #
+    def test_root(self):
+        self.assertTrue(self.device.connect())
+
+        with patch('adb_shell.adb_device.AdbDevice._service') as patch_service:
+            self.device.root()
+            patch_service.assert_called_once()
 
     # ======================================================================= #
     #                                                                         #

@@ -54,6 +54,7 @@
     * :meth:`AdbDevice.list`
     * :meth:`AdbDevice.pull`
     * :meth:`AdbDevice.push`
+    * :meth:`AdbDevice.root`
     * :meth:`AdbDevice.shell`
     * :meth:`AdbDevice.stat`
     * :meth:`AdbDevice.streaming_shell`
@@ -435,6 +436,25 @@ class AdbDevice(object):
         else:
             for line in stream:
                 yield line
+
+    def root(self, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Gain root access.
+
+        The device must be rooted in order for this to work.
+
+        Parameters
+        ----------
+        timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
+            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
+        total_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+
+        """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
+        self._service(b'root', b'', timeout_s, total_timeout_s, False)
 
     def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device.
