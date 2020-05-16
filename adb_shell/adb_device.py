@@ -437,8 +437,8 @@ class AdbDevice(object):
             for line in stream:
                 yield line
 
-    def root(self, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
-        """Gain root access. 
+    def root(self, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+        """Gain root access.
 
         The device must be rooted in order for this to work.
 
