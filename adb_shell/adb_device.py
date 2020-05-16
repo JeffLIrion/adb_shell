@@ -52,9 +52,9 @@
     * :meth:`AdbDevice.close`
     * :meth:`AdbDevice.connect`
     * :meth:`AdbDevice.list`
-    * :meth:`AdbDevice.root`
     * :meth:`AdbDevice.pull`
     * :meth:`AdbDevice.push`
+    * :meth:`AdbDevice.root`
     * :meth:`AdbDevice.shell`
     * :meth:`AdbDevice.stat`
     * :meth:`AdbDevice.streaming_shell`
