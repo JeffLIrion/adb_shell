@@ -330,7 +330,7 @@ class UsbHandle(BaseHandle):
         with self._HANDLE_CACHE_LOCK:
             self._HANDLE_CACHE[port_path] = self
         # When this object is deleted, make sure it's closed.
-        weakref.ref(self, self.Close)
+        weakref.ref(self, self.close)
 
     def _timeout_ms(self, timeout_s):
         """TODO
