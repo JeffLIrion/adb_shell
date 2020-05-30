@@ -20,6 +20,11 @@
 
 """A class for creating a USB connection with the device and sending and receiving data.
 
+.. warning::
+
+   USB support is an experimental feature.
+
+
 * :func:`get_interface`
 * :func:`interface_matcher`
 * :class:`UsbHandle`
