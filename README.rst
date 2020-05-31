@@ -35,14 +35,14 @@ Example Usage
    device1.connect(auth_timeout_s=0.1)
 
    # Connect (authentication required)
-   with open('path/to/adbkey', 'rb') as f:
+   with open('path/to/adbkey') as f:
        priv = f.read()
    signer = PythonRSASigner('', priv)
    device2 = AdbDeviceTcp('192.168.0.222', 5555, default_timeout_s=9.)
    device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
    # Connect via USB (package must be installed via `pip install adb-shell[usb])`
-   with open('path/to/adbkey', 'rb') as f:
+   with open('path/to/adbkey') as f:
        priv = f.read()
    signer = PythonRSASigner('', priv)
    device3 = AdbDeviceUsb('ab78c6ef')

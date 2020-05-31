@@ -1,8 +1,29 @@
 # Copyright (c) 2020 Jeff Irion and contributors
 #
-# This file is part of the adb-shell package.
+# This file is part of the adb-shell package.  It incorporates work
+# covered by the following license notice:
+#
+#
+#   Copyright 2014 Google Inc. All rights reserved.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 
 """A class for creating a USB connection with the device and sending and receiving data.
+
+.. warning::
+
+   USB support is an experimental feature.
+
 
 * :func:`get_interface`
 * :func:`interface_matcher`
@@ -54,7 +75,7 @@ SUBCLASS = 0x42
 PROTOCOL = 0x01
 
 
-def get_interface(setting):
+def get_interface(setting):  # pragma: no cover
     """Get the class, subclass, and protocol for the given USB setting.
 
     Parameters
@@ -75,7 +96,7 @@ def get_interface(setting):
     return (setting.getClass(), setting.getSubClass(), setting.getProtocol())
 
 
-def interface_matcher(clazz, subclass, protocol):
+def interface_matcher(clazz, subclass, protocol):   # pragma: no cover
     """Returns a matcher that returns the setting with the given interface.
 
     Parameters
@@ -117,7 +138,7 @@ def interface_matcher(clazz, subclass, protocol):
     return matcher
 
 
-class UsbHandle(BaseHandle):
+class UsbHandle(BaseHandle):   # pragma: no cover
     """USB communication object. Not thread-safe.
 
     Handles reading and writing over USB with the proper endpoints, exceptions,
@@ -307,7 +328,7 @@ class UsbHandle(BaseHandle):
 
         for endpoint in self._setting.iterEndpoints():
             address = endpoint.getAddress()
-            if address & usb1.USB_ENDPOINT_DIR_MASK:
+            if address & usb1.USB_ENDPOINT_DIR_MASK:  # pylint: disable=no-member
                 self._read_endpoint = address
                 self._max_read_packet_len = endpoint.getMaxPacketSize()
             else:
@@ -321,7 +342,7 @@ class UsbHandle(BaseHandle):
         try:
             if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
                 handle.detachKernelDriver(iface_number)
-        except usb1.USBErrorNotFound as e:  # pylint: disable=no-member
+        except usb1.USBErrorNotFound:  # pylint: disable=no-member
             warnings.warn('Kernel driver not found for interface: %s.', iface_number)
         handle.claimInterface(iface_number)
         self._handle = handle
@@ -330,7 +351,7 @@ class UsbHandle(BaseHandle):
         with self._HANDLE_CACHE_LOCK:
             self._HANDLE_CACHE[port_path] = self
         # When this object is deleted, make sure it's closed.
-        weakref.ref(self, self.Close)
+        weakref.ref(self, self.close)
 
     def _timeout_ms(self, timeout_s):
         """TODO
