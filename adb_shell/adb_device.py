@@ -1302,6 +1302,8 @@ class AdbDeviceUsb(AdbDevice):
     ----------
     serial : str
         The USB device serial ID
+    port_path : TODO, None
+        TODO
     default_timeout_s : float, None
         Default timeout in seconds for USB packets, or ``None``
     banner : str, bytes, None
@@ -1319,7 +1321,7 @@ class AdbDeviceUsb(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _handle : TcpHandle
+    _handle : uSBHandle
         The handle that is used to connect to the device
 
     """
