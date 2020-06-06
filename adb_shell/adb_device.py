@@ -1321,7 +1321,7 @@ class AdbDeviceUsb(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _handle : uSBHandle
+    _handle : UsbHandle
         The handle that is used to connect to the device
 
     """
