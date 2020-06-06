@@ -75,7 +75,7 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-autodoc_mock_imports = []
+autodoc_mock_imports = ['libusb1', 'usb1']
 
 autodoc_default_options = {'members': True, 'undoc-members': True, 'private-members': True, 'show-inheritance': True}
 

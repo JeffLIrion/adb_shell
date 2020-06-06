@@ -60,6 +60,7 @@
     * :meth:`AdbDevice.streaming_shell`
 
 * :class:`AdbDeviceTcp`
+* :class:`AdbDeviceUsb`
 
 """
 
@@ -78,6 +79,11 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .handle.base_handle import BaseHandle
 from .handle.tcp_handle import TcpHandle
+
+try:
+    from .handle.usb_handle import UsbHandle
+except ImportError:
+    UsbHandle = None
 
 
 try:
@@ -1287,3 +1293,42 @@ class AdbDeviceTcp(AdbDevice):
     def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
         handle = TcpHandle(host, port, default_timeout_s)
         super(AdbDeviceTcp, self).__init__(handle, banner)
+
+
+class AdbDeviceUsb(AdbDevice):
+    """A class with methods for connecting to a device via USB and executing ADB commands.
+
+    Parameters
+    ----------
+    serial : str, None
+        The USB device serial ID
+    port_path : TODO, None
+        TODO
+    default_timeout_s : float, None
+        Default timeout in seconds for USB packets, or ``None``
+    banner : str, bytes, None
+        The hostname of the machine where the Python interpreter is currently running; if
+        it is not provided, it will be determined via ``socket.gethostname()``
+
+    Raises
+    ------
+    adb_shell.exceptions.InvalidHandleError
+        Raised if package was not installed with the "usb" extras option (``pip install adb-shell[usb]``)
+
+    Attributes
+    ----------
+    _available : bool
+        Whether an ADB connection to the device has been established
+    _banner : bytearray, bytes
+        The hostname of the machine where the Python interpreter is currently running
+    _handle : UsbHandle
+        The handle that is used to connect to the device
+
+    """
+
+    def __init__(self, serial=None, port_path=None, default_timeout_s=None, banner=None):
+        if UsbHandle is None:
+            raise exceptions.InvalidHandleError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
+
+        handle = UsbHandle.find_adb(serial, port_path, default_timeout_s)
+        super(AdbDeviceUsb, self).__init__(handle, banner)

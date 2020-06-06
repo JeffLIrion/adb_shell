@@ -8,6 +8,7 @@ Submodules
 
    adb_shell.handle.base_handle
    adb_shell.handle.tcp_handle
+   adb_shell.handle.usb_handle
 
 Module contents
 ---------------
