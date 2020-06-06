@@ -1300,7 +1300,7 @@ class AdbDeviceUsb(AdbDevice):
 
     Parameters
     ----------
-    serial : str
+    serial : str, None
         The USB device serial ID
     port_path : TODO, None
         TODO
