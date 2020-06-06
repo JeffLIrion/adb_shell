@@ -146,14 +146,14 @@ class UsbHandle(BaseHandle):   # pragma: no cover
 
     Parameters
     ----------
-    default_timeout_s : TODO, None
-        Timeout in seconds for all I/O.
     device : usb1.USBDevice
         libusb_device to connect to.
     setting : usb1.USBInterfaceSetting
         libusb setting with the correct endpoints to communicate with.
     usb_info : TODO, None
         String describing the usb path/serial/device, for debugging.
+    default_timeout_s : TODO, None
+        Timeout in seconds for all I/O.
 
     Attributes
     ----------
@@ -213,10 +213,9 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         Parameters
         ----------
         timeout_s : float, None
-            Set the timeout on the socket instance
+            Set the timeout on the USB instance
 
         """
-
         read_endpoint = None
         write_endpoint = None
 

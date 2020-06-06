@@ -21,7 +21,7 @@ class TestUsbHandle(unittest.TestCase):
             self.handle.connect()
 
     def tearDown(self):
-        """Close the socket connection."""
+        """Close the USB connection."""
         self.handle.close()
 
     def test_connect_with_timeout(self):
