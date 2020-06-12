@@ -1,9 +1,13 @@
 from mock import patch
+import sys
+import unittest
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage
 from adb_shell.handle.tcp_handle import TcpHandle
 
+
+ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 7, "Async functionality requires Python 3.7+")
 
 MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH_INVALID = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
