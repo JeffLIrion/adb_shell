@@ -11,7 +11,7 @@ addons:
       - libusb-1.0-0-dev
 install:
   - pip install .
-  - pip install flake8 pylint coveralls cryptography libusb1>=1.0.16
+  - pip install flake8 pylint coveralls cryptography libusb1>=1.0.16 pycryptodome
 script:
   - if python --version 2>&1 | grep -q "Python 3.5"; then flake8 adb_shell/ --exclude="adb_shell/adb_device_async.py,adb_shell/handle/base_handle_async.py,adb_shell/handle/tcp_handle_async.py" && pylint --ignore="adb_device_async.py,base_handle_async.py,tcp_handle_async.py" adb_shell/; fi
   - if python --version 2>&1 | grep -qv "Python 3.5"; then flake8 adb_shell/ && pylint adb_shell/; fi
