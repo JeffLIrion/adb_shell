@@ -11,18 +11,11 @@ docs:
 	@cd docs && sphinx-apidoc -f -e -o source/ ../adb_shell/
 	@cd docs && make html && make html
 
-.PHONY: doxygen
-doxygen:
-	rm -rf docs/html
-	doxygen Doxyfile
-
 SYNCTESTS := $(shell cd tests && ls test*.py | grep -v async)
 
 .PHONY: test
 test:
-	#python --version 2>&1 | grep -q "Python 2" && $(shell for synctest in $(cd tests && ls test*.py | grep -v async); do python -m unittest discover -s tests/ -t . -p "$synctest"; done)
 	python --version 2>&1 | grep -q "Python 2" && (for synctest in $(SYNCTESTS); do python -m unittest discover -s tests/ -t . -p "$$synctest"; done) || true
-	#python --version 2>&1 | grep -q "Python 2" && (for synctest in $(cd tests && ls test*.py | grep -v async); do python -m unittest discover -s tests/ -t . -p "$synctest" || exit 1; done) || true
 	python --version 2>&1 | grep -q "Python 3" && python -m unittest discover -s tests/ -t . || true
 
 .PHONY: coverage
