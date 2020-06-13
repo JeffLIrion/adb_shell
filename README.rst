@@ -20,6 +20,22 @@ Installation
    pip install adb-shell
 
 
+USB Support (Experimental)
+**************************
+
+To connect to a device via USB, install this package via:
+
+.. code-block::
+
+   pip install adb-shell[usb]
+
+
+Async
+*****
+
+To utilize the async version of this code, you must install into a Python 3.6+ environment.
+
+
 Example Usage
 -------------
 

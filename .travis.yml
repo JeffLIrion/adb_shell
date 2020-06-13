@@ -1,7 +1,10 @@
 language: python
 python:
   - "2.7"
+  - "3.5"
+  - "3.6"
   - "3.7"
+  - "3.8"
 addons:
   apt:
     packages:
@@ -9,9 +12,12 @@ addons:
       - libusb-1.0-0-dev
 install:
   - pip install .
-  - pip install flake8 pylint coveralls cryptography libusb1>=1.0.16
+  - pip install flake8 pylint coveralls cryptography libusb1>=1.0.16 pycryptodome
   - python --version 2>&1 | grep -q "Python 2" && pip install mock || true
 script:
-- flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
+  - if python --version 2>&1 | grep -q "Python 2" || python --version 2>&1 | grep -q "Python 3.5"; then flake8 adb_shell/ --exclude="adb_shell/adb_device_async.py,adb_shell/handle/base_handle_async.py,adb_shell/handle/tcp_handle_async.py" && pylint --ignore="adb_device_async.py,base_handle_async.py,tcp_handle_async.py" adb_shell/; fi
+  - if python --version 2>&1 | grep -q "Python 3.6" || python --version 2>&1 | grep -q "Python 3.7" || python --version 2>&1 | grep -q "Python 3.8"; then flake8 adb_shell/ && pylint adb_shell/; fi
+  - if python --version 2>&1 | grep -q "Python 2" || python --version 2>&1 | grep -q "Python 3.5"; then for synctest in $(cd tests && ls test*.py | grep -v async); do python -m unittest discover -s tests/ -t . -p "$synctest" || exit 1; done; fi
+  - if python --version 2>&1 | grep -q "Python 3.6" || python --version 2>&1 | grep -q "Python 3.7" || python --version 2>&1 | grep -q "Python 3.8"; then coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage report -m; fi
 after_success:
-- coveralls
+  - if python --version 2>&1 | grep -q "Python 3.6" || python --version 2>&1 | grep -q "Python 3.7" || python --version 2>&1 | grep -q "Python 3.8"; then coveralls; fi
