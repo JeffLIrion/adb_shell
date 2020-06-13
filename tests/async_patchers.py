@@ -43,7 +43,7 @@ class FakeTcpHandleAsync(TcpHandleAsync):
         self._reader = None
         self._writer = None
 
-    async def connect(self, auth_timeout_s=None):
+    async def connect(self, timeout_s=None):
         self._reader = True
         self._writer = True
 
