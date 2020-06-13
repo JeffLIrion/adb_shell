@@ -32,4 +32,4 @@ lint:
 
 .PHONY: alltests
 alltests:
-	flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell setup.py test && coverage report -m
+	flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage report -m
