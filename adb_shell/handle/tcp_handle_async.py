@@ -1,6 +1,6 @@
 # Copyright (c) 2020 Jeff Irion and contributors
 #
-# This file is part of the aio-adb-shell package.  It incorporates work
+# This file is part of the adb-shell package.  It incorporates work
 # covered by the following license notice:
 #
 #
