@@ -20,7 +20,7 @@ test:
 
 .PHONY: coverage
 coverage:
-	coverage run --source adb_shell setup.py test && coverage html && coverage report -m
+	coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage html && coverage report -m
 
 .PHONY: tdd
 tdd:
