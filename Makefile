@@ -24,7 +24,7 @@ coverage:
 
 .PHONY: tdd
 tdd:
-	coverage run --source adb_shell setup.py test && coverage report -m
+	coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage report -m
 
 .PHONY: lint
 lint:
