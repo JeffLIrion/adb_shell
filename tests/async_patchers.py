@@ -4,6 +4,15 @@ from adb_shell import constants
 from adb_shell.adb_message import AdbMessage, unpack
 from adb_shell.handle.tcp_handle_async import TcpHandleAsync
 
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    from unittest.mock import MagicMock
+
+    class AsyncMock(MagicMock):
+        async def __call__(self, *args, **kwargs):
+            return super(AsyncMock, self).__call__(*args, **kwargs)
+
 
 class FakeStreamWriter:
     def close(self):

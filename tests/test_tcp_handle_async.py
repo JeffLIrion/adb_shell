@@ -5,18 +5,9 @@ from unittest.mock import patch
 from adb_shell.exceptions import TcpTimeoutException
 from adb_shell.handle.tcp_handle_async import TcpHandleAsync
 
-from .async_patchers import FakeStreamReader, FakeStreamWriter
+from .async_patchers import AsyncMock, FakeStreamReader, FakeStreamWriter
 from .async_wrapper import awaiter
 from . import patchers
-
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    from unittest.mock import MagicMock
-
-    class AsyncMock(MagicMock):
-        async def __call__(self, *args, **kwargs):
-            return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
 @patchers.ASYNC_SKIPPER
@@ -26,12 +17,6 @@ class TestTcpHandleAsync(unittest.TestCase):
 
         """
         self.handle = TcpHandleAsync('host', 5555)
-        # with patchers.PATCH_CREATE_CONNECTION:
-        #    self.handle.connect()
-
-    '''def tearDown(self):
-        """Close the socket connection."""
-        self.handle.close()'''
 
     @awaiter
     async def test_close(self):
