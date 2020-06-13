@@ -15,9 +15,11 @@ Submodules
 .. toctree::
 
    adb_shell.adb_device
+   adb_shell.adb_device_async
    adb_shell.adb_message
    adb_shell.constants
    adb_shell.exceptions
+   adb_shell.hidden_helpers
 
 Module contents
 ---------------
