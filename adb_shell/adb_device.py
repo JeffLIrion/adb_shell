@@ -96,7 +96,7 @@ class AdbDevice(object):
 
     Raises
     ------
-    adb_shell.exceptions.InvalidHandleError
+    adb_shell.exceptions.InvalidTransportError
         The passed ``transport`` is not an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
 
     Attributes
@@ -123,7 +123,7 @@ class AdbDevice(object):
                 self._banner = bytearray('unknown', 'utf-8')
 
         if not isinstance(transport, BaseTransport):
-            raise exceptions.InvalidHandleError("`transport` must be an instance of a subclass of `BaseTransport`")
+            raise exceptions.InvalidTransportError("`transport` must be an instance of a subclass of `BaseTransport`")
 
         self._transport = transport
 
@@ -1186,7 +1186,7 @@ class AdbDeviceUsb(AdbDevice):
 
     Raises
     ------
-    adb_shell.exceptions.InvalidHandleError
+    adb_shell.exceptions.InvalidTransportError
         Raised if package was not installed with the "usb" extras option (``pip install adb-shell[usb]``)
 
     Attributes
@@ -1202,7 +1202,7 @@ class AdbDeviceUsb(AdbDevice):
 
     def __init__(self, serial=None, port_path=None, default_timeout_s=None, banner=None):
         if UsbTransport is None:
-            raise exceptions.InvalidHandleError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
+            raise exceptions.InvalidTransportError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
 
         transport = UsbTransport.find_adb(serial, port_path, default_timeout_s)
         super(AdbDeviceUsb, self).__init__(transport, banner)

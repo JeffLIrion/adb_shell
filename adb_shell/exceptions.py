@@ -69,7 +69,7 @@ class InvalidCommandError(Exception):
         super(InvalidCommandError, self).__init__(message, response_header, response_data)
 
 
-class InvalidHandleError(Exception):
+class InvalidTransportError(Exception):
     """The provided transport does not implement the necessary methods: ``close``, ``connect``, ``bulk_read``, and ``bulk_write``.
 
     """

@@ -101,7 +101,7 @@ class TestAdbDevice(unittest.TestCase):
         self.device._transport._bulk_read = b''
 
     def test_init_invalid_transport(self):
-        with self.assertRaises(exceptions.InvalidHandleError):
+        with self.assertRaises(exceptions.InvalidTransportError):
             device = AdbDevice(transport=123)
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes

@@ -88,7 +88,7 @@ class AdbDeviceAsync(object):
 
     Raises
     ------
-    adb_shell.exceptions.InvalidHandleError
+    adb_shell.exceptions.InvalidTransportError
         The passed ``transport`` is not an instance of a subclass of :class:`~adb_shell.transport.base_transport_async.BaseTransportAsync`
 
     Attributes
@@ -116,7 +116,7 @@ class AdbDeviceAsync(object):
                 self._banner = bytearray('unknown', 'utf-8')
 
         if not isinstance(transport, BaseTransportAsync):
-            raise exceptions.InvalidHandleError("`transport` must be an instance of a subclass of `BaseTransportAsync`")
+            raise exceptions.InvalidTransportError("`transport` must be an instance of a subclass of `BaseTransportAsync`")
 
         self._transport = transport
 

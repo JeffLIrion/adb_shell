@@ -109,7 +109,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_init_invalid_transport(self):
-        with self.assertRaises(exceptions.InvalidHandleError):
+        with self.assertRaises(exceptions.InvalidTransportError):
             device = AdbDeviceAsync(transport=123)
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
