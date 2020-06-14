@@ -71,7 +71,7 @@ class TestAdbDevice(unittest.TestCase):
         self.device._transport._bulk_read = b''
 
     def test_init_tcp(self):
-        with patchers.PATCH_TCP_HANDLE:
+        with patchers.PATCH_TCP_TRANSPORT:
             tcp_device = AdbDeviceTcp('host')
             tcp_device._transport._bulk_read = self.device._transport._bulk_read
 

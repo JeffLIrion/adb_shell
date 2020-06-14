@@ -12,7 +12,7 @@ from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
-from .async_patchers import PATCH_TCP_HANDLE_ASYNC, AsyncMock, FakeTcpTransportAsync
+from .async_patchers import PATCH_TCP_TRANSPORT_ASYNC, AsyncMock, FakeTcpTransportAsync
 from .async_wrapper import awaiter
 from .filesync_helpers import FileSyncMessage, FileSyncListMessage, FileSyncStatMessage
 from .keygen_stub import open_priv_pub
@@ -77,7 +77,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_init_tcp(self):
-        with PATCH_TCP_HANDLE_ASYNC:
+        with PATCH_TCP_TRANSPORT_ASYNC:
             tcp_device = AdbDeviceTcpAsync('host')
             tcp_device._transport._bulk_read = self.device._transport._bulk_read
 

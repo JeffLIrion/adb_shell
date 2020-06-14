@@ -78,4 +78,4 @@ PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
 # `TcpTransport` patches
-PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpTransport', FakeTcpTransport)
+PATCH_TCP_TRANSPORT = patch('adb_shell.adb_device.TcpTransport', FakeTcpTransport)

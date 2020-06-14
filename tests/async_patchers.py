@@ -59,4 +59,4 @@ class FakeTcpTransportAsync(TcpTransportAsync):
 
 
 # `TcpTransport` patches
-PATCH_TCP_HANDLE_ASYNC = patch('adb_shell.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)
+PATCH_TCP_TRANSPORT_ASYNC = patch('adb_shell.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)
