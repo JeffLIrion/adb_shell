@@ -2,7 +2,7 @@
 #
 # This file is part of the adb-shell package.
 
-"""A base class for handles used to communicate with a device.
+"""A base class for transports used to communicate with a device.
 
 * :class:`BaseHandleAsync`
 
@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseHandleAsync(ABC):
-    """A base handle class.
+    """A base transport class.
 
     """
 

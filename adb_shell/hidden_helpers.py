@@ -88,8 +88,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     remote_id : int
         The ID for the recipient
     timeout_s : float, None
-        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-        and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
+        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
+        and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
     total_timeout_s : float
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
@@ -100,8 +100,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     remote_id : int
         The ID for the recipient
     timeout_s : float, None
-        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-        and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
+        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
+        and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
     total_timeout_s : float
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 

@@ -33,7 +33,7 @@
 import select
 import socket
 
-from .base_handle import BaseHandle
+from .base_transport import BaseHandle
 from ..exceptions import TcpTimeoutException
 
 

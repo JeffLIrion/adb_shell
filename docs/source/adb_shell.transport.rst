@@ -1,4 +1,4 @@
-adb\_shell.handle package
+adb\_shell.transport package
 =========================
 
 Submodules
@@ -6,16 +6,16 @@ Submodules
 
 .. toctree::
 
-   adb_shell.handle.base_handle
-   adb_shell.handle.base_handle_async
-   adb_shell.handle.tcp_handle
-   adb_shell.handle.tcp_handle_async
-   adb_shell.handle.usb_handle
+   adb_shell.transport.base_transport
+   adb_shell.transport.base_transport_async
+   adb_shell.transport.tcp_transport
+   adb_shell.transport.tcp_transport_async
+   adb_shell.transport.usb_transport
 
 Module contents
 ---------------
 
-.. automodule:: adb_shell.handle
+.. automodule:: adb_shell.transport
    :members:
    :undoc-members:
    :show-inheritance:

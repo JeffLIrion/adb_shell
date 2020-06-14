@@ -4,7 +4,7 @@ import unittest
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage
-from adb_shell.handle.tcp_handle import TcpHandle
+from adb_shell.transport.tcp_transport import TcpHandle
 
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 6, "Async functionality requires Python 3.6+")

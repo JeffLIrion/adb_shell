@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage, unpack
-from adb_shell.handle.tcp_handle_async import TcpHandleAsync
+from adb_shell.transport.tcp_transport_async import TcpHandleAsync
 
 try:
     from unittest.mock import AsyncMock

@@ -1,7 +1,7 @@
-adb\_shell.handle.usb\_handle module
+adb\_shell.transport.usb\_transport module
 ====================================
 
-.. automodule:: adb_shell.handle.usb_handle
+.. automodule:: adb_shell.transport.usb_transport
    :members:
    :undoc-members:
    :show-inheritance:

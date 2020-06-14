@@ -1,7 +1,7 @@
-adb\_shell.handle.tcp\_handle\_async module
+adb\_shell.transport.tcp\_transport\_async module
 ===========================================
 
-.. automodule:: adb_shell.handle.tcp_handle_async
+.. automodule:: adb_shell.transport.tcp_transport_async
    :members:
    :undoc-members:
    :show-inheritance:

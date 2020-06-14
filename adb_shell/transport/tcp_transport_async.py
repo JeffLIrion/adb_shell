@@ -16,7 +16,7 @@
 
 import asyncio
 
-from .base_handle_async import BaseHandleAsync
+from .base_transport_async import BaseHandleAsync
 from ..exceptions import TcpTimeoutException
 
 

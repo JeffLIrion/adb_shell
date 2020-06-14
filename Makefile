@@ -28,7 +28,7 @@ tdd:
 
 .PHONY: lint
 lint:
-	python --version 2>&1 | grep -q "Python 2" && (flake8 adb_shell/ --exclude="adb_shell/adb_device_async.py,adb_shell/handle/base_handle_async.py,adb_shell/handle/tcp_handle_async.py" && pylint --ignore="adb_device_async.py,base_handle_async.py,tcp_handle_async.py" adb_shell/) || (flake8 adb_shell/ && pylint adb_shell/)
+	python --version 2>&1 | grep -q "Python 2" && (flake8 adb_shell/ --exclude="adb_shell/adb_device_async.py,adb_shell/transport/base_transport_async.py,adb_shell/transport/tcp_transport_async.py" && pylint --ignore="adb_device_async.py,base_transport_async.py,tcp_transport_async.py" adb_shell/) || (flake8 adb_shell/ && pylint adb_shell/)
 
 .PHONY: alltests
 alltests:

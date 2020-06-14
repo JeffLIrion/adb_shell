@@ -12,7 +12,7 @@ setup(
     url='https://github.com/JeffLIrion/adb_shell',
     author='Jeff Irion',
     author_email='jefflirion@users.noreply.github.com',
-    packages=['adb_shell', 'adb_shell.auth', 'adb_shell.handle'],
+    packages=['adb_shell', 'adb_shell.auth', 'adb_shell.transport'],
     install_requires=['cryptography', 'pyasn1', 'rsa'],
     tests_require=['pycryptodome', 'libusb1>=1.0.16'],
     extras_require = {'usb': ['libusb1>=1.0.16']},

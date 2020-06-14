@@ -58,7 +58,7 @@ import weakref
 
 import usb1
 
-from .base_handle import BaseHandle
+from .base_transport import BaseHandle
 
 from .. import exceptions
 
@@ -161,7 +161,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         Timeout in seconds for all I/O.
     _device : TODO
         libusb_device to connect to.
-    _handle : TODO
+    _transport : TODO
         TODO
     _interface_number : TODO
         TODO
@@ -183,7 +183,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
     def __init__(self, device, setting, usb_info=None, default_timeout_s=None):
         self._setting = setting
         self._device = device
-        self._handle = None
+        self._transport = None
 
         self._interface_number = None
         self._read_endpoint = None
@@ -197,15 +197,15 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         """Close the USB connection.
 
         """
-        if self._handle is None:
+        if self._transport is None:
             return
         try:
-            self._handle.releaseInterface(self._interface_number)
-            self._handle.close()
+            self._transport.releaseInterface(self._interface_number)
+            self._transport.close()
         except usb1.USBError:
-            _LOGGER.info('USBError while closing handle %s: ', self.usb_info, exc_info=True)
+            _LOGGER.info('USBError while closing transport %s: ', self.usb_info, exc_info=True)
         finally:
-            self._handle = None
+            self._transport = None
 
     def connect(self, timeout_s=None):
         """Create a USB connection to the device.
@@ -230,23 +230,23 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         assert read_endpoint is not None
         assert write_endpoint is not None
 
-        handle = self._device.open()
+        transport = self._device.open()
         iface_number = self._setting.getNumber()
         try:
-            if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
-                handle.detachKernelDriver(iface_number)
+            if (platform.system() != 'Windows' and transport.kernelDriverActive(iface_number)):
+                transport.detachKernelDriver(iface_number)
         except usb1.USBErrorNotFound:  # pylint: disable=no-member
             warnings.warn('Kernel driver not found for interface: %s.', iface_number)
 
         # # When this object is deleted, make sure it's closed.
         # weakref.ref(self, self.close)
 
-        self._handle = handle
+        self._transport = transport
         self._read_endpoint = read_endpoint
         self._write_endpoint = write_endpoint
         self._interface_number = iface_number
 
-        self._handle.claimInterface(self._interface_number)
+        self._transport.claimInterface(self._interface_number)
 
     def bulk_read(self, numbytes, timeout_s=None):
         """Receive data from the USB device.
@@ -269,13 +269,13 @@ class UsbHandle(BaseHandle):   # pragma: no cover
             Could not receive data
 
         """
-        if self._handle is None:
-            raise exceptions.UsbReadFailedError('This handle has been closed, probably due to another being opened.', None)
+        if self._transport is None:
+            raise exceptions.UsbReadFailedError('This transport has been closed, probably due to another being opened.', None)
         try:
             # python-libusb1 > 1.6 exposes bytearray()s now instead of bytes/str.
             # To support older and newer versions, we ensure everything's bytearray()
             # from here on out.
-            return bytes(self._handle.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout_ms(timeout_s)))
+            return bytes(self._transport.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout_ms(timeout_s)))
         except usb1.USBError as e:
             raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout_ms(timeout_s)), e)
 
@@ -297,16 +297,16 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         Raises
         ------
         adb_shell.exceptions.UsbWriteFailedError
-            This handle has been closed, probably due to another being opened
+            This transport has been closed, probably due to another being opened
         adb_shell.exceptions.UsbWriteFailedError
             Could not send data
 
         """
-        if self._handle is None:
-            raise exceptions.UsbWriteFailedError('This handle has been closed, probably due to another being opened.', None)
+        if self._transport is None:
+            raise exceptions.UsbWriteFailedError('This transport has been closed, probably due to another being opened.', None)
 
         try:
-            return self._handle.bulkWrite(self._write_endpoint, data, timeout=self._timeout_ms(timeout_s))
+            return self._transport.bulkWrite(self._write_endpoint, data, timeout=self._timeout_ms(timeout_s))
 
         except usb1.USBError as e:
             raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout_ms(timeout_s)), e)
@@ -315,12 +315,12 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         """Opens the USB device for this setting, and claims the interface.
 
         """
-        # Make sure we close any previous handle open to this usb device.
+        # Make sure we close any previous transport open to this usb device.
         port_path = tuple(self.port_path)
         with self._HANDLE_CACHE_LOCK:
-            old_handle = self._HANDLE_CACHE.get(port_path)
-            if old_handle is not None:
-                old_handle.Close()
+            old_transport = self._HANDLE_CACHE.get(port_path)
+            if old_transport is not None:
+                old_transport.Close()
 
         self._read_endpoint = None
         self._write_endpoint = None
@@ -336,15 +336,15 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         assert self._read_endpoint is not None
         assert self._write_endpoint is not None
 
-        handle = self._device.open()
+        transport = self._device.open()
         iface_number = self._setting.getNumber()
         try:
-            if (platform.system() != 'Windows' and handle.kernelDriverActive(iface_number)):
-                handle.detachKernelDriver(iface_number)
+            if (platform.system() != 'Windows' and transport.kernelDriverActive(iface_number)):
+                transport.detachKernelDriver(iface_number)
         except usb1.USBErrorNotFound:  # pylint: disable=no-member
             warnings.warn('Kernel driver not found for interface: %s.', iface_number)
-        handle.claimInterface(iface_number)
-        self._handle = handle
+        transport.claimInterface(iface_number)
+        self._transport = transport
         self._interface_number = iface_number
 
         with self._HANDLE_CACHE_LOCK:
@@ -561,9 +561,9 @@ class UsbHandle(BaseHandle):   # pragma: no cover
             if setting is None:
                 continue
 
-            handle = cls(device, setting, usb_info=usb_info, default_timeout_s=default_timeout_s)
-            if device_matcher is None or device_matcher(handle):
-                yield handle
+            transport = cls(device, setting, usb_info=usb_info, default_timeout_s=default_timeout_s)
+            if device_matcher is None or device_matcher(transport):
+                yield transport
 
     @classmethod
     def _find_first(cls, setting_matcher, device_matcher=None, usb_info='', default_timeout_s=None):

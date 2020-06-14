@@ -1,7 +1,7 @@
-adb\_shell.handle.tcp\_handle module
+adb\_shell.transport.tcp\_transport module
 ====================================
 
-.. automodule:: adb_shell.handle.tcp_handle
+.. automodule:: adb_shell.transport.tcp_transport
    :members:
    :undoc-members:
    :show-inheritance:
