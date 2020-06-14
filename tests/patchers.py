@@ -53,16 +53,16 @@ class FakeTcpTransport(TcpTransport):
     def close(self):
         self._connection = None
 
-    def connect(self, timeout_s=None):
+    def connect(self, transport_timeout_s=None):
         self._connection = True
 
-    def bulk_read(self, numbytes, timeout_s=None):
+    def bulk_read(self, numbytes, transport_timeout_s=None):
         num = min(numbytes, constants.MAX_ADB_DATA)
         ret = self._bulk_read[:num]
         self._bulk_read = self._bulk_read[num:]
         return ret
 
-    def bulk_write(self, data, timeout_s=None):
+    def bulk_write(self, data, transport_timeout_s=None):
         self._bulk_write += data
         return len(data)
 

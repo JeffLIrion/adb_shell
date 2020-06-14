@@ -46,14 +46,14 @@ class TcpTransport(BaseTransport):
         The address of the device; may be an IP address or a host name
     port : int
         The device port to which we are connecting (default is 5555)
-    default_timeout_s : float, None
+    default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
 
     Attributes
     ----------
     _connection : socket.socket, None
         A socket connection to the device
-    _default_timeout_s : float, None
+    _default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
     _host : str
         The address of the device; may be an IP address or a host name
@@ -61,10 +61,10 @@ class TcpTransport(BaseTransport):
         The device port to which we are connecting (default is 5555)
 
     """
-    def __init__(self, host, port=5555, default_timeout_s=None):
+    def __init__(self, host, port=5555, default_transport_timeout_s=None):
         self._host = host
         self._port = port
-        self._default_timeout_s = default_timeout_s
+        self._default_transport_timeout_s = default_transport_timeout_s
 
         self._connection = None
 
@@ -81,30 +81,30 @@ class TcpTransport(BaseTransport):
             self._connection.close()
             self._connection = None
 
-    def connect(self, timeout_s=None):
+    def connect(self, transport_timeout_s=None):
         """Create a socket connection to the device.
 
         Parameters
         ----------
-        timeout_s : float, None
+        transport_timeout_s : float, None
             Set the timeout on the socket instance
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
         self._connection = socket.create_connection((self._host, self._port), timeout=timeout)
         if timeout:
             # Put the socket in non-blocking mode
             # https://docs.python.org/3/library/socket.html#socket.socket.settimeout
             self._connection.setblocking(0)
 
-    def bulk_read(self, numbytes, timeout_s=None):
+    def bulk_read(self, numbytes, transport_timeout_s=None):
         """Receive data from the socket.
 
         Parameters
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : float, None
+        transport_timeout_s : float, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
@@ -118,7 +118,7 @@ class TcpTransport(BaseTransport):
             Reading timed out.
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
         readable, _, _ = select.select([self._connection], [], [], timeout)
         if readable:
             return self._connection.recv(numbytes)
@@ -126,14 +126,14 @@ class TcpTransport(BaseTransport):
         msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
         raise TcpTimeoutException(msg)
 
-    def bulk_write(self, data, timeout_s=None):
+    def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the socket.
 
         Parameters
         ----------
         data : bytes
             The data to be sent
-        timeout_s : float, None
+        transport_timeout_s : float, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
@@ -147,7 +147,7 @@ class TcpTransport(BaseTransport):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
         _, writeable, _ = select.select([], [self._connection], [], timeout)
         if writeable:
             return self._connection.send(data)

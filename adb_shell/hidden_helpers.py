@@ -87,7 +87,7 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         The ID for the sender (i.e., the device running this code)
     remote_id : int
         The ID for the recipient
-    timeout_s : float, None
+    transport_timeout_s : float, None
         Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
         and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
     total_timeout_s : float
@@ -99,17 +99,17 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         The ID for the sender (i.e., the device running this code)
     remote_id : int
         The ID for the recipient
-    timeout_s : float, None
+    transport_timeout_s : float, None
         Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
         and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
     total_timeout_s : float
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read`
 
     """
-    def __init__(self, local_id, remote_id, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def __init__(self, local_id, remote_id, transport_timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
         self.local_id = local_id
         self.remote_id = remote_id
-        self.timeout_s = timeout_s
+        self.transport_timeout_s = transport_timeout_s
         self.total_timeout_s = total_timeout_s
 
 

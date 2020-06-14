@@ -29,25 +29,25 @@ class BaseTransportAsync(ABC):
         """
 
     @abstractmethod
-    async def connect(self, timeout_s=None):
+    async def connect(self, transport_timeout_s=None):
         """Create a connection to the device.
 
         Parameters
         ----------
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A connection timeout
 
         """
 
     @abstractmethod
-    async def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, transport_timeout_s=None):
         """Read data from the device.
 
         Parameters
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A timeout for the read operation
 
         Returns
@@ -58,14 +58,14 @@ class BaseTransportAsync(ABC):
         """
 
     @abstractmethod
-    async def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the device.
 
         Parameters
         ----------
         data : bytes
             The data to be sent
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A timeout for the write operation
 
         Returns

@@ -29,12 +29,12 @@ class TcpTransportAsync(BaseTransportAsync):
         The address of the device; may be an IP address or a host name
     port : int
         The device port to which we are connecting (default is 5555)
-    default_timeout_s : float, None
+    default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
 
     Attributes
     ----------
-    _default_timeout_s : float, None
+    _default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
     _host : str
         The address of the device; may be an IP address or a host name
@@ -46,10 +46,10 @@ class TcpTransportAsync(BaseTransportAsync):
         TODO
 
     """
-    def __init__(self, host, port=5555, default_timeout_s=None):
+    def __init__(self, host, port=5555, default_transport_timeout_s=None):
         self._host = host
         self._port = port
-        self._default_timeout_s = default_timeout_s
+        self._default_transport_timeout_s = default_transport_timeout_s
 
         self._reader = None
         self._writer = None
@@ -68,16 +68,16 @@ class TcpTransportAsync(BaseTransportAsync):
         self._reader = None
         self._writer = None
 
-    async def connect(self, timeout_s=None):
+    async def connect(self, transport_timeout_s=None):
         """Create a socket connection to the device.
 
         Parameters
         ----------
-        timeout_s : float, None
+        transport_timeout_s : float, None
             Set the timeout on the socket instance
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
 
         try:
             self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), timeout)
@@ -85,14 +85,14 @@ class TcpTransportAsync(BaseTransportAsync):
             msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
             raise TcpTimeoutException(msg)
 
-    async def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, transport_timeout_s=None):
         """Receive data from the socket.
 
         Parameters
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : float, None
+        transport_timeout_s : float, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
@@ -106,7 +106,7 @@ class TcpTransportAsync(BaseTransportAsync):
             Reading timed out.
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
 
         try:
             return await asyncio.wait_for(self._reader.read(numbytes), timeout)
@@ -114,14 +114,14 @@ class TcpTransportAsync(BaseTransportAsync):
             msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
             raise TcpTimeoutException(msg)
 
-    async def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the socket.
 
         Parameters
         ----------
         data : bytes
             The data to be sent
-        timeout_s : float, None
+        transport_timeout_s : float, None
             When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
 
         Returns
@@ -135,7 +135,7 @@ class TcpTransportAsync(BaseTransportAsync):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
 
         try:
             self._writer.write(data)

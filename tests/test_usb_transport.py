@@ -33,7 +33,7 @@ class TestUsbTransport(unittest.TestCase):
 
         self.transport.close()
         with patchers.PATCH_CREATE_CONNECTION:
-            self.transport.connect(timeout_s=1)
+            self.transport.connect(transport_timeout_s=1)
             self.assertTrue(True)
 
     def test_bulk_read(self):

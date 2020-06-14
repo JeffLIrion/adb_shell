@@ -43,17 +43,17 @@ class FakeTcpTransportAsync(TcpTransportAsync):
         self._reader = None
         self._writer = None
 
-    async def connect(self, timeout_s=None):
+    async def connect(self, transport_timeout_s=None):
         self._reader = True
         self._writer = True
 
-    async def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, transport_timeout_s=None):
         num = min(numbytes, constants.MAX_ADB_DATA)
         ret = self._bulk_read[:num]
         self._bulk_read = self._bulk_read[num:]
         return ret
 
-    async def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, transport_timeout_s=None):
         self._bulk_write += data
         return len(data)
 
