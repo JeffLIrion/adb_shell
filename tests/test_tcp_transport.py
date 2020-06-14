@@ -3,17 +3,17 @@ import unittest
 from mock import patch
 
 from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.transport.tcp_transport import TcpHandle
+from adb_shell.transport.tcp_transport import TcpTransport
 
 from . import patchers
 
 
-class TestTcpHandle(unittest.TestCase):
+class TestTcpTransport(unittest.TestCase):
     def setUp(self):
-        """Create a ``TcpHandle`` and connect to a TCP service.
+        """Create a ``TcpTransport`` and connect to a TCP service.
 
         """
-        self.transport = TcpHandle('host', 5555)
+        self.transport = TcpTransport('host', 5555)
         with patchers.PATCH_CREATE_CONNECTION:
             self.transport.connect()
 

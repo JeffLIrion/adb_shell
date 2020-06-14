@@ -70,14 +70,14 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
-from .transport.base_transport import BaseHandle
-from .transport.tcp_transport import TcpHandle
+from .transport.base_transport import BaseTransport
+from .transport.tcp_transport import TcpTransport
 from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, _open
 
 try:
-    from .transport.usb_transport import UsbHandle
+    from .transport.usb_transport import UsbTransport
 except ImportError:
-    UsbHandle = None
+    UsbTransport = None
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,8 +88,8 @@ class AdbDevice(object):
 
     Parameters
     ----------
-    transport : BaseHandle
-        A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseHandle`
+    transport : BaseTransport
+        A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
@@ -97,7 +97,7 @@ class AdbDevice(object):
     Raises
     ------
     adb_shell.exceptions.InvalidHandleError
-        The passed ``transport`` is not an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseHandle`
+        The passed ``transport`` is not an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
 
     Attributes
     ----------
@@ -105,8 +105,8 @@ class AdbDevice(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _transport : BaseHandle
-        The transport that is used to connect to the device; must be a subclass of :class:`~adb_shell.transport.base_transport.BaseHandle`
+    _transport : BaseTransport
+        The transport that is used to connect to the device; must be a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
 
     """
 
@@ -122,8 +122,8 @@ class AdbDevice(object):
             except:  # noqa pylint: disable=bare-except
                 self._banner = bytearray('unknown', 'utf-8')
 
-        if not isinstance(transport, BaseHandle):
-            raise exceptions.InvalidHandleError("`transport` must be an instance of a subclass of `BaseHandle`")
+        if not isinstance(transport, BaseTransport):
+            raise exceptions.InvalidHandleError("`transport` must be an instance of a subclass of `BaseTransport`")
 
         self._transport = transport
 
@@ -172,8 +172,8 @@ class AdbDevice(object):
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`~adb_shell.auth.sign_pythonrsa.PythonRSASigner`
         timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         auth_timeout_s : float, None
             The time in seconds to wait for a ``b'CNXN'`` authentication response
         total_timeout_s : float
@@ -267,8 +267,8 @@ class AdbDevice(object):
         command : bytes
             The command that will be sent
         timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
         decode : bool
@@ -295,8 +295,8 @@ class AdbDevice(object):
         command : bytes
             The command that will be sent
         timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
         decode : bool
@@ -325,8 +325,8 @@ class AdbDevice(object):
         Parameters
         ----------
         timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
@@ -344,8 +344,8 @@ class AdbDevice(object):
         command : str
             The shell command that will be sent
         timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
         decode : bool
@@ -370,8 +370,8 @@ class AdbDevice(object):
         command : str
             The shell command that will be sent
         timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.transport.base_transport.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.transport.base_transport.BaseHandle.bulk_write>`
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         total_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
         decode : bool
@@ -1159,13 +1159,13 @@ class AdbDeviceTcp(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _transport : TcpHandle
+    _transport : TcpTransport
         The transport that is used to connect to the device
 
     """
 
     def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
-        transport = TcpHandle(host, port, default_timeout_s)
+        transport = TcpTransport(host, port, default_timeout_s)
         super(AdbDeviceTcp, self).__init__(transport, banner)
 
 
@@ -1195,14 +1195,14 @@ class AdbDeviceUsb(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _transport : UsbHandle
+    _transport : UsbTransport
         The transport that is used to connect to the device
 
     """
 
     def __init__(self, serial=None, port_path=None, default_timeout_s=None, banner=None):
-        if UsbHandle is None:
+        if UsbTransport is None:
             raise exceptions.InvalidHandleError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
 
-        transport = UsbHandle.find_adb(serial, port_path, default_timeout_s)
+        transport = UsbTransport.find_adb(serial, port_path, default_timeout_s)
         super(AdbDeviceUsb, self).__init__(transport, banner)

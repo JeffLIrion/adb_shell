@@ -2,17 +2,17 @@ import unittest
 
 from mock import patch
 
-from adb_shell.transport.usb_transport import UsbHandle
+from adb_shell.transport.usb_transport import UsbTransport
 
 from . import patchers
 
 
-class TestUsbHandle(unittest.TestCase):
+class TestUsbTransport(unittest.TestCase):
     def setUp(self):
-        """Create a ``UsbHandle`` and do something...
+        """Create a ``UsbTransport`` and do something...
 
         """
-        self.transport = UsbHandle('TODO', 'TODO')
+        self.transport = UsbTransport('TODO', 'TODO')
 
         if True:
             return

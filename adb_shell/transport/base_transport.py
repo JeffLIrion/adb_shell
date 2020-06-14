@@ -4,12 +4,12 @@
 
 """A base class for transports used to communicate with a device.
 
-* :class:`BaseHandle`
+* :class:`BaseTransport`
 
-    * :meth:`BaseHandle.bulk_read`
-    * :meth:`BaseHandle.bulk_write`
-    * :meth:`BaseHandle.close`
-    * :meth:`BaseHandle.connect`
+    * :meth:`BaseTransport.bulk_read`
+    * :meth:`BaseTransport.bulk_write`
+    * :meth:`BaseTransport.close`
+    * :meth:`BaseTransport.connect`
 
 """
 
@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
         __metaclass__ = ABCMeta
 
 
-class BaseHandle(ABC):
+class BaseTransport(ABC):
     """A base transport class.
 
     """

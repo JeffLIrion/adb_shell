@@ -4,23 +4,23 @@
 
 """A class for creating a socket connection with the device and sending and receiving data.
 
-* :class:`TcpHandleAsync`
+* :class:`TcpTransportAsync`
 
-    * :meth:`TcpHandleAsync.bulk_read`
-    * :meth:`TcpHandleAsync.bulk_write`
-    * :meth:`TcpHandleAsync.close`
-    * :meth:`TcpHandleAsync.connect`
+    * :meth:`TcpTransportAsync.bulk_read`
+    * :meth:`TcpTransportAsync.bulk_write`
+    * :meth:`TcpTransportAsync.close`
+    * :meth:`TcpTransportAsync.connect`
 
 """
 
 
 import asyncio
 
-from .base_transport_async import BaseHandleAsync
+from .base_transport_async import BaseTransportAsync
 from ..exceptions import TcpTimeoutException
 
 
-class TcpHandleAsync(BaseHandleAsync):
+class TcpTransportAsync(BaseTransportAsync):
     """TCP connection object.
 
     Parameters

@@ -20,12 +20,12 @@
 
 """A class for creating a socket connection with the device and sending and receiving data.
 
-* :class:`TcpHandle`
+* :class:`TcpTransport`
 
-    * :meth:`TcpHandle.bulk_read`
-    * :meth:`TcpHandle.bulk_write`
-    * :meth:`TcpHandle.close`
-    * :meth:`TcpHandle.connect`
+    * :meth:`TcpTransport.bulk_read`
+    * :meth:`TcpTransport.bulk_write`
+    * :meth:`TcpTransport.close`
+    * :meth:`TcpTransport.connect`
 
 """
 
@@ -33,11 +33,11 @@
 import select
 import socket
 
-from .base_transport import BaseHandle
+from .base_transport import BaseTransport
 from ..exceptions import TcpTimeoutException
 
 
-class TcpHandle(BaseHandle):
+class TcpTransport(BaseTransport):
     """TCP connection object.
 
     Parameters

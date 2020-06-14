@@ -27,24 +27,24 @@
 
 * :func:`get_interface`
 * :func:`interface_matcher`
-* :class:`UsbHandle`
+* :class:`UsbTransport`
 
-    * :meth:`UsbHandle._find`
-    * :meth:`UsbHandle._find_and_open`
-    * :meth:`UsbHandle._find_devices`
-    * :meth:`UsbHandle._find_first`
-    * :meth:`UsbHandle._flush_buffers`
-    * :meth:`UsbHandle._open`
-    * :meth:`UsbHandle._port_path_matcher`
-    * :meth:`UsbHandle._serial_matcher`
-    * :meth:`UsbHandle._timeout`
-    * :meth:`UsbHandle.bulk_read`
-    * :meth:`UsbHandle.bulk_write`
-    * :meth:`UsbHandle.close`
-    * :meth:`UsbHandle.connect`
-    * :attr:`UsbHandle.port_path`
-    * :attr:`UsbHandle.serial_number`
-    * :attr:`UsbHandle.usb_info`
+    * :meth:`UsbTransport._find`
+    * :meth:`UsbTransport._find_and_open`
+    * :meth:`UsbTransport._find_devices`
+    * :meth:`UsbTransport._find_first`
+    * :meth:`UsbTransport._flush_buffers`
+    * :meth:`UsbTransport._open`
+    * :meth:`UsbTransport._port_path_matcher`
+    * :meth:`UsbTransport._serial_matcher`
+    * :meth:`UsbTransport._timeout`
+    * :meth:`UsbTransport.bulk_read`
+    * :meth:`UsbTransport.bulk_write`
+    * :meth:`UsbTransport.close`
+    * :meth:`UsbTransport.connect`
+    * :attr:`UsbTransport.port_path`
+    * :attr:`UsbTransport.serial_number`
+    * :attr:`UsbTransport.usb_info`
 
 """
 
@@ -58,7 +58,7 @@ import weakref
 
 import usb1
 
-from .base_transport import BaseHandle
+from .base_transport import BaseTransport
 
 from .. import exceptions
 
@@ -138,7 +138,7 @@ def interface_matcher(clazz, subclass, protocol):   # pragma: no cover
     return matcher
 
 
-class UsbHandle(BaseHandle):   # pragma: no cover
+class UsbTransport(BaseTransport):   # pragma: no cover
     """USB communication object. Not thread-safe.
 
     Handles reading and writing over USB with the proper endpoints, exceptions,
@@ -542,7 +542,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
             Function that returns the setting to use given a ``usb1.USBDevice``, or ``None``
             if the device doesn't have a valid setting.
         device_matcher : TODO, None
-            Function that returns ``True`` if the given ``UsbHandle`` is
+            Function that returns ``True`` if the given ``UsbTransport`` is
             valid. ``None`` to match any device.
         usb_info : str
             Info string describing device(s).
@@ -552,7 +552,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         Yields
         ------
         TODO
-            UsbHandle instances
+            UsbTransport instances
 
         """
         ctx = usb1.USBContext()
@@ -575,7 +575,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
             Function that returns the setting to use given a ``usb1.USBDevice``, or ``None``
             if the device doesn't have a valid setting.
         device_matcher : TODO
-            Function that returns ``True`` if the given ``UsbHandle`` is
+            Function that returns ``True`` if the given ``UsbTransport`` is
             valid. ``None`` to match any device.
         usb_info : str
             Info string describing device(s).
@@ -585,7 +585,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
         Returns
         -------
         TODO
-            An instance of `UsbHandle`
+            An instance of `UsbTransport`
 
         Raises
         ------
@@ -613,7 +613,7 @@ class UsbHandle(BaseHandle):   # pragma: no cover
 
         Returns
         -------
-        UsbHandle
+        UsbTransport
             TODO
 
         """

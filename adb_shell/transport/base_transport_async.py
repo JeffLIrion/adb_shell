@@ -4,12 +4,12 @@
 
 """A base class for transports used to communicate with a device.
 
-* :class:`BaseHandleAsync`
+* :class:`BaseTransportAsync`
 
-    * :meth:`BaseHandleAsync.bulk_read`
-    * :meth:`BaseHandleAsync.bulk_write`
-    * :meth:`BaseHandleAsync.close`
-    * :meth:`BaseHandleAsync.connect`
+    * :meth:`BaseTransportAsync.bulk_read`
+    * :meth:`BaseTransportAsync.bulk_write`
+    * :meth:`BaseTransportAsync.close`
+    * :meth:`BaseTransportAsync.connect`
 
 """
 
@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 
 
-class BaseHandleAsync(ABC):
+class BaseTransportAsync(ABC):
     """A base transport class.
 
     """

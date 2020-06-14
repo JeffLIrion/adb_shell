@@ -8,10 +8,10 @@ class TestUsbImportError(unittest.TestCase):
         from adb_shell.exceptions import InvalidHandleError
 
         # TODO: I can't manage to trigger an `ImportError` in adb_device.py
-        # self.assertIsNone(adb_device.UsbHandle)
+        # self.assertIsNone(adb_device.UsbTransport)
 
         # In lieu of a real `ImportError`, I'll just set this to None
-        adb_device.UsbHandle = None
+        adb_device.UsbTransport = None
 
         with self.assertRaises(InvalidHandleError):
             adb_device.AdbDeviceUsb('serial')

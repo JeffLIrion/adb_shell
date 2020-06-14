@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage, unpack
-from adb_shell.transport.tcp_transport_async import TcpHandleAsync
+from adb_shell.transport.tcp_transport_async import TcpTransportAsync
 
 try:
     from unittest.mock import AsyncMock
@@ -33,9 +33,9 @@ class FakeStreamReader:
         return b'TEST'
 
 
-class FakeTcpHandleAsync(TcpHandleAsync):
+class FakeTcpTransportAsync(TcpTransportAsync):
     def __init__(self, *args, **kwargs):
-        TcpHandleAsync.__init__(self, *args, **kwargs)
+        TcpTransportAsync.__init__(self, *args, **kwargs)
         self._bulk_read = b''
         self._bulk_write = b''
 
@@ -58,5 +58,5 @@ class FakeTcpHandleAsync(TcpHandleAsync):
         return len(data)
 
 
-# `TcpHandle` patches
-PATCH_TCP_HANDLE_ASYNC = patch('adb_shell.adb_device_async.TcpHandleAsync', FakeTcpHandleAsync)
+# `TcpTransport` patches
+PATCH_TCP_HANDLE_ASYNC = patch('adb_shell.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)

@@ -12,7 +12,7 @@ from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
-from .async_patchers import PATCH_TCP_HANDLE_ASYNC, AsyncMock, FakeTcpHandleAsync
+from .async_patchers import PATCH_TCP_HANDLE_ASYNC, AsyncMock, FakeTcpTransportAsync
 from .async_wrapper import awaiter
 from .filesync_helpers import FileSyncMessage, FileSyncListMessage, FileSyncStatMessage
 from .keygen_stub import open_priv_pub
@@ -43,7 +43,7 @@ class AdbMessageForTesting(AdbMessage):
 @patchers.ASYNC_SKIPPER
 class TestAdbDeviceAsync(unittest.TestCase):
     def setUp(self):
-        self.device = AdbDeviceAsync(transport=FakeTcpHandleAsync('host', 5555))
+        self.device = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555))
         self.device._transport._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
     def tearDown(self):
@@ -91,17 +91,17 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_init_banner(self):
-        device_with_banner = AdbDeviceAsync(transport=FakeTcpHandleAsync('host', 5555), banner='banner')
+        device_with_banner = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555), banner='banner')
         self.assertEqual(device_with_banner._banner, b'banner')
 
-        device_with_banner2 = AdbDeviceAsync(transport=FakeTcpHandleAsync('host', 5555), banner=bytearray('banner2', 'utf-8'))
+        device_with_banner2 = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555), banner=bytearray('banner2', 'utf-8'))
         self.assertEqual(device_with_banner2._banner, b'banner2')
 
-        device_with_banner3 = AdbDeviceAsync(transport=FakeTcpHandleAsync('host', 5555), banner=u'banner3')
+        device_with_banner3 = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555), banner=u'banner3')
         self.assertEqual(device_with_banner3._banner, b'banner3')
 
         with patch('socket.gethostname', side_effect=Exception):
-            device_banner_unknown = AdbDeviceAsync(transport=FakeTcpHandleAsync('host', 5555))
+            device_banner_unknown = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555))
             self.assertEqual(device_banner_unknown._banner, b'unknown')
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes

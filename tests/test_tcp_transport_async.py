@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.transport.tcp_transport_async import TcpHandleAsync
+from adb_shell.transport.tcp_transport_async import TcpTransportAsync
 
 from .async_patchers import AsyncMock, FakeStreamReader, FakeStreamWriter
 from .async_wrapper import awaiter
@@ -11,12 +11,12 @@ from . import patchers
 
 
 @patchers.ASYNC_SKIPPER
-class TestTcpHandleAsync(unittest.TestCase):
+class TestTcpTransportAsync(unittest.TestCase):
     def setUp(self):
-        """Create a ``TcpHandleAsync`` and connect to a TCP service.
+        """Create a ``TcpTransportAsync`` and connect to a TCP service.
 
         """
-        self.transport = TcpHandleAsync('host', 5555)
+        self.transport = TcpTransportAsync('host', 5555)
 
     @awaiter
     async def test_close(self):

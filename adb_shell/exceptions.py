@@ -124,6 +124,6 @@ class UsbReadFailedError(Exception):
 
 
 class UsbWriteFailedError(Exception):
-    """:meth:`adb_shell.transport.usb_transport.UsbHandle.bulk_write` failed.
+    """:meth:`adb_shell.transport.usb_transport.UsbTransport.bulk_write` failed.
 
     """

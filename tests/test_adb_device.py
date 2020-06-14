@@ -40,7 +40,7 @@ class AdbMessageForTesting(AdbMessage):
 
 class TestAdbDevice(unittest.TestCase):
     def setUp(self):
-        self.device = AdbDevice(transport=patchers.FakeTcpHandle('host', 5555))
+        self.device = AdbDevice(transport=patchers.FakeTcpTransport('host', 5555))
         self.device._transport._bulk_read = b''.join(patchers.BULK_READ_LIST)
 
     def tearDown(self):
@@ -84,17 +84,17 @@ class TestAdbDevice(unittest.TestCase):
         
 
     def test_init_banner(self):
-        device_with_banner = AdbDevice(transport=patchers.FakeTcpHandle('host', 5555), banner='banner')
+        device_with_banner = AdbDevice(transport=patchers.FakeTcpTransport('host', 5555), banner='banner')
         self.assertEqual(device_with_banner._banner, b'banner')
 
-        device_with_banner2 = AdbDevice(transport=patchers.FakeTcpHandle('host', 5555), banner=bytearray('banner2', 'utf-8'))
+        device_with_banner2 = AdbDevice(transport=patchers.FakeTcpTransport('host', 5555), banner=bytearray('banner2', 'utf-8'))
         self.assertEqual(device_with_banner2._banner, b'banner2')
 
-        device_with_banner3 = AdbDevice(transport=patchers.FakeTcpHandle('host', 5555), banner=u'banner3')
+        device_with_banner3 = AdbDevice(transport=patchers.FakeTcpTransport('host', 5555), banner=u'banner3')
         self.assertEqual(device_with_banner3._banner, b'banner3')
 
         with patch('socket.gethostname', side_effect=Exception):
-            device_banner_unknown = AdbDevice(transport=patchers.FakeTcpHandle('host', 5555))
+            device_banner_unknown = AdbDevice(transport=patchers.FakeTcpTransport('host', 5555))
             self.assertEqual(device_banner_unknown._banner, b'unknown')
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes

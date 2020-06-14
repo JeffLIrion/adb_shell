@@ -4,7 +4,7 @@ import unittest
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage
-from adb_shell.transport.tcp_transport import TcpHandle
+from adb_shell.transport.tcp_transport import TcpTransport
 
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 6, "Async functionality requires Python 3.6+")
@@ -44,9 +44,9 @@ class FakeSocket(object):
         pass
 
 
-class FakeTcpHandle(TcpHandle):
+class FakeTcpTransport(TcpTransport):
     def __init__(self, *args, **kwargs):
-        TcpHandle.__init__(self, *args, **kwargs)
+        TcpTransport.__init__(self, *args, **kwargs)
         self._bulk_read = b''
         self._bulk_write = b''
 
@@ -77,5 +77,5 @@ PATCH_SELECT_SUCCESS = patch('select.select', return_value=(True, True, True))
 PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
-# `TcpHandle` patches
-PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
+# `TcpTransport` patches
+PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpTransport', FakeTcpTransport)
