@@ -1,6 +1,7 @@
 import logging
 from io import BytesIO
 import sys
+import time
 import unittest
 
 from mock import mock_open, patch
@@ -420,6 +421,26 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect([signer]))
         self.device.shell('Android TV update command')
         self.device.shell('Android TV update command')
+
+    def test_shell_error_timeout(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA'),
+                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS'),
+                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        def fake_read_until(*args, **kwargs):
+            time.sleep(0.2)
+            return b'WRTE', b'PA'
+
+        with patch('adb_shell.adb_device.AdbDevice._read_until', fake_read_until):
+            with self.assertRaises(exceptions.AdbTimeoutError):
+                self.device.shell('TEST', timeout_s=0.5)
+
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._transport._bulk_read = b''
 
     # ======================================================================= #
     #                                                                         #

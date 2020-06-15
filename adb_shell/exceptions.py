@@ -38,6 +38,12 @@ class AdbConnectionError(Exception):
     """
 
 
+class AdbTimeoutError(Exception):
+    """ADB command did not complete within the specified time.
+
+    """
+
+
 class DeviceAuthError(Exception):
     """Device authentication failed.
 

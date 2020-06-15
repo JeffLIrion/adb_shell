@@ -257,7 +257,7 @@ class AdbDevice(object):
     #                                 Services                                #
     #                                                                         #
     # ======================================================================= #
-    def _service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
+    def _service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
         """Send an ADB command to the device.
 
         Parameters
@@ -271,6 +271,8 @@ class AdbDevice(object):
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
         decode : bool
             Whether to decode the output to utf8 before returning
 
@@ -280,7 +282,7 @@ class AdbDevice(object):
             The output of the ADB command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s, timeout_s)
         if decode:
             return b''.join(self._streaming_command(service, command, adb_info)).decode('utf8')
         return b''.join(self._streaming_command(service, command, adb_info))
@@ -317,7 +319,7 @@ class AdbDevice(object):
             for line in stream:
                 yield line
 
-    def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+    def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
         """Gain root access.
 
         The device must be rooted in order for this to work.
@@ -334,9 +336,9 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        self._service(b'root', b'', transport_timeout_s, read_timeout_s, False)
+        self._service(b'root', b'', transport_timeout_s, read_timeout_s, timeout_s, False)
 
-    def shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
+    def shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
         """Send an ADB shell command to the device.
 
         Parameters
@@ -348,6 +350,8 @@ class AdbDevice(object):
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
         decode : bool
             Whether to decode the output to utf8 before returning
 
@@ -360,7 +364,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        return self._service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode)
+        return self._service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, decode)
 
     def streaming_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device, yielding each line of output.
@@ -869,6 +873,8 @@ class AdbDevice(object):
             The data that was read by :meth:`AdbDevice._read_until`
 
         """
+        start = time.time()
+
         while True:
             cmd, data = self._read_until([constants.CLSE, constants.WRTE], adb_info)
 
@@ -878,6 +884,10 @@ class AdbDevice(object):
                 break
 
             yield data
+
+            # Make sure the ADB command has not timed out
+            if adb_info.timeout_s is not None and time.time() - start > adb_info.timeout_s:
+                raise exceptions.AdbTimeoutError("The command did not complete within %f seconds", adb_info.timeout_s)
 
     def _send(self, msg, adb_info):
         """Send a message to the device.

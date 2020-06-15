@@ -81,6 +81,15 @@ def _open(name, mode='r'):
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     """A class for storing info and settings used during a single ADB "transaction."
 
+    Note that if ``timeout_s`` is not ``None``, then:
+
+    ::
+
+       self.transport_timeout_s <= self.read_timeout_s <= self.timeout_s
+
+    If ``timeout_s`` is ``None``, the first inequality still applies.
+
+
     Parameters
     ----------
     local_id : int
@@ -94,6 +103,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
     read_timeout_s : float
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read` and :meth:`AdbDeviceAsync._read`
+    timeout_s : float, None
+        The total time in seconds to wait for the ADB command to finish
 
     Attributes
     ----------
@@ -103,6 +114,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read` and :meth:`AdbDeviceAsync._read`
     remote_id : int
         The ID for the recipient
+    timeout_s : float, None
+        The total time in seconds to wait for the ADB command to finish
     transport_timeout_s : float, None
         Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`,
         :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`,
@@ -110,11 +123,12 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
 
     """
-    def __init__(self, local_id, remote_id, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+    def __init__(self, local_id, remote_id, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
         self.local_id = local_id
         self.remote_id = remote_id
-        self.transport_timeout_s = transport_timeout_s
-        self.read_timeout_s = read_timeout_s
+        self.timeout_s = timeout_s
+        self.read_timeout_s = read_timeout_s if self.timeout_s is None else min(read_timeout_s, self.timeout_s)
+        self.transport_timeout_s = self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
 
 
 class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-methods
