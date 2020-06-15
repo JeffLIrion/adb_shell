@@ -887,7 +887,7 @@ class AdbDevice(object):
 
             # Make sure the ADB command has not timed out
             if adb_info.timeout_s is not None and time.time() - start > adb_info.timeout_s:
-                raise exceptions.AdbTimeoutError("The command did not complete within %f seconds", adb_info.timeout_s)
+                raise exceptions.AdbTimeoutError("The command did not complete within {} seconds".format(adb_info.timeout_s))
 
     def _send(self, msg, adb_info):
         """Send a message to the device.
