@@ -95,7 +95,7 @@ class TcpTransport(BaseTransport):
         if timeout:
             # Put the socket in non-blocking mode
             # https://docs.python.org/3/library/socket.html#socket.socket.settimeout
-            self._connection.setblocking(0)
+            self._connection.setblocking(False)
 
     def bulk_read(self, numbytes, transport_timeout_s=None):
         """Receive data from the socket.
