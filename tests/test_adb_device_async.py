@@ -330,7 +330,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
-            await self.device.shell('TEST', total_timeout_s=-1)
+            await self.device.shell('TEST', read_timeout_s=-1)
 
     @awaiter
     async def test_shell_error_timeout_multiple_clse(self):
@@ -341,7 +341,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
                                                        AdbMessage(command=constants.CLSE, arg0=2, arg1=1, data=b''))
 
         with self.assertRaises(exceptions.InvalidCommandError):
-            await self.device.shell('TEST', total_timeout_s=-1)
+            await self.device.shell('TEST', read_timeout_s=-1)
 
     @awaiter
     async def test_shell_error_checksum(self):
