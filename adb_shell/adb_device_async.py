@@ -141,7 +141,7 @@ class AdbDeviceAsync(object):
         self._available = False
         await self._transport.close()
 
-    async def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, auth_callback=None):
+    async def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
         """Establish an ADB connection to the device.
 
         1. Use the transport to establish a connection
@@ -250,7 +250,7 @@ class AdbDeviceAsync(object):
     #                                 Services                                #
     #                                                                         #
     # ======================================================================= #
-    async def _service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def _service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB command to the device.
 
         Parameters
@@ -278,7 +278,7 @@ class AdbDeviceAsync(object):
             return b''.join([x async for x in self._streaming_command(service, command, adb_info)]).decode('utf8')
         return b''.join([x async for x in self._streaming_command(service, command, adb_info)])
 
-    async def _streaming_service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def _streaming_service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB command to the device, yielding each line of output.
 
         Parameters
@@ -310,7 +310,7 @@ class AdbDeviceAsync(object):
             async for line in stream:
                 yield line
 
-    async def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Gain root access.
 
         The device must be rooted in order for this to work.
@@ -329,7 +329,7 @@ class AdbDeviceAsync(object):
 
         await self._service(b'root', b'', transport_timeout_s, read_timeout_s, False)
 
-    async def shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device.
 
         Parameters
@@ -355,7 +355,7 @@ class AdbDeviceAsync(object):
 
         return await self._service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode)
 
-    async def streaming_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    async def streaming_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device, yielding each line of output.
 
         Parameters
@@ -387,7 +387,7 @@ class AdbDeviceAsync(object):
     #                                 FileSync                                #
     #                                                                         #
     # ======================================================================= #
-    async def list(self, device_path, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def list(self, device_path, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Return a directory listing of the given path.
 
         Parameters
@@ -426,7 +426,7 @@ class AdbDeviceAsync(object):
 
         return files
 
-    async def pull(self, device_filename, dest_file=None, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def pull(self, device_filename, dest_file=None, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Pull a file from the device.
 
         Parameters
@@ -511,7 +511,7 @@ class AdbDeviceAsync(object):
             if progress_callback:
                 progress.send(len(data))
 
-    async def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Push a file or directory to the device.
 
         Parameters
@@ -606,7 +606,7 @@ class AdbDeviceAsync(object):
 
             raise exceptions.PushFailedError(data)
 
-    async def stat(self, device_filename, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    async def stat(self, device_filename, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Get a file's ``stat()`` information.
 
         Parameters

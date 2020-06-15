@@ -110,7 +110,7 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
 
     """
-    def __init__(self, local_id, remote_id, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def __init__(self, local_id, remote_id, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         self.local_id = local_id
         self.remote_id = remote_id
         self.transport_timeout_s = transport_timeout_s

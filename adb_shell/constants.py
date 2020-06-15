@@ -115,4 +115,4 @@ MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 DEFAULT_AUTH_TIMEOUT_S = 10.
 
 #: Default total timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice._read`
-DEFAULT_TOTAL_TIMEOUT_S = 10.
+DEFAULT_READ_TIMEOUT_S = 10.
