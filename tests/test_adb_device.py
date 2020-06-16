@@ -715,7 +715,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
         self.device._transport._bulk_write = b''
 
-        filedata = b'0' * int(1.5 * constants.MAX_ADB_DATA)
+        filedata = b'0' * int(1.5 * self.device.max_chunk_size)
 
         # Provide the `bulk_read` return values
 
