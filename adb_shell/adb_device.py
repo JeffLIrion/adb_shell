@@ -331,6 +331,8 @@ class AdbDevice(object):
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
 
         """
         if not self.available:
