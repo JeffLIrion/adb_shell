@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from unittest.mock import patch
 
 from adb_shell import constants
@@ -60,3 +61,7 @@ class FakeTcpTransportAsync(TcpTransportAsync):
 
 # `TcpTransport` patches
 PATCH_TCP_TRANSPORT_ASYNC = patch('adb_shell.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)
+
+
+def async_patch(*args, **kwargs):
+    return patch(*args, new_callable=AsyncMock, **kwargs)
