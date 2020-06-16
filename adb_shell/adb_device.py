@@ -796,7 +796,7 @@ class AdbDevice(object):
             data = bytearray()
             while data_length > 0:
                 temp = self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
-                _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
+                _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
 
                 data += temp
                 data_length -= len(temp)
