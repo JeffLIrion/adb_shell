@@ -41,9 +41,9 @@ class TcpTransportAsync(BaseTransportAsync):
     _port : int
         The device port to which we are connecting (default is 5555)
     _reader : StreamReader, None
-        TODO
+        Object for reading data from the socket
     _writer : StreamWriter, None
-        TODO
+        Object for writing data to the socket
 
     """
     def __init__(self, host, port=5555, default_transport_timeout_s=None):
@@ -74,7 +74,7 @@ class TcpTransportAsync(BaseTransportAsync):
         Parameters
         ----------
         transport_timeout_s : float, None
-            Set the timeout on the socket instance
+            Timeout for connecting to the socket; if it is ``None``, then it will block until the operation completes
 
         """
         timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
@@ -93,7 +93,7 @@ class TcpTransportAsync(BaseTransportAsync):
         numbytes : int
             The maximum amount of data to be received
         transport_timeout_s : float, None
-            When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
+            Timeout for reading data from the socket; if it is ``None``, then it will block until the read operation completes
 
         Returns
         -------
@@ -122,7 +122,7 @@ class TcpTransportAsync(BaseTransportAsync):
         data : bytes
             The data to be sent
         transport_timeout_s : float, None
-            When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
+            Timeout for writing data to the socket; if it is ``None``, then it will block until the write operation completes
 
         Returns
         -------

@@ -5,7 +5,7 @@ from unittest.mock import patch
 from adb_shell.exceptions import TcpTimeoutException
 from adb_shell.transport.tcp_transport_async import TcpTransportAsync
 
-from .async_patchers import AsyncMock, FakeStreamReader, FakeStreamWriter
+from .async_patchers import FakeStreamReader, FakeStreamWriter, async_patch
 from .async_wrapper import awaiter
 from . import patchers
 
@@ -28,12 +28,12 @@ class TestTcpTransportAsync(unittest.TestCase):
 
     @awaiter
     async def test_connect(self):
-        with patch('asyncio.open_connection', return_value=(True, True), new_callable=AsyncMock):
+        with async_patch('asyncio.open_connection', return_value=(True, True)):
             await self.transport.connect()
 
     @awaiter
     async def test_connect_close(self):
-        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+        with async_patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter())):
             await self.transport.connect()
             self.assertIsNotNone(self.transport._writer)
 
@@ -43,7 +43,7 @@ class TestTcpTransportAsync(unittest.TestCase):
 
     @awaiter
     async def test_connect_close_catch_oserror(self):
-        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+        with async_patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter())):
             await self.transport.connect()
             self.assertIsNotNone(self.transport._writer)
 
@@ -55,12 +55,12 @@ class TestTcpTransportAsync(unittest.TestCase):
     @awaiter
     async def test_connect_with_timeout(self):
         with self.assertRaises(TcpTimeoutException):
-            with patch('asyncio.open_connection', side_effect=asyncio.TimeoutError, new_callable=AsyncMock):
+            with async_patch('asyncio.open_connection', side_effect=asyncio.TimeoutError):
                 await self.transport.connect()
 
     @awaiter
     async def test_bulk_read(self):
-        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+        with async_patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter())):
             await self.transport.connect()
 
         self.assertEqual(await self.transport.bulk_read(4), b'TEST')
@@ -71,7 +71,7 @@ class TestTcpTransportAsync(unittest.TestCase):
 
     @awaiter
     async def test_bulk_write(self):
-        with patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter()), new_callable=AsyncMock):
+        with async_patch('asyncio.open_connection', return_value=(FakeStreamReader(), FakeStreamWriter())):
             await self.transport.connect()
 
         self.assertEqual(await self.transport.bulk_write(b'TEST'), 4)
