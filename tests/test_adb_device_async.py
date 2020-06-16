@@ -12,7 +12,7 @@ from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
-from .async_patchers import PATCH_TCP_TRANSPORT_ASYNC, AsyncMock, FakeTcpTransportAsync
+from .async_patchers import PATCH_TCP_TRANSPORT_ASYNC, FakeTcpTransportAsync, async_patch
 from .async_wrapper import awaiter
 from .filesync_helpers import FileSyncMessage, FileSyncListMessage, FileSyncStatMessage
 from .keygen_stub import open_priv_pub
@@ -323,7 +323,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             self.assertEqual(await self.device.shell('TEST'), '')
 
     @awaiter
-    async def test_shell_error_timeout(self):
+    async def test_shell_error_transport_timeout(self):
         self.assertTrue(await self.device.connect())
 
         # Provide the `bulk_read` return values
@@ -333,7 +333,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             await self.device.shell('TEST', read_timeout_s=-1)
 
     @awaiter
-    async def test_shell_error_timeout_multiple_clse(self):
+    async def test_shell_error_read_timeout_multiple_clse(self):
         self.assertTrue(await self.device.connect())
 
         # Provide the `bulk_read` return values
@@ -342,6 +342,27 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidCommandError):
             await self.device.shell('TEST', read_timeout_s=-1)
+
+    @awaiter
+    async def test_shell_error_timeout(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        async def fake_read_until(*args, **kwargs):
+            await asyncio.sleep(0.2)
+            return b'WRTE', b'PA'
+
+        with patch('adb_shell.adb_device_async.AdbDeviceAsync._read_until', fake_read_until):
+            with self.assertRaises(exceptions.AdbTimeoutError):
+                await self.device.shell('TEST', timeout_s=0.5)
+
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._transport._bulk_read = b''
 
     @awaiter
     async def test_shell_error_checksum(self):
@@ -497,7 +518,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     async def test_root(self):
         self.assertTrue(await self.device.connect())
 
-        with patch('adb_shell.adb_device_async.AdbDeviceAsync._service', new_callable=AsyncMock) as patch_service:
+        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._service') as patch_service:
             await self.device.root()
             patch_service.assert_called_once()
 
