@@ -46,7 +46,7 @@ class TestTcpTransport(unittest.TestCase):
                 self.transport.bulk_read(4)
 
     def test_close_oserror(self):
-        """Test that an `OSError` exception is transportd when closing the socket.
+        """Test that an `OSError` exception is handled when closing the socket.
 
         """
         with patch('{}.patchers.FakeSocket.shutdown'.format(__name__), side_effect=OSError):
