@@ -42,8 +42,11 @@ VERSION = 0x01000000
 #: Maximum amount of data in an ADB packet. According to: https://android.googlesource.com/platform/system/core/+/master/adb/adb.h
 MAX_ADB_DATA = 1024 * 1024
 
-#: Maximum size of a filesync DATA packet.
+#: Maximum size of a filesync DATA packet. Default size.
 MAX_PUSH_DATA = 2 * 1024
+
+#: Maximum chunk size. According to https://android.googlesource.com/platform/system/core/+/master/adb/SYNC.TXT
+MAX_CHUNK_SIZE = 64 * 1024
 
 #: Default mode for pushed files.
 DEFAULT_PUSH_MODE = stat.S_IFREG | stat.S_IRWXU | stat.S_IRWXG

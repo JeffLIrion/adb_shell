@@ -124,6 +124,18 @@ class AdbDeviceAsync(object):
         self._maxdata = constants.MAX_PUSH_DATA
 
     @property
+    def max_chunk_size(self):
+        """ Maximum chunk size for filesync operations
+
+        Returns
+        -------
+        int
+            minimum value based on MAX_CHUNK_SIZE and _max_data / 2
+
+        """
+        return min(constants.MAX_CHUNK_SIZE, self._maxdata // 2)
+
+    @property
     def available(self):
         """Whether or not an ADB connection to the device has been established.
 
@@ -596,7 +608,7 @@ class AdbDeviceAsync(object):
             next(progress)
 
         while True:
-            data = datafile.read(self._maxdata)
+            data = datafile.read(self.max_chunk_size)
             if data:
                 await self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
