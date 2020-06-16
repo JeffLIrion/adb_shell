@@ -41,6 +41,7 @@ VERSION = 0x01000000
 
 #: Maximum amount of data in an ADB packet. According to: https://android.googlesource.com/platform/system/core/+/master/adb/adb.h
 MAX_ADB_DATA = 1024 * 1024
+MAX_LEGACY_ADB_DATA = 4 * 1024
 
 #: Maximum size of a filesync DATA packet. Default size.
 MAX_PUSH_DATA = 2 * 1024

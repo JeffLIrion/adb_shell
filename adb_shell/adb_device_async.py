@@ -130,10 +130,10 @@ class AdbDeviceAsync(object):
         Returns
         -------
         int
-            minimum value based on MAX_CHUNK_SIZE and _max_data / 2
+            minimum value based on MAX_CHUNK_SIZE and _max_data / 2, fallback to legacy MAX_PUSH_DATA
 
         """
-        return min(constants.MAX_CHUNK_SIZE, self._maxdata // 2)
+        return min(constants.MAX_CHUNK_SIZE, self._maxdata // 2) or constants.MAX_PUSH_DATA
 
     @property
     def available(self):
