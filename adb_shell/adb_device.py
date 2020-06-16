@@ -438,7 +438,7 @@ class AdbDevice(object):
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT, maxdata=self._maxdata)
         self._open(b'sync:', adb_info)
 
         self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
@@ -493,7 +493,7 @@ class AdbDevice(object):
             raise ValueError("dest_file is of unknown type")
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
         with _open(dest_file, 'wb') as dest:
             self._open(b'sync:', adb_info)
@@ -573,7 +573,7 @@ class AdbDevice(object):
                 return
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
         with _open(source_file, 'rb') as source:
             self._open(b'sync:', adb_info)
@@ -663,7 +663,7 @@ class AdbDevice(object):
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         self._open(b'sync:', adb_info)
 
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
         self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
         _, (mode, size, mtime), _ = self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         self._close(adb_info)

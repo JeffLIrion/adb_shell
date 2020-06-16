@@ -431,7 +431,7 @@ class AdbDeviceAsync(object):
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT, maxdata=self._maxdata)
         await self._open(b'sync:', adb_info)
 
         await self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
@@ -486,7 +486,7 @@ class AdbDeviceAsync(object):
             raise ValueError("dest_file is of unknown type")
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
         with _open(dest_file, 'wb') as dest:
             await self._open(b'sync:', adb_info)
@@ -566,7 +566,7 @@ class AdbDeviceAsync(object):
                 return
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
         with _open(source_file, 'rb') as source:
             await self._open(b'sync:', adb_info)
@@ -656,7 +656,7 @@ class AdbDeviceAsync(object):
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         await self._open(b'sync:', adb_info)
 
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
         await self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
         _, (mode, size, mtime), _ = await self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         await self._close(adb_info)

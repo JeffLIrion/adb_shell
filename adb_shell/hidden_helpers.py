@@ -153,13 +153,15 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
         The index in ``recv_buffer`` that will be the start of the next data packet sent
 
     """
-    def __init__(self, recv_message_format):
-        self.send_buffer = bytearray(constants.MAX_ADB_DATA)
+    def __init__(self, recv_message_format, maxdata=constants.MAX_ADB_DATA):
+        self.send_buffer = bytearray(maxdata)
         self.send_idx = 0
 
         self.recv_buffer = bytearray()
         self.recv_message_format = recv_message_format
         self.recv_message_size = struct.calcsize(recv_message_format)
+
+        self._maxdata = maxdata
 
     def can_add_to_send_buffer(self, data_len):
         """Determine whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`.
@@ -176,4 +178,4 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
 
         """
         added_len = self.recv_message_size + data_len
-        return self.send_idx + added_len < constants.MAX_ADB_DATA
+        return self.send_idx + added_len < self._maxdata
