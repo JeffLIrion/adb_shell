@@ -99,6 +99,8 @@ class AdbDeviceAsync(object):
         The hostname of the machine where the Python interpreter is currently running
     _transport : BaseTransportAsync
         The transport that is used to connect to the device; must be a subclass of :class:`~adb_shell.transport.base_transport_async.BaseTransportAsync`
+    _maxdata: int
+        Maximum amount of data in an ADB packet.
 
     """
 
