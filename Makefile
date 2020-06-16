@@ -1,6 +1,7 @@
 .PHONY: release
 release:
 	rm -rf dist
+	rm -rf build
 	scripts/git_tag.sh
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
