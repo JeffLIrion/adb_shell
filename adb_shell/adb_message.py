@@ -88,7 +88,7 @@ def unpack(message):
     arg1 : int
         TODO
     data_length : int
-        The length of the data sent by the device (used by :meth:`adb_shell.adb_device._read`)
+        The length of the data sent by the device (used by :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`)
     data_checksum : int
         The checksum of the data sent by the device
 
@@ -114,18 +114,18 @@ class AdbMessage(object):
     command : bytes
         A command; examples used in this package include :const:`adb_shell.constants.AUTH`, :const:`adb_shell.constants.CNXN`, :const:`adb_shell.constants.CLSE`, :const:`adb_shell.constants.OPEN`, and :const:`adb_shell.constants.OKAY`
     arg0 : int
-        Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
+        Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` and :meth:`~adb_shell.adb_device_async.AdbDeviceAsync.connect` provide :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
     arg1 : int
-        Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.MAX_ADB_DATA`
+        Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` and :meth:`~adb_shell.adb_device_async.AdbDeviceAsync.connect` provide :const:`adb_shell.constants.MAX_ADB_DATA`
     data : bytes
         The data that will be sent
 
     Attributes
     ----------
     arg0 : int
-        Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
+        Usually the local ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` and :meth:`~adb_shell.adb_device_async.AdbDeviceAsync.connect` provide :const:`adb_shell.constants.VERSION`, :const:`adb_shell.constants.AUTH_SIGNATURE`, and :const:`adb_shell.constants.AUTH_RSAPUBLICKEY`
     arg1 : int
-        Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` provides :const:`adb_shell.constants.MAX_ADB_DATA`
+        Usually the remote ID, but :meth:`~adb_shell.adb_device.AdbDevice.connect` and :meth:`~adb_shell.adb_device_async.AdbDeviceAsync.connect` provide :const:`adb_shell.constants.MAX_ADB_DATA`
     command : int
         The input parameter ``command`` converted to an integer via :const:`adb_shell.constants.ID_TO_WIRE`
     data : bytes

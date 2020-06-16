@@ -1,8 +1,16 @@
 import asyncio
+import warnings
+
 
 
 def _await(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    with warnings.catch_warnings(record=True) as warns:
+        ret = asyncio.get_event_loop().run_until_complete(coro)
+
+        if warns:
+            raise RuntimeError
+
+        return ret
 
 
 def awaiter(func):

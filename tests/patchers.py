@@ -4,7 +4,7 @@ import unittest
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage
-from adb_shell.handle.tcp_handle import TcpHandle
+from adb_shell.transport.tcp_transport import TcpTransport
 
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 6, "Async functionality requires Python 3.6+")
@@ -44,25 +44,25 @@ class FakeSocket(object):
         pass
 
 
-class FakeTcpHandle(TcpHandle):
+class FakeTcpTransport(TcpTransport):
     def __init__(self, *args, **kwargs):
-        TcpHandle.__init__(self, *args, **kwargs)
+        TcpTransport.__init__(self, *args, **kwargs)
         self._bulk_read = b''
         self._bulk_write = b''
 
     def close(self):
         self._connection = None
 
-    def connect(self, timeout_s=None):
+    def connect(self, transport_timeout_s=None):
         self._connection = True
 
-    def bulk_read(self, numbytes, timeout_s=None):
+    def bulk_read(self, numbytes, transport_timeout_s=None):
         num = min(numbytes, constants.MAX_ADB_DATA)
         ret = self._bulk_read[:num]
         self._bulk_read = self._bulk_read[num:]
         return ret
 
-    def bulk_write(self, data, timeout_s=None):
+    def bulk_write(self, data, transport_timeout_s=None):
         self._bulk_write += data
         return len(data)
 
@@ -77,5 +77,5 @@ PATCH_SELECT_SUCCESS = patch('select.select', return_value=(True, True, True))
 PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
-# `TcpHandle` patches
-PATCH_TCP_HANDLE = patch('adb_shell.adb_device.TcpHandle', FakeTcpHandle)
+# `TcpTransport` patches
+PATCH_TCP_TRANSPORT = patch('adb_shell.adb_device.TcpTransport', FakeTcpTransport)

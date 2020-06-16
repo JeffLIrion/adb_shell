@@ -2,14 +2,14 @@
 #
 # This file is part of the adb-shell package.
 
-"""A base class for handles used to communicate with a device.
+"""A base class for transports used to communicate with a device.
 
-* :class:`BaseHandle`
+* :class:`BaseTransport`
 
-    * :meth:`BaseHandle.bulk_read`
-    * :meth:`BaseHandle.bulk_write`
-    * :meth:`BaseHandle.close`
-    * :meth:`BaseHandle.connect`
+    * :meth:`BaseTransport.bulk_read`
+    * :meth:`BaseTransport.bulk_write`
+    * :meth:`BaseTransport.close`
+    * :meth:`BaseTransport.connect`
 
 """
 
@@ -26,8 +26,8 @@ except ImportError:  # pragma: no cover
         __metaclass__ = ABCMeta
 
 
-class BaseHandle(ABC):
-    """A base handle class.
+class BaseTransport(ABC):
+    """A base transport class.
 
     """
 
@@ -38,25 +38,25 @@ class BaseHandle(ABC):
         """
 
     @abstractmethod
-    def connect(self, timeout_s=None):
+    def connect(self, transport_timeout_s=None):
         """Create a connection to the device.
 
         Parameters
         ----------
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A connection timeout
 
         """
 
     @abstractmethod
-    def bulk_read(self, numbytes, timeout_s=None):
+    def bulk_read(self, numbytes, transport_timeout_s=None):
         """Read data from the device.
 
         Parameters
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A timeout for the read operation
 
         Returns
@@ -67,14 +67,14 @@ class BaseHandle(ABC):
         """
 
     @abstractmethod
-    def bulk_write(self, data, timeout_s=None):
+    def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the device.
 
         Parameters
         ----------
         data : bytes
             The data to be sent
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A timeout for the write operation
 
         Returns

@@ -4,23 +4,23 @@
 
 """A class for creating a socket connection with the device and sending and receiving data.
 
-* :class:`TcpHandleAsync`
+* :class:`TcpTransportAsync`
 
-    * :meth:`TcpHandleAsync.bulk_read`
-    * :meth:`TcpHandleAsync.bulk_write`
-    * :meth:`TcpHandleAsync.close`
-    * :meth:`TcpHandleAsync.connect`
+    * :meth:`TcpTransportAsync.bulk_read`
+    * :meth:`TcpTransportAsync.bulk_write`
+    * :meth:`TcpTransportAsync.close`
+    * :meth:`TcpTransportAsync.connect`
 
 """
 
 
 import asyncio
 
-from .base_handle_async import BaseHandleAsync
+from .base_transport_async import BaseTransportAsync
 from ..exceptions import TcpTimeoutException
 
 
-class TcpHandleAsync(BaseHandleAsync):
+class TcpTransportAsync(BaseTransportAsync):
     """TCP connection object.
 
     Parameters
@@ -29,27 +29,27 @@ class TcpHandleAsync(BaseHandleAsync):
         The address of the device; may be an IP address or a host name
     port : int
         The device port to which we are connecting (default is 5555)
-    default_timeout_s : float, None
+    default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
 
     Attributes
     ----------
-    _default_timeout_s : float, None
+    _default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
     _host : str
         The address of the device; may be an IP address or a host name
     _port : int
         The device port to which we are connecting (default is 5555)
     _reader : StreamReader, None
-        TODO
+        Object for reading data from the socket
     _writer : StreamWriter, None
-        TODO
+        Object for writing data to the socket
 
     """
-    def __init__(self, host, port=5555, default_timeout_s=None):
+    def __init__(self, host, port=5555, default_transport_timeout_s=None):
         self._host = host
         self._port = port
-        self._default_timeout_s = default_timeout_s
+        self._default_transport_timeout_s = default_transport_timeout_s
 
         self._reader = None
         self._writer = None
@@ -68,16 +68,16 @@ class TcpHandleAsync(BaseHandleAsync):
         self._reader = None
         self._writer = None
 
-    async def connect(self, timeout_s=None):
+    async def connect(self, transport_timeout_s=None):
         """Create a socket connection to the device.
 
         Parameters
         ----------
-        timeout_s : float, None
-            Set the timeout on the socket instance
+        transport_timeout_s : float, None
+            Timeout for connecting to the socket; if it is ``None``, then it will block until the operation completes
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
 
         try:
             self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), timeout)
@@ -85,15 +85,15 @@ class TcpHandleAsync(BaseHandleAsync):
             msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
             raise TcpTimeoutException(msg)
 
-    async def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, transport_timeout_s=None):
         """Receive data from the socket.
 
         Parameters
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : float, None
-            When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
+        transport_timeout_s : float, None
+            Timeout for reading data from the socket; if it is ``None``, then it will block until the read operation completes
 
         Returns
         -------
@@ -106,7 +106,7 @@ class TcpHandleAsync(BaseHandleAsync):
             Reading timed out.
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
 
         try:
             return await asyncio.wait_for(self._reader.read(numbytes), timeout)
@@ -114,15 +114,15 @@ class TcpHandleAsync(BaseHandleAsync):
             msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
             raise TcpTimeoutException(msg)
 
-    async def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the socket.
 
         Parameters
         ----------
         data : bytes
             The data to be sent
-        timeout_s : float, None
-            When the timeout argument is omitted, ``select.select`` blocks until at least one file descriptor is ready. A time-out value of zero specifies a poll and never blocks.
+        transport_timeout_s : float, None
+            Timeout for writing data to the socket; if it is ``None``, then it will block until the write operation completes
 
         Returns
         -------
@@ -135,7 +135,7 @@ class TcpHandleAsync(BaseHandleAsync):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = self._default_timeout_s if timeout_s is None else timeout_s
+        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
 
         try:
             self._writer.write(data)

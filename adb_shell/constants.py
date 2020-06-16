@@ -75,7 +75,7 @@ RECV = b'RECV'
 SEND = b'SEND'
 STAT = b'STAT'
 
-#: Commands that are recognized by :meth:`adb_shell.adb_device.AdbDevice._read`
+#: Commands that are recognized by :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`
 IDS = (AUTH, CLSE, CNXN, OKAY, OPEN, SYNC, WRTE)
 
 #: A dictionary where the keys are the commands in :const:`IDS` and the values are the keys converted to integers
@@ -84,7 +84,7 @@ ID_TO_WIRE = {cmd_id: sum(c << (i * 8) for i, c in enumerate(bytearray(cmd_id)))
 #: A dictionary where the keys are integers and the values are their corresponding commands (type = bytes) from :const:`IDS`
 WIRE_TO_ID = {wire: cmd_id for cmd_id, wire in ID_TO_WIRE.items()}
 
-#: Commands that are recognized by :meth:`adb_shell.adb_device.AdbDevice._filesync_read`
+#: Commands that are recognized by :meth:`adb_shell.adb_device.AdbDevice._filesync_read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._filesync_read`
 FILESYNC_IDS = (DATA, DENT, DONE, FAIL, LIST, OKAY, QUIT, RECV, SEND, STAT)
 
 #: A dictionary where the keys are the commands in :const:`FILESYNC_IDS` and the values are the keys converted to integers
@@ -111,8 +111,8 @@ FILESYNC_STAT_FORMAT = b'<4I'
 #: The size of an ADB message
 MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
-#: Default authentication timeout (in s) for :meth:`adb_shell.tcp_handle.TcpHandle.connect`
+#: Default authentication timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice.connect` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync.connect`
 DEFAULT_AUTH_TIMEOUT_S = 10.
 
-#: Default total timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice._read`
-DEFAULT_TOTAL_TIMEOUT_S = 10.
+#: Default total timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice._read`, :meth:`adb_shell.adb_device.AdbDevice._read_until`, :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`, and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read_until`
+DEFAULT_READ_TIMEOUT_S = 10.

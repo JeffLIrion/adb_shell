@@ -30,7 +30,7 @@
     * :meth:`AdbDevice._filesync_read_buffered`
     * :meth:`AdbDevice._filesync_read_until`
     * :meth:`AdbDevice._filesync_send`
-    * :meth:`AdbDevice._handle_progress`
+    * :meth:`AdbDevice._transport_progress`
     * :meth:`AdbDevice._okay`
     * :meth:`AdbDevice._open`
     * :meth:`AdbDevice._pull`
@@ -70,14 +70,14 @@ import time
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
-from .handle.base_handle import BaseHandle
-from .handle.tcp_handle import TcpHandle
+from .transport.base_transport import BaseTransport
+from .transport.tcp_transport import TcpTransport
 from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, _open
 
 try:
-    from .handle.usb_handle import UsbHandle
+    from .transport.usb_transport import UsbTransport
 except ImportError:
-    UsbHandle = None
+    UsbTransport = None
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,16 +88,16 @@ class AdbDevice(object):
 
     Parameters
     ----------
-    handle : BaseHandle
-        A user-provided handle for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
+    transport : BaseTransport
+        A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
 
     Raises
     ------
-    adb_shell.exceptions.InvalidHandleError
-        The passed ``handle`` is not an instance of a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
+    adb_shell.exceptions.InvalidTransportError
+        The passed ``transport`` is not an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
 
     Attributes
     ----------
@@ -105,12 +105,12 @@ class AdbDevice(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _handle : BaseHandle
-        The handle that is used to connect to the device; must be a subclass of :class:`~adb_shell.handle.base_handle.BaseHandle`
+    _transport : BaseTransport
+        The transport that is used to connect to the device; must be a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
 
     """
 
-    def __init__(self, handle, banner=None):
+    def __init__(self, transport, banner=None):
         if banner:
             if not isinstance(banner, (bytes, bytearray)):
                 self._banner = bytearray(banner, 'utf-8')
@@ -122,10 +122,10 @@ class AdbDevice(object):
             except:  # noqa pylint: disable=bare-except
                 self._banner = bytearray('unknown', 'utf-8')
 
-        if not isinstance(handle, BaseHandle):
-            raise exceptions.InvalidHandleError("`handle` must be an instance of a subclass of `BaseHandle`")
+        if not isinstance(transport, BaseTransport):
+            raise exceptions.InvalidTransportError("`transport` must be an instance of a subclass of `BaseTransport`")
 
-        self._handle = handle
+        self._transport = transport
 
         self._available = False
 
@@ -142,16 +142,16 @@ class AdbDevice(object):
         return self._available
 
     def close(self):
-        """Close the connection via the provided handle's ``close()`` method.
+        """Close the connection via the provided transport's ``close()`` method.
 
         """
         self._available = False
-        self._handle.close()
+        self._transport.close()
 
-    def connect(self, rsa_keys=None, timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, auth_callback=None):
+    def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
         """Establish an ADB connection to the device.
 
-        1. Use the handle to establish a connection
+        1. Use the transport to establish a connection
         2. Send a ``b'CNXN'`` message
         3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
         4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
@@ -171,12 +171,12 @@ class AdbDevice(object):
         rsa_keys : list, None
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`~adb_shell.auth.sign_pythonrsa.PythonRSASigner`
-        timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         auth_timeout_s : float, None
             The time in seconds to wait for a ``b'CNXN'`` authentication response
-        total_timeout_s : float
+        read_timeout_s : float
             The total time in seconds to wait for expected commands in :meth:`AdbDevice._read`
         auth_callback : function, None
             Function callback invoked when the connection needs to be accepted on the device
@@ -194,13 +194,13 @@ class AdbDevice(object):
             Invalid auth response from the device
 
         """
-        # 1. Use the handle to establish a connection
-        self._handle.close()
-        self._handle.connect(timeout_s)
+        # 1. Use the transport to establish a connection
+        self._transport.close()
+        self._transport.connect(transport_timeout_s)
 
         # 2. Send a ``b'CNXN'`` message
         msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner)
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
@@ -213,14 +213,14 @@ class AdbDevice(object):
 
         # 5. If no ``rsa_keys`` are provided, raise an exception
         if not rsa_keys:
-            self._handle.close()
+            self._transport.close()
             raise exceptions.DeviceAuthError('Device authentication required, no keys available.')
 
         # 6. Loop through our keys, signing the last ``banner`` that we received
         for rsa_key in rsa_keys:
             # 6.1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
             if arg0 != constants.AUTH_TOKEN:
-                self._handle.close()
+                self._transport.close()
                 raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, arg1, banner))
 
             # 6.2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
@@ -247,7 +247,7 @@ class AdbDevice(object):
         msg = AdbMessage(constants.AUTH, constants.AUTH_RSAPUBLICKEY, 0, pubkey + b'\0')
         self._send(msg, adb_info)
 
-        adb_info.timeout_s = auth_timeout_s
+        adb_info.transport_timeout_s = auth_timeout_s
         cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
         self._available = True
         return True  # return banner
@@ -257,7 +257,7 @@ class AdbDevice(object):
     #                                 Services                                #
     #                                                                         #
     # ======================================================================= #
-    def _service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    def _service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
         """Send an ADB command to the device.
 
         Parameters
@@ -266,11 +266,13 @@ class AdbDevice(object):
             The ADB service to talk to (e.g., ``b'shell'``)
         command : bytes
             The command that will be sent
-        timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
-        total_timeout_s : float
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
         decode : bool
             Whether to decode the output to utf8 before returning
 
@@ -280,12 +282,12 @@ class AdbDevice(object):
             The output of the ADB command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s, timeout_s)
         if decode:
             return b''.join(self._streaming_command(service, command, adb_info)).decode('utf8')
         return b''.join(self._streaming_command(service, command, adb_info))
 
-    def _streaming_service(self, service, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    def _streaming_service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB command to the device, yielding each line of output.
 
         Parameters
@@ -294,10 +296,10 @@ class AdbDevice(object):
             The ADB service to talk to (e.g., ``b'shell'``)
         command : bytes
             The command that will be sent
-        timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
-        total_timeout_s : float
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
         decode : bool
             Whether to decode the output to utf8 before returning
@@ -308,7 +310,7 @@ class AdbDevice(object):
             The line-by-line output of the ADB command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         stream = self._streaming_command(service, command, adb_info)
         if decode:
             for line in (stream_line.decode('utf8') for stream_line in stream):
@@ -317,37 +319,41 @@ class AdbDevice(object):
             for line in stream:
                 yield line
 
-    def root(self, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
         """Gain root access.
 
         The device must be rooted in order for this to work.
 
         Parameters
         ----------
-        timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
-        total_timeout_s : float
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
 
         """
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        self._service(b'root', b'', timeout_s, total_timeout_s, False)
+        self._service(b'root', b'', transport_timeout_s, read_timeout_s, timeout_s, False)
 
-    def shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    def shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
         """Send an ADB shell command to the device.
 
         Parameters
         ----------
         command : str
             The shell command that will be sent
-        timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
-        total_timeout_s : float
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
         decode : bool
             Whether to decode the output to utf8 before returning
 
@@ -360,19 +366,19 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        return self._service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode)
+        return self._service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, decode)
 
-    def streaming_shell(self, command, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S, decode=True):
+    def streaming_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device, yielding each line of output.
 
         Parameters
         ----------
         command : str
             The shell command that will be sent
-        timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseHandle.bulk_read() <adb_shell.handle.base_handle.BaseHandle.bulk_read>`
-            and :meth:`BaseHandle.bulk_write() <adb_shell.handle.base_handle.BaseHandle.bulk_write>`
-        total_timeout_s : float
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
         decode : bool
             Whether to decode the output to utf8 before returning
@@ -386,7 +392,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        for line in self._streaming_service(b'shell', command.encode('utf8'), timeout_s, total_timeout_s, decode):
+        for line in self._streaming_service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode):
             yield line
 
     # ======================================================================= #
@@ -394,16 +400,16 @@ class AdbDevice(object):
     #                                 FileSync                                #
     #                                                                         #
     # ======================================================================= #
-    def list(self, device_path, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def list(self, device_path, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Return a directory listing of the given path.
 
         Parameters
         ----------
         device_path : str
             Directory to list.
-        timeout_s : float, None
+        transport_timeout_s : float, None
             Expected timeout for any part of the pull.
-        total_timeout_s : float
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         Returns
@@ -415,7 +421,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
         self._open(b'sync:', adb_info)
 
@@ -433,7 +439,7 @@ class AdbDevice(object):
 
         return files
 
-    def pull(self, device_filename, dest_file=None, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def pull(self, device_filename, dest_file=None, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Pull a file from the device.
 
         Parameters
@@ -445,9 +451,9 @@ class AdbDevice(object):
         progress_callback : function, None
             Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
             objects
-        timeout_s : float, None
+        transport_timeout_s : float, None
             Expected timeout for any part of the pull.
-        total_timeout_s : float
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         Returns
@@ -470,7 +476,7 @@ class AdbDevice(object):
         if not isinstance(dest_file, FILE_TYPES + (str,)):
             raise ValueError("dest_file is of unknown type")
 
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT)
 
         with _open(dest_file, 'wb') as dest:
@@ -506,7 +512,7 @@ class AdbDevice(object):
         """
         if progress_callback:
             total_bytes = self.stat(filename)[1]
-            progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
+            progress = self._transport_progress(lambda current: progress_callback(filename, current, total_bytes))
             next(progress)
 
         self._filesync_send(constants.RECV, adb_info, filesync_info, data=filename)
@@ -518,7 +524,7 @@ class AdbDevice(object):
             if progress_callback:
                 progress.send(len(data))
 
-    def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Push a file or directory to the device.
 
         Parameters
@@ -534,9 +540,9 @@ class AdbDevice(object):
         progress_callback : function, None
             Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
             objects
-        timeout_s : float, None
+        transport_timeout_s : float, None
             Expected timeout for any part of the push.
-        total_timeout_s : float
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
@@ -545,12 +551,12 @@ class AdbDevice(object):
 
         if isinstance(source_file, str):
             if os.path.isdir(source_file):
-                self.shell("mkdir " + device_filename, timeout_s, total_timeout_s)
+                self.shell("mkdir " + device_filename, transport_timeout_s, read_timeout_s)
                 for f in os.listdir(source_file):
                     self.push(os.path.join(source_file, f), device_filename + '/' + f, progress_callback=progress_callback)
                 return
 
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT)
 
         with _open(source_file, 'rb') as source:
@@ -589,7 +595,7 @@ class AdbDevice(object):
 
         if progress_callback:
             total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, FILE_TYPES) else -1
-            progress = self._handle_progress(lambda current: progress_callback(filename, current, total_bytes))
+            progress = self._transport_progress(lambda current: progress_callback(filename, current, total_bytes))
             next(progress)
 
         while True:
@@ -613,16 +619,16 @@ class AdbDevice(object):
 
             raise exceptions.PushFailedError(data)
 
-    def stat(self, device_filename, timeout_s=None, total_timeout_s=constants.DEFAULT_TOTAL_TIMEOUT_S):
+    def stat(self, device_filename, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Get a file's ``stat()`` information.
 
         Parameters
         ----------
         device_filename : str
             The file on the device for which we will get information.
-        timeout_s : float, None
+        transport_timeout_s : float, None
             Expected timeout for any part of the pull.
-        total_timeout_s : float
+        read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         Returns
@@ -638,7 +644,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        adb_info = _AdbTransactionInfo(None, None, timeout_s, total_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         self._open(b'sync:', adb_info)
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
@@ -721,7 +727,7 @@ class AdbDevice(object):
 
         1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
         2. If ``cmd`` is not a recognized command in :const:`adb_shell.constants.WIRE_TO_ID`, raise an exception
-        3. If the time has exceeded ``total_timeout_s``, raise an exception
+        3. If the time has exceeded ``read_timeout_s``, raise an exception
         4. Read ``data_length`` bytes from the device
         5. If the checksum of the read data does not match ``data_checksum``, raise an exception
         6. Return ``command``, ``arg0``, ``arg1``, and ``bytes(data)``
@@ -756,7 +762,7 @@ class AdbDevice(object):
         start = time.time()
 
         while True:
-            msg = self._handle.bulk_read(constants.MESSAGE_SIZE, adb_info.timeout_s)
+            msg = self._transport.bulk_read(constants.MESSAGE_SIZE, adb_info.transport_timeout_s)
             _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
@@ -767,13 +773,13 @@ class AdbDevice(object):
             if command in expected_cmds:
                 break
 
-            if time.time() - start > adb_info.total_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
+            if time.time() - start > adb_info.read_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
         if data_length > 0:
             data = bytearray()
             while data_length > 0:
-                temp = self._handle.bulk_read(data_length, adb_info.timeout_s)
+                temp = self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
                 _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
 
                 data += temp
@@ -831,8 +837,8 @@ class AdbDevice(object):
             if remote_id2 in (0, adb_info.remote_id):
                 break
 
-            if time.time() - start > adb_info.total_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.timeout_s, adb_info.total_timeout_s))
+            if time.time() - start > adb_info.read_timeout_s:
+                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
             # Ignore CLSE responses to previous commands
             # https://github.com/JeffLIrion/adb_shell/pull/14
@@ -869,6 +875,8 @@ class AdbDevice(object):
             The data that was read by :meth:`AdbDevice._read_until`
 
         """
+        start = time.time()
+
         while True:
             cmd, data = self._read_until([constants.CLSE, constants.WRTE], adb_info)
 
@@ -878,6 +886,10 @@ class AdbDevice(object):
                 break
 
             yield data
+
+            # Make sure the ADB command has not timed out
+            if adb_info.timeout_s is not None and time.time() - start > adb_info.timeout_s:
+                raise exceptions.AdbTimeoutError("The command did not complete within {} seconds".format(adb_info.timeout_s))
 
     def _send(self, msg, adb_info):
         """Send a message to the device.
@@ -895,9 +907,9 @@ class AdbDevice(object):
 
         """
         _LOGGER.debug("bulk_write: %s", repr(msg.pack()))
-        self._handle.bulk_write(msg.pack(), adb_info.timeout_s)
+        self._transport.bulk_write(msg.pack(), adb_info.transport_timeout_s)
         _LOGGER.debug("bulk_write: %s", repr(msg.data))
-        self._handle.bulk_write(msg.data, adb_info.timeout_s)
+        self._transport.bulk_write(msg.data, adb_info.transport_timeout_s)
 
     def _streaming_command(self, service, command, adb_info):
         """One complete set of USB packets for a single command.
@@ -1119,7 +1131,7 @@ class AdbDevice(object):
         filesync_info.send_idx += len(buf)
 
     @staticmethod
-    def _handle_progress(progress_callback):
+    def _transport_progress(progress_callback):
         """Calls the callback with the current progress and total bytes written/received.
 
         Parameters
@@ -1147,7 +1159,7 @@ class AdbDeviceTcp(AdbDevice):
         The address of the device; may be an IP address or a host name
     port : int
         The device port to which we are connecting (default is 5555)
-    default_timeout_s : float, None
+    default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
@@ -1159,14 +1171,14 @@ class AdbDeviceTcp(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _handle : TcpHandle
-        The handle that is used to connect to the device
+    _transport : TcpTransport
+        The transport that is used to connect to the device
 
     """
 
-    def __init__(self, host, port=5555, default_timeout_s=None, banner=None):
-        handle = TcpHandle(host, port, default_timeout_s)
-        super(AdbDeviceTcp, self).__init__(handle, banner)
+    def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
+        transport = TcpTransport(host, port, default_transport_timeout_s)
+        super(AdbDeviceTcp, self).__init__(transport, banner)
 
 
 class AdbDeviceUsb(AdbDevice):
@@ -1178,7 +1190,7 @@ class AdbDeviceUsb(AdbDevice):
         The USB device serial ID
     port_path : TODO, None
         TODO
-    default_timeout_s : float, None
+    default_transport_timeout_s : float, None
         Default timeout in seconds for USB packets, or ``None``
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
@@ -1186,7 +1198,7 @@ class AdbDeviceUsb(AdbDevice):
 
     Raises
     ------
-    adb_shell.exceptions.InvalidHandleError
+    adb_shell.exceptions.InvalidTransportError
         Raised if package was not installed with the "usb" extras option (``pip install adb-shell[usb]``)
 
     Attributes
@@ -1195,14 +1207,14 @@ class AdbDeviceUsb(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
-    _handle : UsbHandle
-        The handle that is used to connect to the device
+    _transport : UsbTransport
+        The transport that is used to connect to the device
 
     """
 
-    def __init__(self, serial=None, port_path=None, default_timeout_s=None, banner=None):
-        if UsbHandle is None:
-            raise exceptions.InvalidHandleError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
+    def __init__(self, serial=None, port_path=None, default_transport_timeout_s=None, banner=None):
+        if UsbTransport is None:
+            raise exceptions.InvalidTransportError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
 
-        handle = UsbHandle.find_adb(serial, port_path, default_timeout_s)
-        super(AdbDeviceUsb, self).__init__(handle, banner)
+        transport = UsbTransport.find_adb(serial, port_path, default_transport_timeout_s)
+        super(AdbDeviceUsb, self).__init__(transport, banner)

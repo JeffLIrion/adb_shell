@@ -3,31 +3,31 @@ import unittest
 from mock import patch
 
 from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.handle.tcp_handle import TcpHandle
+from adb_shell.transport.tcp_transport import TcpTransport
 
 from . import patchers
 
 
-class TestTcpHandle(unittest.TestCase):
+class TestTcpTransport(unittest.TestCase):
     def setUp(self):
-        """Create a ``TcpHandle`` and connect to a TCP service.
+        """Create a ``TcpTransport`` and connect to a TCP service.
 
         """
-        self.handle = TcpHandle('host', 5555)
+        self.transport = TcpTransport('host', 5555)
         with patchers.PATCH_CREATE_CONNECTION:
-            self.handle.connect()
+            self.transport.connect()
 
     def tearDown(self):
         """Close the socket connection."""
-        self.handle.close()
+        self.transport.close()
 
     def test_connect_with_timeout(self):
         """TODO
 
         """
-        self.handle.close()
+        self.transport.close()
         with patchers.PATCH_CREATE_CONNECTION:
-            self.handle.connect(timeout_s=1)
+            self.transport.connect(transport_timeout_s=1)
             self.assertTrue(True)
 
     def test_bulk_read(self):
@@ -35,30 +35,30 @@ class TestTcpHandle(unittest.TestCase):
 
         """
         # Provide the `recv` return values
-        self.handle._connection._recv = b'TEST1TEST2'
+        self.transport._connection._recv = b'TEST1TEST2'
 
         with patchers.PATCH_SELECT_SUCCESS:
-            self.assertEqual(self.handle.bulk_read(5), b'TEST1')
-            self.assertEqual(self.handle.bulk_read(5), b'TEST2')
+            self.assertEqual(self.transport.bulk_read(5), b'TEST1')
+            self.assertEqual(self.transport.bulk_read(5), b'TEST2')
 
         with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
-                self.handle.bulk_read(4)
+                self.transport.bulk_read(4)
 
     def test_close_oserror(self):
         """Test that an `OSError` exception is handled when closing the socket.
 
         """
         with patch('{}.patchers.FakeSocket.shutdown'.format(__name__), side_effect=OSError):
-            self.handle.close()
+            self.transport.close()
 
     def test_bulk_write(self):
         """TODO
 
         """
         with patchers.PATCH_SELECT_SUCCESS:
-            self.handle.bulk_write(b'TEST')
+            self.transport.bulk_write(b'TEST')
 
         with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
-                self.handle.bulk_write(b'FAIL')
+                self.transport.bulk_write(b'FAIL')

@@ -38,6 +38,12 @@ class AdbConnectionError(Exception):
     """
 
 
+class AdbTimeoutError(Exception):
+    """ADB command did not complete within the specified time.
+
+    """
+
+
 class DeviceAuthError(Exception):
     """Device authentication failed.
 
@@ -69,8 +75,8 @@ class InvalidCommandError(Exception):
         super(InvalidCommandError, self).__init__(message, response_header, response_data)
 
 
-class InvalidHandleError(Exception):
-    """The provided handle does not implement the necessary methods: ``close``, ``connect``, ``bulk_read``, and ``bulk_write``.
+class InvalidTransportError(Exception):
+    """The provided transport does not implement the necessary methods: ``close``, ``connect``, ``bulk_read``, and ``bulk_write``.
 
     """
 
@@ -124,6 +130,6 @@ class UsbReadFailedError(Exception):
 
 
 class UsbWriteFailedError(Exception):
-    """:meth:`adb_shell.handle.usb_handle.UsbHandle.bulk_write` failed.
+    """:meth:`adb_shell.transport.usb_transport.UsbTransport.bulk_write` failed.
 
     """

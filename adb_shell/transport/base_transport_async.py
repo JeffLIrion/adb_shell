@@ -2,14 +2,14 @@
 #
 # This file is part of the adb-shell package.
 
-"""A base class for handles used to communicate with a device.
+"""A base class for transports used to communicate with a device.
 
-* :class:`BaseHandleAsync`
+* :class:`BaseTransportAsync`
 
-    * :meth:`BaseHandleAsync.bulk_read`
-    * :meth:`BaseHandleAsync.bulk_write`
-    * :meth:`BaseHandleAsync.close`
-    * :meth:`BaseHandleAsync.connect`
+    * :meth:`BaseTransportAsync.bulk_read`
+    * :meth:`BaseTransportAsync.bulk_write`
+    * :meth:`BaseTransportAsync.close`
+    * :meth:`BaseTransportAsync.connect`
 
 """
 
@@ -17,8 +17,8 @@
 from abc import ABC, abstractmethod
 
 
-class BaseHandleAsync(ABC):
-    """A base handle class.
+class BaseTransportAsync(ABC):
+    """A base transport class.
 
     """
 
@@ -29,25 +29,25 @@ class BaseHandleAsync(ABC):
         """
 
     @abstractmethod
-    async def connect(self, timeout_s=None):
+    async def connect(self, transport_timeout_s=None):
         """Create a connection to the device.
 
         Parameters
         ----------
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A connection timeout
 
         """
 
     @abstractmethod
-    async def bulk_read(self, numbytes, timeout_s=None):
+    async def bulk_read(self, numbytes, transport_timeout_s=None):
         """Read data from the device.
 
         Parameters
         ----------
         numbytes : int
             The maximum amount of data to be received
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A timeout for the read operation
 
         Returns
@@ -58,14 +58,14 @@ class BaseHandleAsync(ABC):
         """
 
     @abstractmethod
-    async def bulk_write(self, data, timeout_s=None):
+    async def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the device.
 
         Parameters
         ----------
         data : bytes
             The data to be sent
-        timeout_s : float, None
+        transport_timeout_s : float, None
             A timeout for the write operation
 
         Returns

@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
 
    adb_shell.auth
-   adb_shell.handle
+   adb_shell.transport
 
 Submodules
 ----------
