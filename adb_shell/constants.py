@@ -39,11 +39,11 @@ PROTOCOL = 0x01
 #: ADB protocol version.
 VERSION = 0x01000000
 
-#: Maximum amount of data in an ADB packet.
-MAX_ADB_DATA = 4096
+#: Maximum amount of data in an ADB packet. According to: https://android.googlesource.com/platform/system/core/+/master/adb/adb.h
+MAX_ADB_DATA = 1024 * 1024
 
 #: Maximum size of a filesync DATA packet.
-MAX_PUSH_DATA = 2048
+MAX_PUSH_DATA = 2 * 1024
 
 #: Default mode for pushed files.
 DEFAULT_PUSH_MODE = stat.S_IFREG | stat.S_IRWXU | stat.S_IRWXG

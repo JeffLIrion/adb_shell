@@ -128,6 +128,7 @@ class AdbDevice(object):
         self._transport = transport
 
         self._available = False
+        self._maxdata = constants.MAX_PUSH_DATA
 
     @property
     def available(self):
@@ -161,7 +162,7 @@ class AdbDevice(object):
             1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
             2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
             3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            4. If ``cmd`` is ``b'CNXN'``, return ``banner``
+            4. If ``cmd`` is ``b'CNXN'``, set transfer maxdata and return ``banner``
 
         7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
 
@@ -208,6 +209,7 @@ class AdbDevice(object):
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
+            self._maxdata = arg1  # CNXN maxdata
             self._available = True
             return True  # return banner
 
@@ -229,10 +231,11 @@ class AdbDevice(object):
             self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            cmd, arg0, _, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
+            cmd, arg0, arg1, banner = self._read([constants.CNXN, constants.AUTH], adb_info)
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
+                self._maxdata = arg1  # CNXN maxdata
                 self._available = True
                 return True  # return banner
 
@@ -248,7 +251,8 @@ class AdbDevice(object):
         self._send(msg, adb_info)
 
         adb_info.transport_timeout_s = auth_timeout_s
-        cmd, arg0, _, banner = self._read([constants.CNXN], adb_info)
+        cmd, arg0, arg1, banner = self._read([constants.CNXN], adb_info)
+        self._maxdata = arg1  # CNXN maxdata
         self._available = True
         return True  # return banner
 
@@ -599,7 +603,7 @@ class AdbDevice(object):
             next(progress)
 
         while True:
-            data = datafile.read(constants.MAX_PUSH_DATA)
+            data = datafile.read(self._maxdata)
             if data:
                 self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
