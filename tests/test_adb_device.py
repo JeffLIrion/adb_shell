@@ -225,7 +225,7 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1)),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(self.device.max_chunk_size+1)),
                                                           AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.device.shell('TEST')
@@ -236,10 +236,10 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA-1) + b'\xe3\x81\x82'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(self.device.max_chunk_size-1) + b'\xe3\x81\x82'),
                                                           AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042', self.device.shell('TEST'))
+        self.assertEqual(u'0'*(self.device.max_chunk_size-1) + u'\u3042', self.device.shell('TEST'))
 
     def test_shell_with_multibytes_sequence_over_two_messages(self):
         self.assertTrue(self.device.connect())
