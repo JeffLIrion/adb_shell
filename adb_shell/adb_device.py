@@ -76,7 +76,7 @@ from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSy
 
 try:
     from .transport.usb_transport import UsbTransport
-except ImportError:
+except (ImportError, OSError):
     UsbTransport = None
 
 
