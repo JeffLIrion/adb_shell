@@ -134,12 +134,12 @@ class AdbDevice(object):
 
     @property
     def max_chunk_size(self):
-        """ Maximum chunk size for filesync operations
+        """Maximum chunk size for filesync operations
 
         Returns
         -------
         int
-            minimum value based on MAX_CHUNK_SIZE and _max_data / 2, fallback to legacy MAX_PUSH_DATA
+            minimum value based on :const:`adb_shell.constants.MAX_CHUNK_SIZE` and ``_max_data / 2``, fallback to legacy :const:`adb_shell.constants.MAX_PUSH_DATA`
 
         """
         return min(constants.MAX_CHUNK_SIZE, self._maxdata // 2) or constants.MAX_PUSH_DATA
