@@ -105,10 +105,10 @@ class AdbDevice(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _maxdata: int
+        Maximum amount of data in an ADB packet
     _transport : BaseTransport
         The transport that is used to connect to the device; must be a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
-    _maxdata: int
-        Maximum amount of data in an ADB packet.
 
     """
 
