@@ -139,10 +139,12 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
     recv_message_format : bytes
         The FileSync message format
     maxdata: int
-        Maximum amount of data in an ADB packet.
+        Maximum amount of data in an ADB packet
 
     Attributes
     ----------
+    _maxdata: int
+        Maximum amount of data in an ADB packet
     recv_buffer : bytearray
         A buffer for storing received data
     recv_message_format : bytes
@@ -153,8 +155,6 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
         A buffer for storing data to be sent
     send_idx : int
         The index in ``recv_buffer`` that will be the start of the next data packet sent
-    _maxdata: int
-        Maximum amount of data in an ADB packet.
 
     """
     def __init__(self, recv_message_format, maxdata=constants.MAX_ADB_DATA):
