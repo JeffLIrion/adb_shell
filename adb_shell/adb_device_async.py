@@ -97,6 +97,8 @@ class AdbDeviceAsync(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _maxdata: int
+        Maximum amount of data in an ADB packet
     _transport : BaseTransportAsync
         The transport that is used to connect to the device; must be a subclass of :class:`~adb_shell.transport.base_transport_async.BaseTransportAsync`
 
@@ -121,6 +123,19 @@ class AdbDeviceAsync(object):
         self._transport = transport
 
         self._available = False
+        self._maxdata = constants.MAX_PUSH_DATA
+
+    @property
+    def max_chunk_size(self):
+        """Maximum chunk size for filesync operations
+
+        Returns
+        -------
+        int
+            Minimum value based on :const:`adb_shell.constants.MAX_CHUNK_SIZE` and ``_max_data / 2``, fallback to legacy :const:`adb_shell.constants.MAX_PUSH_DATA`
+
+        """
+        return min(constants.MAX_CHUNK_SIZE, self._maxdata // 2) or constants.MAX_PUSH_DATA
 
     @property
     def available(self):
@@ -154,7 +169,7 @@ class AdbDeviceAsync(object):
             1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
             2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
             3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            4. If ``cmd`` is ``b'CNXN'``, return ``banner``
+            4. If ``cmd`` is ``b'CNXN'``, set transfer maxdata size and return ``banner``
 
         7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
 
@@ -201,6 +216,7 @@ class AdbDeviceAsync(object):
 
         # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
         if cmd != constants.AUTH:
+            self._maxdata = arg1  # CNXN maxdata
             self._available = True
             return True  # return banner
 
@@ -222,10 +238,11 @@ class AdbDeviceAsync(object):
             await self._send(msg, adb_info)
 
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            cmd, arg0, _, banner = await self._read([constants.CNXN, constants.AUTH], adb_info)
+            cmd, arg0, arg1, banner = await self._read([constants.CNXN, constants.AUTH], adb_info)
 
             # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
             if cmd == constants.CNXN:
+                self._maxdata = arg1  # CNXN maxdata
                 self._available = True
                 return True  # return banner
 
@@ -241,7 +258,8 @@ class AdbDeviceAsync(object):
         await self._send(msg, adb_info)
 
         adb_info.transport_timeout_s = auth_timeout_s
-        cmd, arg0, _, banner = await self._read([constants.CNXN], adb_info)
+        cmd, arg0, arg1, banner = await self._read([constants.CNXN], adb_info)
+        self._maxdata = arg1  # CNXN maxdata
         self._available = True
         return True  # return banner
 
@@ -415,7 +433,7 @@ class AdbDeviceAsync(object):
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT, maxdata=self._maxdata)
         await self._open(b'sync:', adb_info)
 
         await self._filesync_send(constants.LIST, adb_info, filesync_info, data=device_path)
@@ -470,7 +488,7 @@ class AdbDeviceAsync(object):
             raise ValueError("dest_file is of unknown type")
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
         with _open(dest_file, 'wb') as dest:
             await self._open(b'sync:', adb_info)
@@ -550,7 +568,7 @@ class AdbDeviceAsync(object):
                 return
 
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
         with _open(source_file, 'rb') as source:
             await self._open(b'sync:', adb_info)
@@ -592,7 +610,7 @@ class AdbDeviceAsync(object):
             next(progress)
 
         while True:
-            data = datafile.read(constants.MAX_PUSH_DATA)
+            data = datafile.read(self.max_chunk_size)
             if data:
                 await self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
@@ -640,7 +658,7 @@ class AdbDeviceAsync(object):
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         await self._open(b'sync:', adb_info)
 
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT)
+        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
         await self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
         _, (mode, size, mtime), _ = await self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         await self._close(adb_info)
@@ -773,7 +791,7 @@ class AdbDeviceAsync(object):
             data = bytearray()
             while data_length > 0:
                 temp = await self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
-                _LOGGER.debug("bulk_read(%d): %s", data_length, repr(temp))
+                _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
 
                 data += temp
                 data_length -= len(temp)

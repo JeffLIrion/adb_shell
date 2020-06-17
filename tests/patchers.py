@@ -9,12 +9,12 @@ from adb_shell.transport.tcp_transport import TcpTransport
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 6, "Async functionality requires Python 3.6+")
 
-MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH_INVALID = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH1 = AdbMessage(command=constants.AUTH, arg0=constants.AUTH_TOKEN, arg1=0, data=b'host::unknown\0')
-MSG_CONNECT_WITH_AUTH2 = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH2 = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=2*constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH_NEW_KEY2 = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
-MSG_CONNECT_WITH_AUTH_NEW_KEY3 = AdbMessage(command=constants.CNXN, arg0=0, arg1=0, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH_NEW_KEY3 = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=3*constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
 
 BULK_READ_LIST = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 BULK_READ_LIST_WITH_AUTH_INVALID = [MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CONNECT_WITH_AUTH_INVALID.data]

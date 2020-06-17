@@ -244,7 +244,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA+1)),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(self.device.max_chunk_size+1)),
                                                           AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         await self.device.shell('TEST')
@@ -256,10 +256,10 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(constants.MAX_ADB_DATA-1) + b'\xe3\x81\x82'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'0'*(self.device.max_chunk_size-1) + b'\xe3\x81\x82'),
                                                           AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        self.assertEqual(await self.device.shell('TEST'), u'0'*(constants.MAX_ADB_DATA-1) + u'\u3042')
+        self.assertEqual(await self.device.shell('TEST'), u'0'*(self.device.max_chunk_size-1) + u'\u3042')
 
     @awaiter
     async def test_shell_with_multibytes_sequence_over_two_messages(self):
@@ -635,7 +635,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.device._transport._bulk_write = b''
 
         mtime = 100
-        filedata = b'0' * int(3.5 * constants.MAX_PUSH_DATA)
+        filedata = b'0' * int(3.5 * self.device.max_chunk_size)
 
         # Provide the `bulk_read` return values
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -646,14 +646,17 @@ class TestAdbDeviceAsync(unittest.TestCase):
                                                           AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
-        mpd0, mpd1, mpd2, mpd3 = 0, constants.MAX_PUSH_DATA, 2*constants.MAX_PUSH_DATA, 3*constants.MAX_PUSH_DATA
+        mcs0, mcs1, mcs2, mcs3 = 0, self.device.max_chunk_size, 2*self.device.max_chunk_size, 3*self.device.max_chunk_size
         expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
-                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
-                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata[mpd0:mpd1]))),
-                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata[mpd1:mpd2]))),
-                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata[mpd2:mpd3]),
-                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata[mpd3:]),
-                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime))),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(
+                                                FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                FileSyncMessage(command=constants.DATA, data=filedata[mcs0:mcs1]))),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(
+                                                FileSyncMessage(command=constants.DATA, data=filedata[mcs1:mcs2]))),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(
+                                                FileSyncMessage(command=constants.DATA, data=filedata[mcs2:mcs3]),
+                                                FileSyncMessage(command=constants.DATA, data=filedata[mcs3:]),
+                                                FileSyncMessage(command=constants.DONE, arg0=mtime))),
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
