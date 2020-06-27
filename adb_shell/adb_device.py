@@ -60,6 +60,7 @@
 """
 
 
+from contextlib import contextmanager
 import io
 import logging
 import os
@@ -72,7 +73,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport import BaseTransport
 from .transport.tcp_transport import TcpTransport
-from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, _open
+from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo
 
 try:
     from .transport.usb_transport import UsbTransport
@@ -81,6 +82,36 @@ except (ImportError, OSError):
 
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@contextmanager
+def _open(name, mode='r'):
+    """Handle opening and closing of files and IO streams.
+
+    Parameters
+    ----------
+    name : str, io.IOBase
+        The name of the file *or* an IO stream
+    mode : str
+        The mode for opening the file
+
+    Yields
+    ------
+    io.IOBase
+        The opened file *or* the IO stream
+
+    """
+    try:
+        opened = open(name, mode) if isinstance(name, str) else None
+        if isinstance(name, str):
+            yield opened
+        else:
+            yield name
+    finally:
+        if isinstance(name, str):
+            opened.close()
+        else:
+            name.close()
 
 
 class AdbDevice(object):

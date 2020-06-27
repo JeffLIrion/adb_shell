@@ -57,6 +57,7 @@
 """
 
 
+from contextmanager import asynccontextmanager
 import io
 import logging
 import os
@@ -64,15 +65,47 @@ import socket
 import struct
 import time
 
+import aiofiles
+
 from . import constants
 from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
-from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, _open
+from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo
 
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _open(name, mode='r'):
+    """Handle opening and closing of files and IO streams.
+
+    Parameters
+    ----------
+    name : str, io.IOBase
+        The name of the file *or* an IO stream
+    mode : str
+        The mode for opening the file
+
+    Yields
+    ------
+    io.IOBase
+        The opened file *or* the IO stream
+
+    """
+    try:
+        opened = await aiofiles.open(name, mode) if isinstance(name, str) else None
+        if isinstance(name, str):
+            yield opened
+        else:
+            yield name
+    finally:
+        if isinstance(name, str):
+            await opened.close()
+        else:
+            name.close()
 
 
 class AdbDeviceAsync(object):
@@ -490,7 +523,7 @@ class AdbDeviceAsync(object):
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
-        with _open(dest_file, 'wb') as dest:
+        async with _open(dest_file, 'wb') as dest:
             await self._open(b'sync:', adb_info)
             await self._pull(device_filename, dest, progress_callback, adb_info, filesync_info)
             await self._close(adb_info)
@@ -570,7 +603,7 @@ class AdbDeviceAsync(object):
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
-        with _open(source_file, 'rb') as source:
+        async with _open(source_file, 'rb') as source:
             await self._open(b'sync:', adb_info)
             await self._push(source, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
 

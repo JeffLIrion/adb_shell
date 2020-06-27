@@ -15,7 +15,7 @@ setup(
     packages=['adb_shell', 'adb_shell.auth', 'adb_shell.transport'],
     install_requires=['cryptography', 'pyasn1', 'rsa'],
     tests_require=['pycryptodome', 'libusb1>=1.0.16'],
-    extras_require = {'usb': ['libusb1>=1.0.16']},
+    extras_require = {'usb': ['libusb1>=1.0.16'], 'async': ['aiofiles>=0.4.0']},
     classifiers=['Operating System :: OS Independent',
                  'License :: OSI Approved :: Apache Software License',
                  'Programming Language :: Python :: 3',

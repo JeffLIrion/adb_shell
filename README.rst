@@ -33,7 +33,11 @@ To connect to a device via USB, install this package via:
 Async
 *****
 
-To utilize the async version of this code, you must install into a Python 3.6+ environment.
+To utilize the async version of this code, you must install into a Python 3.6+ environment via:
+
+.. code-block::
+
+   pip install adb-shell[async]
 
 
 Example Usage
