@@ -169,7 +169,7 @@ class AdbDeviceAsync(object):
             1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
             2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
             3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            4. If ``cmd`` is ``b'CNXN'``, set transfer maxdata size and return ``banner``
+            4. If ``cmd`` is ``b'CNXN'``, set transfer maxdata size and return ``True``
 
         7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
 
@@ -240,7 +240,7 @@ class AdbDeviceAsync(object):
             # 6.3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
             cmd, arg0, arg1, banner = await self._read([constants.CNXN, constants.AUTH], adb_info)
 
-            # 6.4. If ``cmd`` is ``b'CNXN'``, return ``banner``
+            # 6.4. If ``cmd`` is ``b'CNXN'``, we are done
             if cmd == constants.CNXN:
                 self._maxdata = arg1  # CNXN maxdata
                 self._available = True
