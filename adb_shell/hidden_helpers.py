@@ -27,13 +27,10 @@
 
     * :meth:`_FileSyncTransactionInfo.can_add_to_send_buffer`
 
-* :func:`_open`
-
 """
 
 
 from collections import namedtuple
-from contextlib import contextmanager
 import io
 import struct
 
@@ -46,36 +43,6 @@ except NameError:  # pragma: no cover
     FILE_TYPES = (io.IOBase,)
 
 DeviceFile = namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
-
-
-@contextmanager
-def _open(name, mode='r'):
-    """Handle opening and closing of files and IO streams.
-
-    Parameters
-    ----------
-    name : str, io.IOBase
-        The name of the file *or* an IO stream
-    mode : str
-        The mode for opening the file
-
-    Yields
-    ------
-    io.IOBase
-        The opened file *or* the IO stream
-
-    """
-    try:
-        opened = open(name, mode) if isinstance(name, str) else None
-        if isinstance(name, str):
-            yield opened
-        else:
-            yield name
-    finally:
-        if isinstance(name, str):
-            opened.close()
-        else:
-            name.close()
 
 
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
