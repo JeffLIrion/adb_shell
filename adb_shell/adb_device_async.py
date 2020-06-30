@@ -57,7 +57,6 @@
 """
 
 
-import io
 import logging
 import os
 import socket
@@ -69,7 +68,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
-from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, _open
+from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_files_to_push
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -450,71 +449,45 @@ class AdbDeviceAsync(object):
 
         return files
 
-    async def pull(self, device_filename, dest_file=None, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+    async def pull(self, device_path, local_path, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Pull a file from the device.
 
         Parameters
         ----------
-        device_filename : str
-            Filename on the device to pull.
-        dest_file : str, file, io.IOBase, None
-            If set, a filename or writable file-like object.
+        device_path : str
+            The file on the device that will be pulled
+        local_path : str
+            The path to where the file will be downloaded
         progress_callback : function, None
-            Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
-            objects
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         transport_timeout_s : float, None
             Expected timeout for any part of the pull.
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDeviceAsync._read`
-
-        Returns
-        -------
-        bytes, bool
-            The file data if ``dest_file`` is not set. Otherwise, ``True`` if the destination file exists
-
-        Raises
-        ------
-        ValueError
-            If ``dest_file`` is of unknown type.
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
-        if not dest_file:
-            dest_file = io.BytesIO()
-
-        if not isinstance(dest_file, FILE_TYPES + (str,)):
-            raise ValueError("dest_file is of unknown type")
-
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
-        with _open(dest_file, 'wb') as dest:
+        with open(local_path, 'wb') as stream:
             await self._open(b'sync:', adb_info)
-            await self._pull(device_filename, dest, progress_callback, adb_info, filesync_info)
+            await self._pull(device_path, stream, progress_callback, adb_info, filesync_info)
             await self._close(adb_info)
 
-            if isinstance(dest, io.BytesIO):
-                return dest.getvalue()
-
-            if hasattr(dest, 'name'):
-                return os.path.exists(dest.name)
-
-            # We don't know what the path is, so we just assume it exists.
-            return True
-
-    async def _pull(self, filename, dest, progress_callback, adb_info, filesync_info):
-        """Pull a file from the device into the file-like ``dest_file``.
+    async def _pull(self, device_path, stream, progress_callback, adb_info, filesync_info):
+        """Pull a file from the device into the file-like ``local_path``.
 
         Parameters
         ----------
-        filename : str
-            The file to be pulled
-        dest : _io.BytesIO
+        device_path : str
+            The file on the device that will be pulled
+        stream : _io.BytesIO
             File-like object for writing to
         progress_callback : function, None
-            Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         adb_info : _AdbTransactionInfo
             Info and settings for this ADB transaction
         filesync_info : _FileSyncTransactionInfo
@@ -522,37 +495,36 @@ class AdbDeviceAsync(object):
 
         """
         if progress_callback:
-            total_bytes = await self.stat(filename)[1]
-            progress = self._transport_progress(lambda current: progress_callback(filename, current, total_bytes))
+            total_bytes = await self.stat(device_path)[1]
+            progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
-        await self._filesync_send(constants.RECV, adb_info, filesync_info, data=filename)
+        await self._filesync_send(constants.RECV, adb_info, filesync_info, data=device_path)
         async for cmd_id, _, data in self._filesync_read_until([constants.DATA], [constants.DONE], adb_info, filesync_info):
             if cmd_id == constants.DONE:
                 break
 
-            dest.write(data)
+            stream.write(data)
             if progress_callback:
                 progress.send(len(data))
 
-    async def push(self, source_file, device_filename, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+    async def push(self, local_path, device_path, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Push a file or directory to the device.
 
         Parameters
         ----------
-        source_file : str
-            Either a filename, a directory or file-like object to push to the device.
-        device_filename : str
-            Destination on the device to write to.
+        local_path : str
+            Either a filename or a directory to push to the device
+        device_path : str
+            Destination on the device to write to
         st_mode : int
-            Stat mode for filename
+            Stat mode for ``local_path``
         mtime : int
-            Modification time to set on the file.
+            Modification time to set on the file
         progress_callback : function, None
-            Callback method that accepts filename, bytes_written and total_bytes, total_bytes will be -1 for file-like
-            objects
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         transport_timeout_s : float, None
-            Expected timeout for any part of the push.
+            Expected timeout for any part of the push
         read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDeviceAsync._read`
 
@@ -560,37 +532,36 @@ class AdbDeviceAsync(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
-        if isinstance(source_file, str):
-            if os.path.isdir(source_file):
-                await self.shell("mkdir " + device_filename, transport_timeout_s, read_timeout_s)
-                for f in os.listdir(source_file):
-                    await self.push(os.path.join(source_file, f), device_filename + '/' + f, progress_callback=progress_callback)
-                return
+        local_path_is_dir, local_paths, device_paths = get_files_to_push(local_path, device_path)
 
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
-        filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
+        if local_path_is_dir:
+            await self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
 
-        with _open(source_file, 'rb') as source:
-            await self._open(b'sync:', adb_info)
-            await self._push(source, device_filename, st_mode, mtime, progress_callback, adb_info, filesync_info)
+        for _local_path, _device_path in zip(local_paths, device_paths):
+            adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+            filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
-        await self._close(adb_info)
+            with open(_local_path, 'rb') as stream:
+                await self._open(b'sync:', adb_info)
+                await self._push(stream, _device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
-    async def _push(self, datafile, filename, st_mode, mtime, progress_callback, adb_info, filesync_info):
+            await self._close(adb_info)
+
+    async def _push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info):
         """Push a file-like object to the device.
 
         Parameters
         ----------
-        datafile : _io.BytesIO
+        stream : _io.BytesIO
             File-like object for reading from
-        filename : str
-            Filename to push to
+        device_path : str
+            Destination on the device to write to
         st_mode : int
-            Stat mode for filename
+            Stat mode for the file
         mtime : int
             Modification time
         progress_callback : function, None
-            Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         adb_info : _AdbTransactionInfo
             Info and settings for this ADB transaction
 
@@ -600,17 +571,17 @@ class AdbDeviceAsync(object):
             Raised on push failure.
 
         """
-        fileinfo = ('{},{}'.format(filename, int(st_mode))).encode('utf-8')
+        fileinfo = ('{},{}'.format(device_path, int(st_mode))).encode('utf-8')
 
         await self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
-            total_bytes = os.fstat(datafile.fileno()).st_size if isinstance(datafile, FILE_TYPES) else -1
-            progress = self._transport_progress(lambda current: progress_callback(filename, current, total_bytes))
+            total_bytes = os.fstat(stream.fileno()).st_size
+            progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
         while True:
-            data = datafile.read(self.max_chunk_size)
+            data = stream.read(self.max_chunk_size)
             if data:
                 await self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
@@ -630,12 +601,12 @@ class AdbDeviceAsync(object):
 
             raise exceptions.PushFailedError(data)
 
-    async def stat(self, device_filename, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+    async def stat(self, device_path, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Get a file's ``stat()`` information.
 
         Parameters
         ----------
-        device_filename : str
+        device_path : str
             The file on the device for which we will get information.
         transport_timeout_s : float, None
             Expected timeout for any part of the pull.
@@ -659,7 +630,7 @@ class AdbDeviceAsync(object):
         await self._open(b'sync:', adb_info)
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
-        await self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_filename)
+        await self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_path)
         _, (mode, size, mtime), _ = await self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
         await self._close(adb_info)
 
@@ -1148,8 +1119,7 @@ class AdbDeviceAsync(object):
         Parameters
         ----------
         progress_callback : function
-            Callback method that accepts ``filename``, ``bytes_written``, and ``total_bytes``; total_bytes will be -1 for file-like
-            objects.
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
 
         """
         current = 0

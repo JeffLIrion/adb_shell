@@ -27,55 +27,46 @@
 
     * :meth:`_FileSyncTransactionInfo.can_add_to_send_buffer`
 
-* :func:`_open`
+* :func:`get_files_to_push`
 
 """
 
 
 from collections import namedtuple
-from contextlib import contextmanager
-import io
+import os
 import struct
 
 from . import constants
 
 
-try:
-    FILE_TYPES = (file, io.IOBase)
-except NameError:  # pragma: no cover
-    FILE_TYPES = (io.IOBase,)
-
 DeviceFile = namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
 
 
-@contextmanager
-def _open(name, mode='r'):
-    """Handle opening and closing of files and IO streams.
+def get_files_to_push(local_path, device_path):
+    """Get a list of the file(s) to push.
 
     Parameters
     ----------
-    name : str, io.IOBase
-        The name of the file *or* an IO stream
-    mode : str
-        The mode for opening the file
+    local_path : str
+        A path to a local file or directory
+    device_path : str
+        A path to a file or directory on the device
 
-    Yields
-    ------
-    io.IOBase
-        The opened file *or* the IO stream
+    Returns
+    -------
+    local_path_is_dir : bool
+        Whether or not ``local_path`` is a directory
+    local_paths : list[str]
+        A list of the file(s) to push
+    device_paths : list[str]
+        A list of destination paths on the device that corresponds to ``local_paths``
 
     """
-    try:
-        opened = open(name, mode) if isinstance(name, str) else None
-        if isinstance(name, str):
-            yield opened
-        else:
-            yield name
-    finally:
-        if isinstance(name, str):
-            opened.close()
-        else:
-            name.close()
+    local_path_is_dir = os.path.isdir(local_path)
+    local_paths = [local_path] if not local_path_is_dir else os.listdir(local_path)
+    device_paths = [device_path] if not local_path_is_dir else [device_path + '/' + f for f in local_paths]
+
+    return local_path_is_dir, local_paths, device_paths
 
 
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods

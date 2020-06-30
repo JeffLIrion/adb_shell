@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from mock import patch
 import sys
 import unittest
@@ -20,6 +21,39 @@ BULK_READ_LIST = [MSG_CONNECT.pack(), MSG_CONNECT.data]
 BULK_READ_LIST_WITH_AUTH_INVALID = [MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CONNECT_WITH_AUTH_INVALID.data]
 BULK_READ_LIST_WITH_AUTH = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH2.pack(), MSG_CONNECT_WITH_AUTH2.data]
 BULK_READ_LIST_WITH_AUTH_NEW_KEY = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH_NEW_KEY2.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY2.data, MSG_CONNECT_WITH_AUTH_NEW_KEY3.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY3.data]
+
+
+def mock_open(read_data=""):
+    class MockFile:
+        def __init__(self, read_data):
+            self.read_data = read_data
+            _mock_open.written = read_data[:0]
+
+        def read(self, size=-1):
+            if size == -1:
+                ret = self.read_data
+                self.read_data = self.read_data[:0]
+                return ret
+
+            n = min(size, len(self.read_data))
+            ret = self.read_data[:n]
+            self.read_data = self.read_data[n:]
+            return ret
+
+        def write(self, b):
+            if _mock_open.written:
+                _mock_open.written += b
+            else:
+                _mock_open.written = b
+
+    @contextmanager
+    def _mock_open(*args, **kwargs):
+        try:
+            yield MockFile(read_data)
+        finally:
+            pass
+
+    return _mock_open
 
 
 class FakeSocket(object):
