@@ -27,16 +27,46 @@
 
     * :meth:`_FileSyncTransactionInfo.can_add_to_send_buffer`
 
+* :func:`get_files_to_push`
+
 """
 
 
 from collections import namedtuple
+import os
 import struct
 
 from . import constants
 
 
 DeviceFile = namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
+
+
+def get_files_to_push(local_path, device_path):
+    """Get a list of the file(s) to push.
+
+    Parameters
+    ----------
+    local_path : str
+        A path to a local file or directory
+    device_path : str
+        A path to a file or directory on the device
+
+    Returns
+    -------
+    local_path_is_dir : bool
+        Whether or not ``local_path`` is a directory
+    local_paths : list[str]
+        A list of the file(s) to push
+    device_paths : list[str]
+        A list of destination paths on the device that corresponds to ``local_paths``
+
+    """
+    local_path_is_dir = os.path.isdir(local_path)
+    local_paths = [local_path] if not local_path_is_dir else os.listdir(local_path)
+    device_paths = [device_path] if not local_path_is_dir else [device_path + '/' + f for f in local_paths]
+
+    return local_path_is_dir, local_paths, device_paths
 
 
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods

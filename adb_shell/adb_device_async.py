@@ -68,7 +68,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
-from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo
+from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_files_to_push
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -532,10 +532,7 @@ class AdbDeviceAsync(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
-        # TODO: Make this a function
-        local_path_is_dir = os.path.isdir(local_path)
-        local_paths = [local_path] if not local_path_is_dir else os.listdir(local_path)
-        device_paths = [device_path] if not local_path_is_dir else [device_path + '/' + f for f in local_paths]
+        local_path_is_dir, local_paths, device_paths = get_files_to_push(local_path, device_path)
 
         if local_path_is_dir:
             await self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
