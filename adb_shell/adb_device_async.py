@@ -57,11 +57,18 @@
 """
 
 
+try:
+    from asyncio import get_running_loop
+except ImportError:  # pragma: no cover
+    from asyncio import get_event_loop as get_running_loop  # Python 3.6 compatibility
+
 import logging
 import os
 import socket
 import struct
 import time
+
+import aiofiles
 
 from . import constants
 from . import exceptions
@@ -472,7 +479,7 @@ class AdbDeviceAsync(object):
         adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
-        with open(local_path, 'wb') as stream:
+        async with aiofiles.open(local_path, 'wb') as stream:
             await self._open(b'sync:', adb_info)
             await self._pull(device_path, stream, progress_callback, adb_info, filesync_info)
             await self._close(adb_info)
@@ -484,7 +491,7 @@ class AdbDeviceAsync(object):
         ----------
         device_path : str
             The file on the device that will be pulled
-        stream : _io.BytesIO
+        stream : AsyncBufferedIOBase
             File-like object for writing to
         progress_callback : function, None
             Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
@@ -504,7 +511,7 @@ class AdbDeviceAsync(object):
             if cmd_id == constants.DONE:
                 break
 
-            stream.write(data)
+            await stream.write(data)
             if progress_callback:
                 progress.send(len(data))
 
@@ -532,7 +539,7 @@ class AdbDeviceAsync(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
-        local_path_is_dir, local_paths, device_paths = get_files_to_push(local_path, device_path)
+        local_path_is_dir, local_paths, device_paths = await get_running_loop().run_in_executor(None, get_files_to_push, local_path, device_path)
 
         if local_path_is_dir:
             await self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
@@ -541,7 +548,7 @@ class AdbDeviceAsync(object):
             adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
             filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
-            with open(_local_path, 'rb') as stream:
+            async with aiofiles.open(_local_path, 'rb') as stream:
                 await self._open(b'sync:', adb_info)
                 await self._push(stream, _device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
@@ -552,7 +559,7 @@ class AdbDeviceAsync(object):
 
         Parameters
         ----------
-        stream : _io.BytesIO
+        stream : AsyncBufferedReader
             File-like object for reading from
         device_path : str
             Destination on the device to write to
@@ -576,12 +583,12 @@ class AdbDeviceAsync(object):
         await self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
-            total_bytes = os.fstat(stream.fileno()).st_size
+            total_bytes = (await get_running_loop().run_in_executor(os.fstat, stream.fileno())).st_size
             progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
         while True:
-            data = stream.read(self.max_chunk_size)
+            data = await stream.read(self.max_chunk_size)
             if data:
                 await self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
