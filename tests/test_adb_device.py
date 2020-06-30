@@ -4,7 +4,7 @@ import sys
 import time
 import unittest
 
-from mock import mock_open, patch
+from mock import patch
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
@@ -529,7 +529,7 @@ class TestAdbDevice(unittest.TestCase):
                                                           AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                                           AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.FAIL, data=b''))))
 
-        with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
+        with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
 
     def test_push_file(self):
@@ -553,7 +553,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
@@ -578,7 +578,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)), patch('time.time', return_value=mtime):
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('time.time', return_value=mtime):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
@@ -612,7 +612,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)):
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
@@ -637,7 +637,7 @@ class TestAdbDevice(unittest.TestCase):
         # Expected `bulk_write` values
         #TODO
 
-        with patch('adb_shell.adb_device.open', mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
             self.device.push('TEST_DIR/', '/data', mtime=mtime)
 
     def test_pull_file(self):
@@ -659,9 +659,9 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open()) as m:
+        with patch('adb_shell.adb_device.open', patchers.mock_open()) as m:
             self.device.pull('/data', 'TEST_FILE')
-            self.assertEqual(b''.join([bytes(call.args[0]) for call in m().write.mock_calls]), filedata)
+            self.assertEqual(m.written, filedata)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
     def test_pull_big_file(self):
@@ -683,9 +683,9 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', mock_open()) as m:
+        with patch('adb_shell.adb_device.open', patchers.mock_open()) as m:
             self.device.pull('/data', 'TEST_FILE')
-            self.assertEqual(b''.join([bytes(call.args[0]) for call in m().write.mock_calls]), filedata)
+            self.assertEqual(m.written, filedata)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
     def test_stat(self):

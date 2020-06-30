@@ -15,6 +15,39 @@ except ImportError:
             return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
+def async_mock_open(read_data=""):
+    class AsyncMockFile:
+        def __init__(self, read_data):
+            self.read_data = read_data
+            _async_mock_open.written = read_data[:0]
+
+        def read(self, size=-1):
+            if size == -1:
+                ret = self.read_data
+                self.read_data = self.read_data[:0]
+                return ret
+
+            n = min(size, len(self.read_data))
+            ret = self.read_data[:n]
+            self.read_data = self.read_data[n:]
+            return ret
+
+        def write(self, b):
+            if _async_mock_open.written:
+                _async_mock_open.written += b
+            else:
+                _async_mock_open.written = b
+
+    @contextmanager
+    def _async_mock_open(*args, **kwargs):
+        try:
+            yield AsyncMockFile(read_data)
+        finally:
+            pass
+
+    return _async_mock_open
+
+
 class FakeStreamWriter:
     def close(self):
         pass
