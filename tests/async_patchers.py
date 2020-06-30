@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from unittest.mock import patch
 
 from adb_shell import constants
@@ -21,7 +21,7 @@ def async_mock_open(read_data=""):
             self.read_data = read_data
             _async_mock_open.written = read_data[:0]
 
-        def read(self, size=-1):
+        async def read(self, size=-1):
             if size == -1:
                 ret = self.read_data
                 self.read_data = self.read_data[:0]
@@ -32,14 +32,14 @@ def async_mock_open(read_data=""):
             self.read_data = self.read_data[n:]
             return ret
 
-        def write(self, b):
+        async def write(self, b):
             if _async_mock_open.written:
                 _async_mock_open.written += b
             else:
                 _async_mock_open.written = b
 
-    @contextmanager
-    def _async_mock_open(*args, **kwargs):
+    @asynccontextmanager
+    async def _async_mock_open(*args, **kwargs):
         try:
             yield AsyncMockFile(read_data)
         finally:
