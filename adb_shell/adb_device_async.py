@@ -57,7 +57,11 @@
 """
 
 
-import asyncio
+try:
+    from asyncio import get_running_loop
+except ImportError:  # pragma: no cover
+    from asyncio import get_event_loop as get_running_loop  # Python 3.6 compatibility
+
 import logging
 import os
 import socket
@@ -535,7 +539,7 @@ class AdbDeviceAsync(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
-        local_path_is_dir, local_paths, device_paths = await asyncio.get_running_loop().run_in_executor(None, get_files_to_push, local_path, device_path)
+        local_path_is_dir, local_paths, device_paths = await get_running_loop().run_in_executor(None, get_files_to_push, local_path, device_path)
 
         if local_path_is_dir:
             await self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
@@ -579,7 +583,7 @@ class AdbDeviceAsync(object):
         await self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
-            total_bytes = (await asyncio.get_running_loop().run_in_executor(os.fstat, stream.fileno())).st_size
+            total_bytes = (await get_running_loop().run_in_executor(os.fstat, stream.fileno())).st_size
             progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
