@@ -31,16 +31,10 @@
 
 
 from collections import namedtuple
-import io
 import struct
 
 from . import constants
 
-
-try:
-    FILE_TYPES = (file, io.IOBase)
-except NameError:  # pragma: no cover
-    FILE_TYPES = (io.IOBase,)
 
 DeviceFile = namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
 

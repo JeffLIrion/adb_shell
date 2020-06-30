@@ -68,7 +68,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
-from .hidden_helpers import FILE_TYPES, DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo
+from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo
 
 
 _LOGGER = logging.getLogger(__name__)
