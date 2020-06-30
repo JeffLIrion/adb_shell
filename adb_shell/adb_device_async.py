@@ -459,8 +459,7 @@ class AdbDeviceAsync(object):
         local_path : str
             The path to where the file will be downloaded
         progress_callback : function, None
-            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``; ``total_bytes`` will be -1 for file-like
-            objects
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         transport_timeout_s : float, None
             Expected timeout for any part of the pull.
         read_timeout_s : float
@@ -523,8 +522,7 @@ class AdbDeviceAsync(object):
         mtime : int
             Modification time to set on the file
         progress_callback : function, None
-            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``; ``total_bytes`` will be -1 for file-like
-            objects
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         transport_timeout_s : float, None
             Expected timeout for any part of the push
         read_timeout_s : float
@@ -581,7 +579,7 @@ class AdbDeviceAsync(object):
         await self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
-            total_bytes = os.fstat(stream.fileno()).st_size if isinstance(stream, FILE_TYPES) else -1
+            total_bytes = os.fstat(stream.fileno()).st_size
             progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
@@ -1124,8 +1122,7 @@ class AdbDeviceAsync(object):
         Parameters
         ----------
         progress_callback : function
-            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``; total_bytes will be -1 for file-like
-            objects.
+            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
 
         """
         current = 0
