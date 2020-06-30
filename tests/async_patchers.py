@@ -1,4 +1,8 @@
-from contextlib import asynccontextmanager
+try:
+    from contextlib import asynccontextmanager
+except ImportError:
+    asynccontextmanager = lambda func: func
+
 from unittest.mock import patch
 
 from adb_shell import constants

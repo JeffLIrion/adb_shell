@@ -9,6 +9,7 @@ from adb_shell.transport.tcp_transport import TcpTransport
 
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 6, "Async functionality requires Python 3.6+")
+ASYNC_SKIPPER37=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 7, "Async functionality requires Python 3.6+")
 
 MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH_INVALID = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
