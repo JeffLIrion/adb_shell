@@ -3,3 +3,4 @@ adb-shell
 cryptography
 pycryptodome
 libusb1
+aiofiles
