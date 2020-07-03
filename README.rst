@@ -7,6 +7,9 @@ adb\_shell
 .. image:: https://coveralls.io/repos/github/JeffLIrion/adb_shell/badge.svg?branch=master
    :target: https://coveralls.io/github/JeffLIrion/adb_shell?branch=master
 
+.. image:: https://pepy.tech/badge/adb-shell
+   :target: https://pepy.tech/project/adb-shell
+
 
 Documentation for this package can be found at https://adb-shell.readthedocs.io/.
 
