@@ -26,7 +26,7 @@ Installation
 Async
 *****
 
-To utilize the async version of this code, you must install into a Python 3.6+ environment via:
+To utilize the async version of this code, you must install into a Python 3.7+ environment via:
 
 .. code-block::
 

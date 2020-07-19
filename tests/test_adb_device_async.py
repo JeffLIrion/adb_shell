@@ -553,7 +553,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.assertEqual(await self.device.list('/dir'), expected_result)
         self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_push_fail(self):
         self.assertTrue(await self.device.connect())
@@ -570,7 +570,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with self.assertRaises(exceptions.PushFailedError), patch('aiofiles.open', async_mock_open(read_data=filedata)):
             await self.device.push('TEST_FILE', '/data', mtime=mtime)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_push_file(self):
         self.assertTrue(await self.device.connect())
@@ -597,7 +597,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             await self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_push_file_mtime0(self):
         self.assertTrue(await self.device.connect())
@@ -624,7 +624,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             await self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_push_big_file(self):
         self.assertTrue(await self.device.connect())
@@ -660,7 +660,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             await self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_push_dir(self):
         self.assertTrue(await self.device.connect())
@@ -686,7 +686,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with patch('aiofiles.open', async_mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
             await self.device.push('TEST_DIR/', '/data', mtime=mtime)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_pull_file(self):
         self.assertTrue(await self.device.connect())
@@ -712,7 +712,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             self.assertEqual(m.written, filedata)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
-    @patchers.ASYNC_SKIPPER37
+    @patchers.ASYNC_SKIPPER
     @awaiter
     async def test_pull_big_file(self):
         self.assertTrue(await self.device.connect())
