@@ -102,6 +102,8 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with patch('socket.gethostname', side_effect=Exception):
             device_banner_unknown = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555))
+            device_banner_unknown._transport._bulk_read = self.device._transport._bulk_read
+            self.assertTrue(await device_banner_unknown.connect())
             self.assertEqual(device_banner_unknown._banner, b'unknown')
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes

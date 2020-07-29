@@ -62,7 +62,6 @@
 
 import logging
 import os
-import socket
 import struct
 import time
 
@@ -71,7 +70,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport import BaseTransport
 from .transport.tcp_transport import TcpTransport
-from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_files_to_push
+from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_banner, get_files_to_push
 
 try:
     from .transport.usb_transport import UsbTransport
@@ -112,16 +111,10 @@ class AdbDevice(object):
     """
 
     def __init__(self, transport, banner=None):
-        if banner:
-            if not isinstance(banner, (bytes, bytearray)):
-                self._banner = bytearray(banner, 'utf-8')
-            else:
-                self._banner = banner
+        if banner and not isinstance(banner, (bytes, bytearray)):
+            self._banner = bytearray(banner, 'utf-8')
         else:
-            try:
-                self._banner = bytearray(socket.gethostname(), 'utf-8')
-            except:  # noqa pylint: disable=bare-except
-                self._banner = bytearray('unknown', 'utf-8')
+            self._banner = banner
 
         if not isinstance(transport, BaseTransport):
             raise exceptions.InvalidTransportError("`transport` must be an instance of a subclass of `BaseTransport`")
@@ -208,6 +201,10 @@ class AdbDevice(object):
             Invalid auth response from the device
 
         """
+        # 0. Get `self._banner` if it was not provided in the constructor
+        if not self._banner:
+            self._banner = get_banner()
+
         # 1. Use the transport to establish a connection
         self._transport.close()
         self._transport.connect(transport_timeout_s)

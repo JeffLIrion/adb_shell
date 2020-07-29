@@ -34,6 +34,7 @@
 
 from collections import namedtuple
 import os
+import socket
 import struct
 
 from . import constants
@@ -67,6 +68,21 @@ def get_files_to_push(local_path, device_path):
     device_paths = [device_path] if not local_path_is_dir else [device_path + '/' + f for f in local_paths]
 
     return local_path_is_dir, local_paths, device_paths
+
+
+def get_banner():
+    """Get the ``banner`` that will be signed in :meth:`adb_shell.adb_device.AdbDevice.connect` / :meth:`adb_shell.adb_device_async.AdbDeviceAsync.connect`.
+
+    Returns
+    -------
+    bytearray
+        The hostname, or "unknown" if it could not be determined
+
+    """
+    try:
+        return bytearray(socket.gethostname(), 'utf-8')
+    except:  # noqa pylint: disable=bare-except
+        return bytearray('unknown', 'utf-8')
 
 
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods

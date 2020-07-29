@@ -60,7 +60,6 @@
 from asyncio import get_running_loop
 import logging
 import os
-import socket
 import struct
 import time
 
@@ -71,7 +70,7 @@ from . import exceptions
 from .adb_message import AdbMessage, checksum, unpack
 from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
-from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_files_to_push
+from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_banner, get_files_to_push
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -107,17 +106,10 @@ class AdbDeviceAsync(object):
     """
 
     def __init__(self, transport, banner=None):
-        if banner:
-            if not isinstance(banner, (bytes, bytearray)):
-                self._banner = bytearray(banner, 'utf-8')
-            else:
-                self._banner = banner
+        if banner and not isinstance(banner, (bytes, bytearray)):
+            self._banner = bytearray(banner, 'utf-8')
         else:
-            try:
-                # TODO: make this async / don't do I/O
-                self._banner = bytearray(socket.gethostname(), 'utf-8')
-            except:  # noqa pylint: disable=bare-except
-                self._banner = bytearray('unknown', 'utf-8')
+            self._banner = banner
 
         if not isinstance(transport, BaseTransportAsync):
             raise exceptions.InvalidTransportError("`transport` must be an instance of a subclass of `BaseTransportAsync`")
@@ -204,6 +196,10 @@ class AdbDeviceAsync(object):
             Invalid auth response from the device
 
         """
+        # 0. Get `self._banner` if it was not provided in the constructor
+        if not self._banner:
+            self._banner = await get_running_loop().run_in_executor(None, get_banner)
+
         # 1. Use the transport to establish a connection
         await self._transport.close()
         await self._transport.connect(transport_timeout_s)
