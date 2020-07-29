@@ -27,6 +27,7 @@
 
     * :meth:`_FileSyncTransactionInfo.can_add_to_send_buffer`
 
+* :func:`get_banner`
 * :func:`get_files_to_push`
 
 """

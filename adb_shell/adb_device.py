@@ -47,6 +47,7 @@
     * :meth:`AdbDevice.close`
     * :meth:`AdbDevice.connect`
     * :meth:`AdbDevice.list`
+    * :attr:`AdbDevice.max_chunk_size`
     * :meth:`AdbDevice.pull`
     * :meth:`AdbDevice.push`
     * :meth:`AdbDevice.root`

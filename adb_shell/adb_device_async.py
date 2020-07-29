@@ -45,6 +45,7 @@
     * :meth:`AdbDeviceAsync.close`
     * :meth:`AdbDeviceAsync.connect`
     * :meth:`AdbDeviceAsync.list`
+    * :attr:`AdbDeviceAsync.max_chunk_size`
     * :meth:`AdbDeviceAsync.pull`
     * :meth:`AdbDeviceAsync.push`
     * :meth:`AdbDeviceAsync.root`
