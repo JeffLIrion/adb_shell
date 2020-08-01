@@ -9,7 +9,7 @@ release:
 .PHONY: docs
 docs:
 	rm -rf docs/build/html
-	@cd docs && sphinx-apidoc -f -e -o source/ ../adb_shell/
+	@cd docs && sphinx-apidoc -f -e -o source/ ../adb_shell_dev/
 	@cd docs && make html && make html
 
 SYNCTESTS := $(shell cd tests && ls test*.py | grep -v async)
@@ -21,16 +21,16 @@ test:
 
 .PHONY: coverage
 coverage:
-	coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage html && coverage report -m
+	coverage run --source adb_shell_dev -m unittest discover -s tests/ -t . && coverage html && coverage report -m
 
 .PHONY: tdd
 tdd:
-	coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage report -m
+	coverage run --source adb_shell_dev -m unittest discover -s tests/ -t . && coverage report -m
 
 .PHONY: lint
 lint:
-	python --version 2>&1 | grep -q "Python 2" && (flake8 adb_shell/ --exclude="adb_shell/adb_device_async.py,adb_shell/transport/base_transport_async.py,adb_shell/transport/tcp_transport_async.py" && pylint --ignore="adb_device_async.py,base_transport_async.py,tcp_transport_async.py" adb_shell/) || (flake8 adb_shell/ && pylint adb_shell/)
+	python --version 2>&1 | grep -q "Python 2" && (flake8 adb_shell_dev/ --exclude="adb_shell_dev/adb_device_async.py,adb_shell_dev/transport/base_transport_async.py,adb_shell_dev/transport/tcp_transport_async.py" && pylint --ignore="adb_device_async.py,base_transport_async.py,tcp_transport_async.py" adb_shell_dev/) || (flake8 adb_shell_dev/ && pylint adb_shell_dev/)
 
 .PHONY: alltests
 alltests:
-	flake8 adb_shell/ && pylint adb_shell/ && coverage run --source adb_shell -m unittest discover -s tests/ -t . && coverage report -m
+	flake8 adb_shell_dev/ && pylint adb_shell_dev/ && coverage run --source adb_shell_dev -m unittest discover -s tests/ -t . && coverage report -m

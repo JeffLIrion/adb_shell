@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=source
 set BUILDDIR=build
-set SPHINXPROJ=adb_shell
+set SPHINXPROJ=adb_shell_dev
 
 if "%1" == "" goto help
 

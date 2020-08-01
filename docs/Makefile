@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = adb_shell
+SPHINXPROJ    = adb_shell_dev
 SOURCEDIR     = source
 BUILDDIR      = build
 

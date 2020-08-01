@@ -21,7 +21,7 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'adb_shell'
+project = 'adb_shell_dev'
 copyright = '2020, Jeff Irion and contributors'
 author = 'Jeff Irion'
 
@@ -149,7 +149,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'adb_shell', 'ADB Shell Documentation',
+    (master_doc, 'adb_shell_dev', 'ADB Shell Documentation',
      [author], 1)
 ]
 
