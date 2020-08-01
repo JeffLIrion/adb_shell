@@ -26,9 +26,6 @@ echo "Renaming from '$PACKAGE' to '$1'"
 # .gitignore
 sed -i "s|$PACKAGE|$1|g" $DIR/../.gitignore
 
-# Doxyfile
-sed -i "s|$PACKAGE|$1|g" $DIR/../Doxyfile
-
 # Makefile
 sed -i "s|$PACKAGE|$1|g" $DIR/../Makefile
 
