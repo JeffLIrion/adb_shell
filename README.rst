@@ -66,7 +66,7 @@ Example Usage
    device1.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
    # Connect via USB (package must be installed via `pip install adb-shell[usb])`
-   device2 = AdbDeviceUsb('ab78c6ef')
+   device2 = AdbDeviceUsb()
    device2.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
    # Send a shell command
