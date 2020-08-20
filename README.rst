@@ -61,7 +61,7 @@ Example Usage
         pub = f.read()
    signer = PythonRSASigner(pub, priv)
 
-   # Connect (authentication required)
+   # Connect
    device1 = AdbDeviceTcp('192.168.0.222', 5555, default_transport_timeout_s=9.)
    device1.connect(rsa_keys=[signer], auth_timeout_s=0.1)
 
