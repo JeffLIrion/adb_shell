@@ -838,12 +838,7 @@ class AdbDeviceAsync(object):
 
         1. Read the ``cmd`` and ``data`` fields from a ``b'CLSE'`` or ``b'WRTE'`` packet via :meth:`AdbDeviceAsync._read_until`
         2. If ``cmd`` is ``b'CLSE'``, then send a ``b'CLSE'`` message and stop
-        3. If ``cmd`` is not ``b'WRTE'``, raise an exception
-
-            * If ``cmd`` is ``b'FAIL'``, raise :class:`~adb_shell.exceptions.AdbCommandFailureException`
-            * Otherwise, raise :class:`~~adb_shell.exceptions.InvalidCommandError`
-
-        4. Yield ``data`` and repeat
+        3. Yield ``data`` and repeat
 
 
         Parameters
