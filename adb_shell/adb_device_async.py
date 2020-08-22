@@ -68,7 +68,7 @@ import aiofiles
 
 from . import constants
 from . import exceptions
-from .adb_message import AdbMessage, checksum, unpack
+from .adb_message import AdbMessage, checksum, int_to_cmd, unpack
 from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
 from .hidden_helpers import DeviceFile, _AdbTransactionInfo, _FileSyncTransactionInfo, get_banner, get_files_to_push
@@ -750,13 +750,13 @@ class AdbDeviceAsync(object):
             command = constants.WIRE_TO_ID.get(cmd)
 
             if not command:
-                raise exceptions.InvalidCommandError('Unknown command: %x' % cmd, cmd, (arg0, arg1))
+                raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), arg0, arg1, msg))
 
             if command in expected_cmds:
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %d, read_timeout_s = %d" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
         if data_length > 0:
             data = bytearray()
@@ -820,7 +820,7 @@ class AdbDeviceAsync(object):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
-                raise exceptions.InvalidCommandError('Never got one of the expected responses (%s)' % expected_cmds, cmd, (adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %d, read_timeout_s = %d" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
             # Ignore CLSE responses to previous commands
             # https://github.com/JeffLIrion/adb_shell/pull/14

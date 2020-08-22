@@ -69,10 +69,6 @@ class InvalidCommandError(Exception):
     """Got an invalid command.
 
     """
-    def __init__(self, message, response_header, response_data):
-        if response_header == constants.FAIL:
-            message = 'Command failed, device said so. (%s)' % message
-        super(InvalidCommandError, self).__init__(message, response_header, response_data)
 
 
 class InvalidTransportError(Exception):
