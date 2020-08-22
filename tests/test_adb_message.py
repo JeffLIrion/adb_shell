@@ -5,11 +5,7 @@ from mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_device import AdbDevice
-from adb_shell.adb_message import AdbMessage, checksum, unpack
-
-
-def from_int(n):
-    return ''.join(chr((n >> (i * 8)) % 256) for i in range(4)).encode('utf-8')
+from adb_shell.adb_message import AdbMessage, checksum, int_to_cmd, unpack
 
 
 class TestAdbMessage(unittest.TestCase):
@@ -31,4 +27,4 @@ class TestAdbMessage(unittest.TestCase):
 
     def test_constants(self):
         for key, val in constants.ID_TO_WIRE.items():
-            self.assertEqual(key, from_int(val))
+            self.assertEqual(key, int_to_cmd(val))

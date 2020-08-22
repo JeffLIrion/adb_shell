@@ -28,6 +28,7 @@
     * :meth:`AdbMessage.pack`
 
 * :func:`checksum`
+* :func:`int_to_cmd`
 * :func:`unpack`
 
 """
@@ -69,6 +70,23 @@ def checksum(data):
         total = sum((ord(d) for d in data))
 
     return total & 0xFFFFFFFF
+
+
+def int_to_cmd(n):
+    """Convert from an integer (4 bytes) to an ADB command.
+
+    Parameters
+    ----------
+    n : int
+        The integer that will be converted to an ADB command
+
+    Returns
+    -------
+    str
+        The ADB command (e.g., ``'CNXN'``)
+
+    """
+    return ''.join(chr((n >> (i * 8)) % 256) for i in range(4)).encode('utf-8')
 
 
 def unpack(message):
