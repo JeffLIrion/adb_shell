@@ -23,9 +23,6 @@
 """
 
 
-from . import constants
-
-
 class AdbCommandFailureException(Exception):
     """A ``b'FAIL'`` packet was received.
 
