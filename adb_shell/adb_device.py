@@ -1082,7 +1082,7 @@ class AdbDevice(object):
             if cmd_id in finish_ids:  # pragma: no cover
                 break
 
-    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=0):
+    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=None):
         """Send/buffer FileSync packets.
 
         Packets are buffered and only flushed when this connection is read from. All
@@ -1102,9 +1102,9 @@ class AdbDevice(object):
             Optionally override size from len(data).
 
         """
-        if data:
-            if not isinstance(data, bytes):
-                data = data.encode('utf8')
+        if not isinstance(data, bytes):
+            data = data.encode('utf8')
+        if size is None:
             size = len(data)
 
         if not filesync_info.can_add_to_send_buffer(len(data)):
