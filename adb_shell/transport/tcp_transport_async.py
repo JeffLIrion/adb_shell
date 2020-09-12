@@ -81,9 +81,9 @@ class TcpTransportAsync(BaseTransportAsync):
 
         try:
             self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), timeout)
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
-            raise TcpTimeoutException(msg)
+            raise TcpTimeoutException(msg) from exc
 
     async def bulk_read(self, numbytes, transport_timeout_s=None):
         """Receive data from the socket.
@@ -110,9 +110,9 @@ class TcpTransportAsync(BaseTransportAsync):
 
         try:
             return await asyncio.wait_for(self._reader.read(numbytes), timeout)
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
-            raise TcpTimeoutException(msg)
+            raise TcpTimeoutException(msg) from exc
 
     async def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the socket.
@@ -141,6 +141,6 @@ class TcpTransportAsync(BaseTransportAsync):
             self._writer.write(data)
             await asyncio.wait_for(self._writer.drain(), timeout)
             return len(data)
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, timeout)
-            raise TcpTimeoutException(msg)
+            raise TcpTimeoutException(msg) from exc
