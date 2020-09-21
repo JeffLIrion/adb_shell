@@ -890,7 +890,7 @@ class AdbDevice(object):
         """
         _LOGGER.debug("bulk_write: %s", repr(msg.pack()))
         self._transport.bulk_write(msg.pack(), adb_info.transport_timeout_s)
-        
+ 
         if msg.data:
             _LOGGER.debug("bulk_write: %s", repr(msg.data))
             self._transport.bulk_write(msg.data, adb_info.transport_timeout_s)
