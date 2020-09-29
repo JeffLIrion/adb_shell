@@ -433,6 +433,8 @@ class AdbDevice(object):
             Filename, mode, size, and mtime info for the files in the directory
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot list an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
@@ -471,6 +473,8 @@ class AdbDevice(object):
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot pull from an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
@@ -534,6 +538,8 @@ class AdbDevice(object):
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot push to an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
@@ -628,6 +634,8 @@ class AdbDevice(object):
             The last modified time for the file
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot stat an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 

@@ -519,6 +519,18 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(expected_result, self.device.list('/dir'))
         self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
+    def test_list_empty_path(self):
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.list("")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.list(b"")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.list(u"")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.list(None)
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._transport._bulk_read = b''
+
     def test_push_fail(self):
         self.assertTrue(self.device.connect())
         self.device._transport._bulk_write = b''
@@ -642,6 +654,18 @@ class TestAdbDevice(unittest.TestCase):
         with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
             self.device.push('TEST_DIR/', '/data', mtime=mtime)
 
+    def test_push_empty_path(self):
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.push("NOTHING", "")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.push("NOTHING", b"")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.push("NOTHING", u"")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.push("NOTHING", None)
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._transport._bulk_read = b''
+
     def test_pull_file(self):
         self.assertTrue(self.device.connect())
         self.device._transport._bulk_write = b''
@@ -690,6 +714,18 @@ class TestAdbDevice(unittest.TestCase):
             self.assertEqual(m.written, filedata)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
+    def test_pull_empty_path(self):
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.pull("", "NOWHERE")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.pull(b"", "NOWHERE")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.pull(u"", "NOWHERE")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.pull(None, "NOWHERE")
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._transport._bulk_read = b''
+
     def test_stat(self):
         self.assertTrue(self.device.connect())
         self.device._transport._bulk_write = b''
@@ -709,6 +745,18 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertEqual((1, 2, 3), self.device.stat('/data'))
         self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
+
+    def test_stat_empty_path(self):
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.stat("")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.stat(b"")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.stat(u"")
+        with self.assertRaises(exceptions.DevicePathInvalidError):
+            self.device.stat(None)
+        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
+        self.device._transport._bulk_read = b''
 
     # ======================================================================= #
     #                                                                         #
