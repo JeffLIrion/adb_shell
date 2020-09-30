@@ -1106,7 +1106,7 @@ class AdbDevice(object):
             Data and storage for this FileSync transaction
         data : str, bytes
             Optional data to send, must set data or size.
-        size : int
+        size : int, None
             Optionally override size from len(data).
 
         """
