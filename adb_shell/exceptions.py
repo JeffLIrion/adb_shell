@@ -80,6 +80,12 @@ class InvalidResponseError(Exception):
     """
 
 
+class DevicePathInvalidError(Exception):
+    """A file command was passed an invalid path.
+
+    """
+
+
 class PushFailedError(Exception):
     """Pushing a file failed for some reason.
 

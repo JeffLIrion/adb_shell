@@ -428,6 +428,8 @@ class AdbDeviceAsync(object):
             Filename, mode, size, and mtime info for the files in the directory
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot list an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
@@ -466,6 +468,8 @@ class AdbDeviceAsync(object):
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot pull from an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
@@ -529,6 +533,8 @@ class AdbDeviceAsync(object):
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDeviceAsync._read`
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot push to an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
@@ -623,6 +629,8 @@ class AdbDeviceAsync(object):
             The last modified time for the file
 
         """
+        if not device_path:
+            raise exceptions.DevicePathInvalidError("Cannot stat an empty device path")
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
@@ -1077,7 +1085,7 @@ class AdbDeviceAsync(object):
             if cmd_id in finish_ids:  # pragma: no cover
                 break
 
-    async def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=0):
+    async def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=None):
         """Send/buffer FileSync packets.
 
         Packets are buffered and only flushed when this connection is read from. All
@@ -1093,13 +1101,13 @@ class AdbDeviceAsync(object):
             Data and storage for this FileSync transaction
         data : str, bytes
             Optional data to send, must set data or size.
-        size : int
+        size : int, None
             Optionally override size from len(data).
 
         """
-        if data:
-            if not isinstance(data, bytes):
-                data = data.encode('utf8')
+        if not isinstance(data, bytes):
+            data = data.encode('utf8')
+        if size is None:
             size = len(data)
 
         if not filesync_info.can_add_to_send_buffer(len(data)):
