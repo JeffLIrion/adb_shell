@@ -22,6 +22,19 @@ _LOGGER = logging.getLogger('adb_shell.adb_device')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
+_LOGGER2 = logging.getLogger(__name__)
+_LOGGER2.setLevel(logging.DEBUG)
+_LOGGER2.addHandler(logging.StreamHandler(sys.stdout))
+
+
+class AdbDeviceTest(AdbDevice):
+    def __init__(self, transport, banner=None):
+        AdbDevice.__init__(self, transport, banner)
+
+    def _push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._push({}, {}, {}, {}, {}, {}, {})".format(stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info))
+        return AdbDevice._push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
+
 
 def to_int(cmd):
     return sum(c << (i * 8) for i, c in enumerate(bytearray(cmd)))
@@ -547,6 +560,34 @@ class TestAdbDevice(unittest.TestCase):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
 
     def test_push_file(self):
+        self.assertTrue(self.device.connect())
+        self.device._transport._bulk_write = b''
+
+        mtime = 100
+        filedata = b'Ohayou sekai.\nGood morning world!'
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        # Expected `bulk_write` values
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime, data=b''))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
+            self.device.push('TEST_FILE', '/data', mtime=mtime)
+            self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
+
+    def test_push_file2(self):
+        self.device = AdbDeviceTest(transport=patchers.FakeTcpTransport('host', 5555))
+        self.device._transport._bulk_read = b''.join(patchers.BULK_READ_LIST)
+
         self.assertTrue(self.device.connect())
         self.device._transport._bulk_write = b''
 
