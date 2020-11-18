@@ -27,13 +27,178 @@ _LOGGER2.setLevel(logging.DEBUG)
 _LOGGER2.addHandler(logging.StreamHandler(sys.stdout))
 
 
-class AdbDeviceTest(AdbDevice):
+class AdbDeviceTest2(AdbDevice):
     def __init__(self, transport, banner=None):
         AdbDevice.__init__(self, transport, banner)
 
+    def _filesync_flush(self, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._filesync_flush({}, {})".format(adb_info, filesync_info))
+        return AdbDevice._filesync_flush(self, adb_info, filesync_info)
+
+    def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
+        _LOGGER2.info("AdbDevice._filesync_read({}, {}, {}, {})".format(expected_ids, adb_info, filesync_info, read_data))
+        return AdbDevice._filesync_read(self, expected_ids, adb_info, filesync_info, read_data)
+
+    def _filesync_read_buffered(self, size, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._filesync_read_buffered({}, {}, {})".format(size, adb_info, filesync_info))
+        return AdbDevice._filesync_read_buffered(self, size, adb_info, filesync_info)
+
+    def _filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._filesynce_read_until({}, {}, {}, {})".format(expected_ids, finish_ids, adb_info, filesync_info))
+        return AdbDevice._filesynce_read_until(self, expected_ids, finish_ids, adb_info, filesync_info)
+
+    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=None):
+        _LOGGER2.info("AdbDevice._filesync_send({}, {}, {}, {}, {})".format(command_id, adb_info, filesync_info, data, size))
+        return AdbDevice._filesync_send(command_id, adb_info, filesync_info, data, size)
+
+    def _open(self, destination, adb_info):
+        _LOGGER2.info("AdbDevice._open({}, {})".format(destination, adb_info))
+        return AdbDevice._open(self, destination, adb_info)
+
     def _push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info):
-        _LOGGER2.info("AdbDevice._push({}, {}, {}, {}, {}, {}, {})".format(stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info))
+        _LOGGER2.info("AdbDevice._push({}, '{}', {}, {}, {}, {}, {})".format(stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info))
         return AdbDevice._push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
+
+    def push(self, local_path, device_path, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        _LOGGER2.info("AdbDevice.push('{}', '{}', {}, {}, {}, {}, {})".format(local_path, device_path, st_mode, mtime, progress_callback, transport_timeout_s, read_timeout_s))
+        return AdbDevice.push(self, local_path, device_path, st_mode, mtime, progress_callback, transport_timeout_s, read_timeout_s)
+
+    def _send(self, msg, adb_info):
+        _LOGGER2.info("AdbDevice._send({}, {})".format(msg, adb_info))
+        return AdbDevice._send(self, msg, adb_info)
+
+
+def parse_module(infile):
+    with open(infile) as f:
+         for line in f.readlines():
+             if line.strip().startswith("def "):
+                 parse_function(line)
+                 print()
+
+def parse_function(line):
+     name = line.split("(")[0].split()[-1]
+     args = line.split("(")[1].split(")")[0]
+     args_list = args.split(",")
+     arg_names = [arg.split("=")[0].strip() for arg in args_list]
+     args_format = ", ".join(["{}" for _ in arg_names[1:]])
+     args_str = ", ".join(arg_names[1:])
+     print("    {}".format(line.strip()))
+     print("        _LOGGER2.info(\"AdbDevice.{}({})\".format({}))".format(name, args_format, args_str))
+     print("        return AdbDevice.{}(self, {})".format(name, args_str))
+
+
+class AdbDeviceTest(AdbDevice):
+    def __init__(self, transport, banner=None):
+        _LOGGER2.info("AdbDevice.__init__({}, {})".format(transport, banner))
+        return AdbDevice.__init__(self, transport, banner)
+
+    def close(self):
+        _LOGGER2.info("AdbDevice.close()".format())
+        return AdbDevice.close(self)
+
+    def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
+        _LOGGER2.info("AdbDevice.connect({}, {}, {}, {}, {})".format(rsa_keys, transport_timeout_s, auth_timeout_s, read_timeout_s, auth_callback))
+        return AdbDevice.connect(self, rsa_keys, transport_timeout_s, auth_timeout_s, read_timeout_s, auth_callback)
+
+    def _service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
+        _LOGGER2.info("AdbDevice._service({}, {}, {}, {}, {}, {})".format(service, command, transport_timeout_s, read_timeout_s, timeout_s, decode))
+        return AdbDevice._service(self, service, command, transport_timeout_s, read_timeout_s, timeout_s, decode)
+
+    def _streaming_service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
+        _LOGGER2.info("AdbDevice._streaming_service({}, {}, {}, {}, {})".format(service, command, transport_timeout_s, read_timeout_s, decode))
+        return AdbDevice._streaming_service(self, service, command, transport_timeout_s, read_timeout_s, decode)
+
+    def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
+        _LOGGER2.info("AdbDevice.root({}, {}, {})".format(transport_timeout_s, read_timeout_s, timeout_s))
+        return AdbDevice.root(self, transport_timeout_s, read_timeout_s, timeout_s)
+
+    def shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
+        _LOGGER2.info("AdbDevice.shell({}, {}, {}, {}, {})".format(command, transport_timeout_s, read_timeout_s, timeout_s, decode))
+        return AdbDevice.shell(self, command, transport_timeout_s, read_timeout_s, timeout_s, decode)
+
+    def streaming_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
+        _LOGGER2.info("AdbDevice.streaming_shell({}, {}, {}, {})".format(command, transport_timeout_s, read_timeout_s, decode))
+        return AdbDevice.streaming_shell(self, command, transport_timeout_s, read_timeout_s, decode)
+
+    def list(self, device_path, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        _LOGGER2.info("AdbDevice.list('{}', {}, {})".format(device_path, transport_timeout_s, read_timeout_s))
+        return AdbDevice.list(self, device_path, transport_timeout_s, read_timeout_s)
+
+    def pull(self, device_path, local_path, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        _LOGGER2.info("AdbDevice.pull('{}', '{}', {}, {}, {})".format(device_path, local_path, progress_callback, transport_timeout_s, read_timeout_s))
+        return AdbDevice.pull(self, device_path, local_path, progress_callback, transport_timeout_s, read_timeout_s)
+
+    def _pull(self, device_path, stream, progress_callback, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._pull('{}', {}, {}, {}, {})".format(device_path, stream, progress_callback, adb_info, filesync_info))
+        return AdbDevice._pull(self, device_path, stream, progress_callback, adb_info, filesync_info)
+
+    def push(self, local_path, device_path, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        _LOGGER2.info("AdbDevice.push('{}', '{}', {}, {}, {}, {}, {})".format(local_path, device_path, st_mode, mtime, progress_callback, transport_timeout_s, read_timeout_s))
+        return AdbDevice.push(self, local_path, device_path, st_mode, mtime, progress_callback, transport_timeout_s, read_timeout_s)
+
+    def _push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._push({}, '{}', {}, {}, {}, {}, {})".format(stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info))
+        return AdbDevice._push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
+
+    def stat(self, device_path, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        _LOGGER2.info("AdbDevice.stat('{}', {}, {})".format(device_path, transport_timeout_s, read_timeout_s))
+        return AdbDevice.stat(self, device_path, transport_timeout_s, read_timeout_s)
+
+    def _close(self, adb_info):
+        _LOGGER2.info("AdbDevice._close({})".format(adb_info))
+        return AdbDevice._close(self, adb_info)
+
+    def _okay(self, adb_info):
+        _LOGGER2.info("AdbDevice._okay({})".format(adb_info))
+        return AdbDevice._okay(self, adb_info)
+
+    def _open(self, destination, adb_info):
+        _LOGGER2.info("AdbDevice._open({}, {})".format(destination, adb_info))
+        return AdbDevice._open(self, destination, adb_info)
+
+    def _read(self, expected_cmds, adb_info):
+        _LOGGER2.info("AdbDevice._read({}, {})".format(expected_cmds, adb_info))
+        return AdbDevice._read(self, expected_cmds, adb_info)
+
+    def _read_until(self, expected_cmds, adb_info):
+        _LOGGER2.info("AdbDevice._read_until({}, {})".format(expected_cmds, adb_info))
+        return AdbDevice._read_until(self, expected_cmds, adb_info)
+
+    def _read_until_close(self, adb_info):
+        _LOGGER2.info("AdbDevice._read_until_close({})".format(adb_info))
+        return AdbDevice._read_until_close(self, adb_info)
+
+    def _send(self, msg, adb_info):
+        _LOGGER2.info("AdbDevice._send({}, {})".format(msg, adb_info))
+        return AdbDevice._send(self, msg, adb_info)
+
+    def _streaming_command(self, service, command, adb_info):
+        _LOGGER2.info("AdbDevice._streaming_command({}, {}, {})".format(service, command, adb_info))
+        return AdbDevice._streaming_command(self, service, command, adb_info)
+
+    def _write(self, data, adb_info):
+        _LOGGER2.info("AdbDevice._write({}, {})".format(data, adb_info))
+        return AdbDevice._write(self, data, adb_info)
+
+    def _filesync_flush(self, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._filesync_flush({}, {})".format(adb_info, filesync_info))
+        return AdbDevice._filesync_flush(self, adb_info, filesync_info)
+
+    def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
+        _LOGGER2.info("AdbDevice._filesync_read({}, {}, {}, {})".format(expected_ids, adb_info, filesync_info, read_data))
+        return AdbDevice._filesync_read(self, expected_ids, adb_info, filesync_info, read_data)
+
+    def _filesync_read_buffered(self, size, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._filesync_read_buffered({}, {}, {})".format(size, adb_info, filesync_info))
+        return AdbDevice._filesync_read_buffered(self, size, adb_info, filesync_info)
+
+    def _filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info):
+        _LOGGER2.info("AdbDevice._filesync_read_until({}, {}, {}, {})".format(expected_ids, finish_ids, adb_info, filesync_info))
+        return AdbDevice._filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info)
+
+    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=None):
+        _LOGGER2.info("AdbDevice._filesync_send({}, {}, {}, {}, {})".format(command_id, adb_info, filesync_info, data, size))
+        return AdbDevice._filesync_send(self, command_id, adb_info, filesync_info, data, size)
 
 
 def to_int(cmd):
@@ -584,21 +749,36 @@ class TestAdbDevice(unittest.TestCase):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
-    def test_push_file2(self):
+    def test_push_issue113(self):
+        # pytest tests/test_adb_device.py::TestAdbDevice::test_push_issue113 --log-cli-level=INFO
+        def push_progress_callback(device_path, bytes_written, total_bytes):
+            _LOGGER2.warning(f"ADB Push-Progress: {device_path} bytes_written:{bytes_written} total_bytes:{total_bytes}")
+
         self.device = AdbDeviceTest(transport=patchers.FakeTcpTransport('host', 5555))
         self.device._transport._bulk_read = b''.join(patchers.BULK_READ_LIST)
+        self.device._transport._bulk_read = b''.join([b'CNXN\x01\x00\x00\x01\x00\x00\x10\x00\x10\x01\x00\x00\xa1f\x00\x00\xbc\xb1\xa7\xb1',
+                                                      b'device::ro.product.name=sdk_gphone_x86_64_arm64;ro.product.model=sdk_gphone_x86_64_arm64;ro.product.device=generic_x86_64_arm64;features=sendrecv_v2_brotli,remount_shell,sendrecv_v2,abb_exec,fixed_push_mkdir,fixed_push_symlink_timestamp,abb,shell_v2,cmd,ls_v2,apex,stat_v2',
+                                                      b'OKAYj\x06\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
+                                                      b'WRTEj\x06\x00\x00\x01\x00\x00\x00 \x00\x00\x00\x8c\x0b\x00\x00\xa8\xad\xab\xba',
+                                                      b'adbd is already running as root\n',
+                                                      b'CLSEj\x06\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba'])
 
         self.assertTrue(self.device.connect())
+        self.device.root()
+        self.assertEqual(self.device._transport._bulk_read, b'')
+
         self.device._transport._bulk_write = b''
 
         mtime = 100
         filedata = b'Ohayou sekai.\nGood morning world!'
 
         # Provide the `bulk_read` return values
-        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
-                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+        self.device._transport._bulk_read = b''.join([b'CLSEj\x06\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',
+                                                      b'OKAYk\x06\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6'])
+        #self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+        #                                                  AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+        #                                                  AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
+        #                                                  AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         # Expected `bulk_write` values
         expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
@@ -608,8 +788,12 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
-            self.device.push('TEST_FILE', '/data', mtime=mtime)
+        class StSize:
+            def __init__(self):
+                self.st_size = -1
+
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('os.fstat', return_value=StSize()):
+            self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=push_progress_callback)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
     def test_push_file_mtime0(self):

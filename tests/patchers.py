@@ -29,6 +29,9 @@ def mock_open(read_data=""):
             self.read_data = read_data
             _mock_open.written = read_data[:0]
 
+        def fileno(self):
+            return 123
+
         def read(self, size=-1):
             if size == -1:
                 ret = self.read_data
