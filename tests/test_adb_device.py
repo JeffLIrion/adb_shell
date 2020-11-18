@@ -27,48 +27,8 @@ _LOGGER2.setLevel(logging.DEBUG)
 _LOGGER2.addHandler(logging.StreamHandler(sys.stdout))
 
 
-class AdbDeviceTest2(AdbDevice):
-    def __init__(self, transport, banner=None):
-        AdbDevice.__init__(self, transport, banner)
-
-    def _filesync_flush(self, adb_info, filesync_info):
-        _LOGGER2.info("AdbDevice._filesync_flush({}, {})".format(adb_info, filesync_info))
-        return AdbDevice._filesync_flush(self, adb_info, filesync_info)
-
-    def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
-        _LOGGER2.info("AdbDevice._filesync_read({}, {}, {}, {})".format(expected_ids, adb_info, filesync_info, read_data))
-        return AdbDevice._filesync_read(self, expected_ids, adb_info, filesync_info, read_data)
-
-    def _filesync_read_buffered(self, size, adb_info, filesync_info):
-        _LOGGER2.info("AdbDevice._filesync_read_buffered({}, {}, {})".format(size, adb_info, filesync_info))
-        return AdbDevice._filesync_read_buffered(self, size, adb_info, filesync_info)
-
-    def _filesync_read_until(self, expected_ids, finish_ids, adb_info, filesync_info):
-        _LOGGER2.info("AdbDevice._filesynce_read_until({}, {}, {}, {})".format(expected_ids, finish_ids, adb_info, filesync_info))
-        return AdbDevice._filesynce_read_until(self, expected_ids, finish_ids, adb_info, filesync_info)
-
-    def _filesync_send(self, command_id, adb_info, filesync_info, data=b'', size=None):
-        _LOGGER2.info("AdbDevice._filesync_send({}, {}, {}, {}, {})".format(command_id, adb_info, filesync_info, data, size))
-        return AdbDevice._filesync_send(command_id, adb_info, filesync_info, data, size)
-
-    def _open(self, destination, adb_info):
-        _LOGGER2.info("AdbDevice._open({}, {})".format(destination, adb_info))
-        return AdbDevice._open(self, destination, adb_info)
-
-    def _push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info):
-        _LOGGER2.info("AdbDevice._push({}, '{}', {}, {}, {}, {}, {})".format(stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info))
-        return AdbDevice._push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
-
-    def push(self, local_path, device_path, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
-        _LOGGER2.info("AdbDevice.push('{}', '{}', {}, {}, {}, {}, {})".format(local_path, device_path, st_mode, mtime, progress_callback, transport_timeout_s, read_timeout_s))
-        return AdbDevice.push(self, local_path, device_path, st_mode, mtime, progress_callback, transport_timeout_s, read_timeout_s)
-
-    def _send(self, msg, adb_info):
-        _LOGGER2.info("AdbDevice._send({}, {})".format(msg, adb_info))
-        return AdbDevice._send(self, msg, adb_info)
-
-
 def parse_module(infile):
+    """Code for converting `AdbDevice` methods into `AdbDeviceTest` methods (see below)."""
     with open(infile) as f:
          for line in f.readlines():
              if line.strip().startswith("def "):
@@ -76,6 +36,7 @@ def parse_module(infile):
                  print()
 
 def parse_function(line):
+    """Code for converting an `AdbDevice` method into an `AdbDeviceTest` method (see below)."""
      name = line.split("(")[0].split()[-1]
      args = line.split("(")[1].split(")")[0]
      args_list = args.split(",")
