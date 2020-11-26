@@ -764,7 +764,7 @@ class AdbDeviceAsync(object):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
-                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %d, read_timeout_s = %d" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
         if data_length > 0:
             data = bytearray()
@@ -828,7 +828,7 @@ class AdbDeviceAsync(object):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
-                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %d, read_timeout_s = %d" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
             # Ignore CLSE responses to previous commands
             # https://github.com/JeffLIrion/adb_shell/pull/14
