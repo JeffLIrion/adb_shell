@@ -889,11 +889,12 @@ class AdbDeviceAsync(object):
             Info and settings for this ADB transaction
 
         """
-        _LOGGER.debug("bulk_write: %s", repr(msg.pack()))
+        packed = msg.pack()
+        _LOGGER.debug("bulk_write(%d): %s", len(packed), repr(packed))
         await self._transport.bulk_write(msg.pack(), adb_info.transport_timeout_s)
 
         if msg.data:
-            _LOGGER.debug("bulk_write: %s", repr(msg.data))
+            _LOGGER.debug("bulk_write(%d): %s", len(msg.data), repr(msg.data))
             await self._transport.bulk_write(msg.data, adb_info.transport_timeout_s)
 
     async def _streaming_command(self, service, command, adb_info):
