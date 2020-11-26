@@ -37,15 +37,15 @@ def parse_module(infile):
 
 def parse_function(line):
     """Code for converting an `AdbDevice` method into an `AdbDeviceTest` method (see below)."""
-     name = line.split("(")[0].split()[-1]
-     args = line.split("(")[1].split(")")[0]
-     args_list = args.split(",")
-     arg_names = [arg.split("=")[0].strip() for arg in args_list]
-     args_format = ", ".join(["{}" for _ in arg_names[1:]])
-     args_str = ", ".join(arg_names[1:])
-     print("    {}".format(line.strip()))
-     print("        _LOGGER2.info(\"AdbDevice.{}({})\".format({}))".format(name, args_format, args_str))
-     print("        return AdbDevice.{}(self, {})".format(name, args_str))
+    name = line.split("(")[0].split()[-1]
+    args = line.split("(")[1].split(")")[0]
+    args_list = args.split(",")
+    arg_names = [arg.split("=")[0].strip() for arg in args_list]
+    args_format = ", ".join(["{}" for _ in arg_names[1:]])
+    args_str = ", ".join(arg_names[1:])
+    print("    {}".format(line.strip()))
+    print("        _LOGGER2.info(\"AdbDevice.{}({})\".format({}))".format(name, args_format, args_str))
+    print("        return AdbDevice.{}(self, {})".format(name, args_str))
 
 
 class AdbDeviceTest(AdbDevice):
@@ -710,7 +710,7 @@ class TestAdbDevice(unittest.TestCase):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
-    def test_push_issue113(self):
+    def _test_push_issue113(self):
         # pytest tests/test_adb_device.py::TestAdbDevice::test_push_issue113 --log-cli-level=INFO
         def push_progress_callback(device_path, bytes_written, total_bytes):
             _LOGGER2.warning(f"ADB Push-Progress: {device_path} bytes_written:{bytes_written} total_bytes:{total_bytes}")
