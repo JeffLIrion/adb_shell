@@ -764,10 +764,11 @@ class AdbDeviceAsync(object):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
-                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %d, read_timeout_s = %d" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+
+        data = bytearray()
 
         if data_length > 0:
-            data = bytearray()
             while data_length > 0:
                 temp = await self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
                 _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
@@ -778,9 +779,6 @@ class AdbDeviceAsync(object):
             actual_checksum = checksum(data)
             if actual_checksum != data_checksum:
                 raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
-
-        else:
-            data = bytearray()
 
         return command, arg0, arg1, bytes(data)
 
@@ -828,7 +826,7 @@ class AdbDeviceAsync(object):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
-                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %d, read_timeout_s = %d" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
             # Ignore CLSE responses to previous commands
             # https://github.com/JeffLIrion/adb_shell/pull/14
