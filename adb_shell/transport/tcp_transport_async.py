@@ -29,13 +29,9 @@ class TcpTransportAsync(BaseTransportAsync):
         The address of the device; may be an IP address or a host name
     port : int
         The device port to which we are connecting (default is 5555)
-    default_transport_timeout_s : float, None
-        Default timeout in seconds for TCP packets, or ``None``
 
     Attributes
     ----------
-    _default_transport_timeout_s : float, None
-        Default timeout in seconds for TCP packets, or ``None``
     _host : str
         The address of the device; may be an IP address or a host name
     _port : int
@@ -46,10 +42,9 @@ class TcpTransportAsync(BaseTransportAsync):
         Object for writing data to the socket
 
     """
-    def __init__(self, host, port=5555, default_transport_timeout_s=None):
+    def __init__(self, host, port=5555):
         self._host = host
         self._port = port
-        self._default_transport_timeout_s = default_transport_timeout_s
 
         self._reader = None
         self._writer = None
@@ -68,7 +63,7 @@ class TcpTransportAsync(BaseTransportAsync):
         self._reader = None
         self._writer = None
 
-    async def connect(self, transport_timeout_s=None):
+    async def connect(self, transport_timeout_s):
         """Create a socket connection to the device.
 
         Parameters
@@ -77,15 +72,13 @@ class TcpTransportAsync(BaseTransportAsync):
             Timeout for connecting to the socket; if it is ``None``, then it will block until the operation completes
 
         """
-        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
-
         try:
-            self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), timeout)
+            self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), transport_timeout_s)
         except asyncio.TimeoutError as exc:
-            msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
+            msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
 
-    async def bulk_read(self, numbytes, transport_timeout_s=None):
+    async def bulk_read(self, numbytes, transport_timeout_s):
         """Receive data from the socket.
 
         Parameters
@@ -106,15 +99,13 @@ class TcpTransportAsync(BaseTransportAsync):
             Reading timed out.
 
         """
-        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
-
         try:
-            return await asyncio.wait_for(self._reader.read(numbytes), timeout)
+            return await asyncio.wait_for(self._reader.read(numbytes), transport_timeout_s)
         except asyncio.TimeoutError as exc:
-            msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
+            msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
 
-    async def bulk_write(self, data, transport_timeout_s=None):
+    async def bulk_write(self, data, transport_timeout_s):
         """Send data to the socket.
 
         Parameters
@@ -135,12 +126,10 @@ class TcpTransportAsync(BaseTransportAsync):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
-
         try:
             self._writer.write(data)
-            await asyncio.wait_for(self._writer.drain(), timeout)
+            await asyncio.wait_for(self._writer.drain(), transport_timeout_s)
             return len(data)
         except asyncio.TimeoutError as exc:
-            msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, timeout)
+            msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
