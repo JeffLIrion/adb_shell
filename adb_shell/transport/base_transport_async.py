@@ -34,7 +34,7 @@ class BaseTransportAsync(ABC):
 
         Parameters
         ----------
-        transport_timeout_s : float
+        transport_timeout_s : float, None
             A connection timeout
 
         """
@@ -47,7 +47,7 @@ class BaseTransportAsync(ABC):
         ----------
         numbytes : int
             The maximum amount of data to be received
-        transport_timeout_s : float
+        transport_timeout_s : float, None
             A timeout for the read operation
 
         Returns
@@ -65,7 +65,7 @@ class BaseTransportAsync(ABC):
         ----------
         data : bytes
             The data to be sent
-        transport_timeout_s : float
+        transport_timeout_s : float, None
             A timeout for the write operation
 
         Returns
