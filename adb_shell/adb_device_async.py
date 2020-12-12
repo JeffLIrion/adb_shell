@@ -84,6 +84,8 @@ class AdbDeviceAsync(object):
     ----------
     transport : BaseTransportAsync
         A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport_async.BaseTransportAsync`
+    default_transport_timeout_s : float, None
+        TODO
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
@@ -101,6 +103,8 @@ class AdbDeviceAsync(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        TODO
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransportAsync
@@ -1185,6 +1189,10 @@ class AdbDeviceTcpAsync(AdbDeviceAsync):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        TODO
+    _maxdata : int
+        TODO
     _transport : TcpTransportAsync
         The transport that is used to connect to the device
 
@@ -1192,4 +1200,4 @@ class AdbDeviceTcpAsync(AdbDeviceAsync):
 
     def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
         transport = TcpTransportAsync(host, port)
-        super(AdbDeviceTcpAsync, self).__init__(transport, banner)
+        super(AdbDeviceTcpAsync, self).__init__(transport, default_transport_timeout_s, banner)

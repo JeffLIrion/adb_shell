@@ -89,6 +89,8 @@ class AdbDevice(object):
     ----------
     transport : BaseTransport
         A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
+    default_transport_timeout_s : float, None
+        TODO
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
@@ -106,6 +108,8 @@ class AdbDevice(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        TODO
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransport
@@ -1190,6 +1194,10 @@ class AdbDeviceTcp(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        TODO
+    _maxdata : int
+        TODO
     _transport : TcpTransport
         The transport that is used to connect to the device
 
@@ -1197,7 +1205,7 @@ class AdbDeviceTcp(AdbDevice):
 
     def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
         transport = TcpTransport(host, port)
-        super(AdbDeviceTcp, self).__init__(transport, banner)
+        super(AdbDeviceTcp, self).__init__(transport, default_transport_timeout_s, banner)
 
 
 class AdbDeviceUsb(AdbDevice):
@@ -1226,6 +1234,10 @@ class AdbDeviceUsb(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        TODO
+    _maxdata : int
+        TODO
     _transport : UsbTransport
         The transport that is used to connect to the device
 
@@ -1236,4 +1248,4 @@ class AdbDeviceUsb(AdbDevice):
             raise exceptions.InvalidTransportError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
 
         transport = UsbTransport.find_adb(serial, port_path, default_transport_timeout_s)
-        super(AdbDeviceUsb, self).__init__(transport, banner)
+        super(AdbDeviceUsb, self).__init__(transport, default_transport_timeout_s, banner)
