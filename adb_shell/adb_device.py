@@ -90,12 +90,10 @@ class AdbDevice(object):
     transport : BaseTransport
         A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
     default_transport_timeout_s : float, None
-        TODO
+        Default timeout in seconds for transport packets, or ``None``
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
-    default_transport_timeout_s : float, None
-        Default timeout in seconds for transport packets, or ``None``
 
     Raises
     ------
@@ -109,7 +107,7 @@ class AdbDevice(object):
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
-        TODO
+        Default timeout in seconds for transport packets, or ``None``
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransport
@@ -1195,9 +1193,9 @@ class AdbDeviceTcp(AdbDevice):
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
-        TODO
+        Default timeout in seconds for transport packets, or ``None``
     _maxdata : int
-        TODO
+        Maximum amount of data in an ADB packet
     _transport : TcpTransport
         The transport that is used to connect to the device
 
@@ -1235,9 +1233,9 @@ class AdbDeviceUsb(AdbDevice):
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
-        TODO
+        Default timeout in seconds for transport packets, or ``None``
     _maxdata : int
-        TODO
+        Maximum amount of data in an ADB packet
     _transport : UsbTransport
         The transport that is used to connect to the device
 
