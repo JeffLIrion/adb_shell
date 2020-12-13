@@ -1193,7 +1193,7 @@ class AdbDeviceTcp(AdbDevice):
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
-        Default timeout in seconds for transport packets, or ``None``
+        Default timeout in seconds for TCP packets, or ``None``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : TcpTransport
@@ -1233,7 +1233,7 @@ class AdbDeviceUsb(AdbDevice):
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
-        Default timeout in seconds for transport packets, or ``None``
+        Default timeout in seconds for USB packets, or ``None``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : UsbTransport
