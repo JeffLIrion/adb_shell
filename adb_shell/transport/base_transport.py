@@ -38,7 +38,7 @@ class BaseTransport(ABC):
         """
 
     @abstractmethod
-    def connect(self, transport_timeout_s=None):
+    def connect(self, transport_timeout_s):
         """Create a connection to the device.
 
         Parameters
@@ -49,7 +49,7 @@ class BaseTransport(ABC):
         """
 
     @abstractmethod
-    def bulk_read(self, numbytes, transport_timeout_s=None):
+    def bulk_read(self, numbytes, transport_timeout_s):
         """Read data from the device.
 
         Parameters
@@ -67,7 +67,7 @@ class BaseTransport(ABC):
         """
 
     @abstractmethod
-    def bulk_write(self, data, transport_timeout_s=None):
+    def bulk_write(self, data, transport_timeout_s):
         """Send data to the device.
 
         Parameters

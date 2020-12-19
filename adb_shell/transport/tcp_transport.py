@@ -46,25 +46,20 @@ class TcpTransport(BaseTransport):
         The address of the device; may be an IP address or a host name
     port : int
         The device port to which we are connecting (default is 5555)
-    default_transport_timeout_s : float, None
-        Default timeout in seconds for TCP packets, or ``None``
 
     Attributes
     ----------
     _connection : socket.socket, None
         A socket connection to the device
-    _default_transport_timeout_s : float, None
-        Default timeout in seconds for TCP packets, or ``None``
     _host : str
         The address of the device; may be an IP address or a host name
     _port : int
         The device port to which we are connecting (default is 5555)
 
     """
-    def __init__(self, host, port=5555, default_transport_timeout_s=None):
+    def __init__(self, host, port=5555):
         self._host = host
         self._port = port
-        self._default_transport_timeout_s = default_transport_timeout_s
 
         self._connection = None
 
@@ -81,7 +76,7 @@ class TcpTransport(BaseTransport):
             self._connection.close()
             self._connection = None
 
-    def connect(self, transport_timeout_s=None):
+    def connect(self, transport_timeout_s):
         """Create a socket connection to the device.
 
         Parameters
@@ -90,14 +85,13 @@ class TcpTransport(BaseTransport):
             Set the timeout on the socket instance
 
         """
-        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
-        self._connection = socket.create_connection((self._host, self._port), timeout=timeout)
-        if timeout:
+        self._connection = socket.create_connection((self._host, self._port), timeout=transport_timeout_s)
+        if transport_timeout_s:
             # Put the socket in non-blocking mode
             # https://docs.python.org/3/library/socket.html#socket.socket.settimeout
             self._connection.setblocking(False)
 
-    def bulk_read(self, numbytes, transport_timeout_s=None):
+    def bulk_read(self, numbytes, transport_timeout_s):
         """Receive data from the socket.
 
         Parameters
@@ -118,15 +112,14 @@ class TcpTransport(BaseTransport):
             Reading timed out.
 
         """
-        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
-        readable, _, _ = select.select([self._connection], [], [], timeout)
+        readable, _, _ = select.select([self._connection], [], [], transport_timeout_s)
         if readable:
             return self._connection.recv(numbytes)
 
-        msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, timeout)
+        msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
         raise TcpTimeoutException(msg)
 
-    def bulk_write(self, data, transport_timeout_s=None):
+    def bulk_write(self, data, transport_timeout_s):
         """Send data to the socket.
 
         Parameters
@@ -147,10 +140,9 @@ class TcpTransport(BaseTransport):
             Sending data timed out.  No data was sent.
 
         """
-        timeout = self._default_transport_timeout_s if transport_timeout_s is None else transport_timeout_s
-        _, writeable, _ = select.select([], [self._connection], [], timeout)
+        _, writeable, _ = select.select([], [self._connection], [], transport_timeout_s)
         if writeable:
             return self._connection.send(data)
 
-        msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, timeout)
+        msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, transport_timeout_s)
         raise TcpTimeoutException(msg)

@@ -15,7 +15,7 @@ class TestTcpTransport(unittest.TestCase):
         """
         self.transport = TcpTransport('host', 5555)
         with patchers.PATCH_CREATE_CONNECTION:
-            self.transport.connect()
+            self.transport.connect(transport_timeout_s=1)
 
     def tearDown(self):
         """Close the socket connection."""
@@ -38,12 +38,12 @@ class TestTcpTransport(unittest.TestCase):
         self.transport._connection._recv = b'TEST1TEST2'
 
         with patchers.PATCH_SELECT_SUCCESS:
-            self.assertEqual(self.transport.bulk_read(5), b'TEST1')
-            self.assertEqual(self.transport.bulk_read(5), b'TEST2')
+            self.assertEqual(self.transport.bulk_read(5, transport_timeout_s=1), b'TEST1')
+            self.assertEqual(self.transport.bulk_read(5, transport_timeout_s=1), b'TEST2')
 
         with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
-                self.transport.bulk_read(4)
+                self.transport.bulk_read(4, transport_timeout_s=1)
 
     def test_close_oserror(self):
         """Test that an `OSError` exception is handled when closing the socket.
@@ -57,8 +57,8 @@ class TestTcpTransport(unittest.TestCase):
 
         """
         with patchers.PATCH_SELECT_SUCCESS:
-            self.transport.bulk_write(b'TEST')
+            self.transport.bulk_write(b'TEST', transport_timeout_s=1)
 
         with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
-                self.transport.bulk_write(b'FAIL')
+                self.transport.bulk_write(b'FAIL', transport_timeout_s=1)

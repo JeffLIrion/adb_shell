@@ -89,6 +89,8 @@ class AdbDevice(object):
     ----------
     transport : BaseTransport
         A user-provided transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
+    default_transport_timeout_s : float, None
+        Default timeout in seconds for transport packets, or ``None``
     banner : str, bytes, None
         The hostname of the machine where the Python interpreter is currently running; if
         it is not provided, it will be determined via ``socket.gethostname()``
@@ -104,6 +106,8 @@ class AdbDevice(object):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        Default timeout in seconds for transport packets, or ``None``
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransport
@@ -111,7 +115,7 @@ class AdbDevice(object):
 
     """
 
-    def __init__(self, transport, banner=None):
+    def __init__(self, transport, default_transport_timeout_s=None, banner=None):
         if banner and not isinstance(banner, (bytes, bytearray)):
             self._banner = bytearray(banner, 'utf-8')
         else:
@@ -123,7 +127,25 @@ class AdbDevice(object):
         self._transport = transport
 
         self._available = False
+        self._default_transport_timeout_s = default_transport_timeout_s
         self._maxdata = constants.MAX_PUSH_DATA
+
+    # ======================================================================= #
+    #                                                                         #
+    #                       Properties & simple methods                       #
+    #                                                                         #
+    # ======================================================================= #
+    @property
+    def available(self):
+        """Whether or not an ADB connection to the device has been established.
+
+        Returns
+        -------
+        bool
+            ``self._available``
+
+        """
+        return self._available
 
     @property
     def max_chunk_size(self):
@@ -137,18 +159,27 @@ class AdbDevice(object):
         """
         return min(constants.MAX_CHUNK_SIZE, self._maxdata // 2) or constants.MAX_PUSH_DATA
 
-    @property
-    def available(self):
-        """Whether or not an ADB connection to the device has been established.
+    def _get_transport_timeout_s(self, transport_timeout_s):
+        """Use the provided ``transport_timeout_s`` if it is not ``None``; otherwise, use ``self._default_transport_timeout_s``
+
+        Parameters
+        ----------
+        transport_timeout_s : float, None
+            The potential transport timeout
 
         Returns
         -------
-        bool
-            ``self._available``
+        float
+            ``transport_timeout_s`` if it is not ``None``; otherwise, ``self._default_transport_timeout_s``
 
         """
-        return self._available
+        return transport_timeout_s if transport_timeout_s is not None else self._default_transport_timeout_s
 
+    # ======================================================================= #
+    #                                                                         #
+    #                             Close & Connect                             #
+    #                                                                         #
+    # ======================================================================= #
     def close(self):
         """Close the connection via the provided transport's ``close()`` method.
 
@@ -212,7 +243,7 @@ class AdbDevice(object):
 
         # 2. Send a ``b'CNXN'`` message
         msg = AdbMessage(constants.CNXN, constants.VERSION, constants.MAX_ADB_DATA, b'host::%s\0' % self._banner)
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
         self._send(msg, adb_info)
 
         # 3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
@@ -297,7 +328,7 @@ class AdbDevice(object):
             The output of the ADB command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s, timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s, timeout_s)
         if decode:
             return b''.join(self._streaming_command(service, command, adb_info)).decode('utf8')
         return b''.join(self._streaming_command(service, command, adb_info))
@@ -325,7 +356,7 @@ class AdbDevice(object):
             The line-by-line output of the ADB command as a string if ``decode`` is True, otherwise as bytes.
 
         """
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
         stream = self._streaming_command(service, command, adb_info)
         if decode:
             for line in (stream_line.decode('utf8') for stream_line in stream):
@@ -438,7 +469,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_LIST_FORMAT, maxdata=self._maxdata)
         self._open(b'sync:', adb_info)
 
@@ -478,7 +509,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
         with open(local_path, 'wb') as stream:
@@ -549,7 +580,7 @@ class AdbDevice(object):
             self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
 
         for _local_path, _device_path in zip(local_paths, device_paths):
-            adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+            adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
             filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
             with open(_local_path, 'rb') as stream:
@@ -639,7 +670,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        adb_info = _AdbTransactionInfo(None, None, transport_timeout_s, read_timeout_s)
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
         self._open(b'sync:', adb_info)
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
@@ -1161,14 +1192,18 @@ class AdbDeviceTcp(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        Default timeout in seconds for TCP packets, or ``None``
+    _maxdata : int
+        Maximum amount of data in an ADB packet
     _transport : TcpTransport
         The transport that is used to connect to the device
 
     """
 
     def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
-        transport = TcpTransport(host, port, default_transport_timeout_s)
-        super(AdbDeviceTcp, self).__init__(transport, banner)
+        transport = TcpTransport(host, port)
+        super(AdbDeviceTcp, self).__init__(transport, default_transport_timeout_s, banner)
 
 
 class AdbDeviceUsb(AdbDevice):
@@ -1197,6 +1232,10 @@ class AdbDeviceUsb(AdbDevice):
         Whether an ADB connection to the device has been established
     _banner : bytearray, bytes
         The hostname of the machine where the Python interpreter is currently running
+    _default_transport_timeout_s : float, None
+        Default timeout in seconds for USB packets, or ``None``
+    _maxdata : int
+        Maximum amount of data in an ADB packet
     _transport : UsbTransport
         The transport that is used to connect to the device
 
@@ -1207,4 +1246,4 @@ class AdbDeviceUsb(AdbDevice):
             raise exceptions.InvalidTransportError("To enable USB support you must install this package via `pip install adb-shell[usb]`")
 
         transport = UsbTransport.find_adb(serial, port_path, default_transport_timeout_s)
-        super(AdbDeviceUsb, self).__init__(transport, banner)
+        super(AdbDeviceUsb, self).__init__(transport, default_transport_timeout_s, banner)
