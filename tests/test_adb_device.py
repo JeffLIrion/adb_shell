@@ -49,7 +49,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):
-            self.device.exec('FAIL')
+            self.device.exec_out('FAIL')
 
         with self.assertRaises(exceptions.AdbConnectionError):
             self.device.root()
@@ -516,7 +516,7 @@ class TestAdbDevice(unittest.TestCase):
                                                       b'',
                                                       b'CLSE\x14\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba'])
 
-        self.assertEqual(self.device.exec("echo 'TEST'"), "TEST\n")
+        self.assertEqual(self.device.exec_out("echo 'TEST'"), "TEST\n")
 
     # ======================================================================= #
     #                                                                         #

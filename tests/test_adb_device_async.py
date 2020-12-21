@@ -52,7 +52,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     @awaiter
     async def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):
-            await self.device.exec('FAIL')
+            await self.device.exec_out('FAIL')
 
         with self.assertRaises(exceptions.AdbConnectionError):
             await self.device.root()
@@ -547,7 +547,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
                                                       b'',
                                                       b'CLSE\x14\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba'])
 
-        self.assertEqual(await self.device.exec("echo 'TEST'"), "TEST\n")
+        self.assertEqual(await self.device.exec_out("echo 'TEST'"), "TEST\n")
 
 
     # ======================================================================= #

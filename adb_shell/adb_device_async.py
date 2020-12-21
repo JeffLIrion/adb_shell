@@ -360,7 +360,7 @@ class AdbDeviceAsync(object):
             async for line in stream:
                 yield line
 
-    async def exec(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
+    async def exec_out(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
         """Send an ADB ``exec-out`` command to the device.
 
         https://www.linux-magazine.com/Issues/2017/195/Ask-Klaus
