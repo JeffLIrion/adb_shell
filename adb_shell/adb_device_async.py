@@ -382,7 +382,7 @@ class AdbDeviceAsync(object):
         Returns
         -------
         bytes, str
-            The output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
+            The output of the ADB exec-out command as a string if ``decode`` is True, otherwise as bytes.
 
         """
         if not self.available:

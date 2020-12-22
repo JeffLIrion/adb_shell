@@ -499,10 +499,10 @@ class TestAdbDevice(unittest.TestCase):
 
     # ======================================================================= #
     #                                                                         #
-    #                               `exec` test                               #
+    #                          `exec_out` test                                #
     #                                                                         #
     # ======================================================================= #
-    def test_exec(self):
+    def test_exec_out(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values

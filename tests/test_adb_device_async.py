@@ -533,11 +533,11 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     # ======================================================================= #
     #                                                                         #
-    #                               `exec` test                               #
+    #                         `exec_out` test                                 #
     #                                                                         #
     # ======================================================================= #
     @awaiter
-    async def test_exec(self):
+    async def test_exec_out(self):
         self.assertTrue(await self.device.connect())
 
         # Provide the `bulk_read` return values
