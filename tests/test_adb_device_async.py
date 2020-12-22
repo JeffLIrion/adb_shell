@@ -52,6 +52,12 @@ class TestAdbDeviceAsync(unittest.TestCase):
     @awaiter
     async def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):
+            await self.device.exec_out('FAIL')
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            await self.device.root()
+
+        with self.assertRaises(exceptions.AdbConnectionError):
             await self.device.shell('FAIL')
 
         with self.assertRaises(exceptions.AdbConnectionError):
@@ -523,6 +529,25 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._service') as patch_service:
             await self.device.root()
             patch_service.assert_called_once()
+
+
+    # ======================================================================= #
+    #                                                                         #
+    #                         `exec_out` test                                 #
+    #                                                                         #
+    # ======================================================================= #
+    @awaiter
+    async def test_exec_out(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = b''.join([b'OKAY\x14\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
+                                                      b'WRTE\x14\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00\x00J\x01\x00\x00\xa8\xad\xab\xba',
+                                                      b'TEST\n',
+                                                      b'',
+                                                      b'CLSE\x14\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba'])
+
+        self.assertEqual(await self.device.exec_out("echo 'TEST'"), "TEST\n")
 
 
     # ======================================================================= #

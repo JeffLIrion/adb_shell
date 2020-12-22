@@ -49,6 +49,12 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.exec_out('FAIL')
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            self.device.root()
+
+        with self.assertRaises(exceptions.AdbConnectionError):
             self.device.shell('FAIL')
 
         with self.assertRaises(exceptions.AdbConnectionError):
@@ -489,6 +495,28 @@ class TestAdbDevice(unittest.TestCase):
         with patch('adb_shell.adb_device.AdbDevice._service') as patch_service:
             self.device.root()
             patch_service.assert_called_once()
+
+
+    # ======================================================================= #
+    #                                                                         #
+    #                          `exec_out` test                                #
+    #                                                                         #
+    # ======================================================================= #
+    def test_exec_out(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'TEST'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.device._transport._bulk_read = b''.join([b'OKAY\x14\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
+                                                      b'WRTE\x14\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00\x00J\x01\x00\x00\xa8\xad\xab\xba',
+                                                      b'TEST\n',
+                                                      b'',
+                                                      b'CLSE\x14\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba'])
+
+        self.assertEqual(self.device.exec_out("echo 'TEST'"), "TEST\n")
 
     # ======================================================================= #
     #                                                                         #

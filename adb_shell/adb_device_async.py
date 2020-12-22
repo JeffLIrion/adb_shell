@@ -360,6 +360,36 @@ class AdbDeviceAsync(object):
             async for line in stream:
                 yield line
 
+    async def exec_out(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
+        """Send an ADB ``exec-out`` command to the device.
+
+        https://www.linux-magazine.com/Issues/2017/195/Ask-Klaus
+
+        Parameters
+        ----------
+        command : str
+            The exec-out command that will be sent
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
+        decode : bool
+            Whether to decode the output to utf8 before returning
+
+        Returns
+        -------
+        bytes, str
+            The output of the ADB exec-out command as a string if ``decode`` is True, otherwise as bytes.
+
+        """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
+        return await self._service(b'exec', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, decode)
+
     async def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
         """Gain root access.
 
