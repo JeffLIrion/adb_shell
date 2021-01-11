@@ -116,6 +116,8 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
 
     Attributes
     ----------
+    clse_received : False
+        Whether a ``CLSE`` packet has been received
     local_id : int
         The ID for the sender (i.e., the device running this code)
     read_timeout_s : float
@@ -137,6 +139,7 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         self.timeout_s = timeout_s
         self.read_timeout_s = read_timeout_s if self.timeout_s is None else min(read_timeout_s, self.timeout_s)
         self.transport_timeout_s = self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
+        self.clse_received = False
 
 
 class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-methods
