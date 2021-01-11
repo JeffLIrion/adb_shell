@@ -921,11 +921,11 @@ class AdbDevice(object):
             # Streaming shell fix
             if cmd == constants.CLSE:
                 adb_info.local_id = None
-                adb_info.remote_id = None
+                # adb_info.remote_id = None
             else:
                 if adb_info.local_id is None:
                     adb_info.local_id = local_id2
-                if adb_info.remote_id is None:
+                    # if adb_info.remote_id is None:
                     adb_info.remote_id = remote_id2
 
             if adb_info.local_id is not None and local_id2 not in (0, adb_info.local_id):
