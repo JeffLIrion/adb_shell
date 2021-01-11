@@ -918,6 +918,16 @@ class AdbDevice(object):
         while True:
             cmd, remote_id2, local_id2, data = self._read(expected_cmds, adb_info)
 
+            # Streaming shell fix
+            if cmd == constants.CLSE:
+                adb_info.local_id = None
+                adb_info.remote_id = None
+            else:
+                if adb_info.local_id is None:
+                    adb_info.local_id = local_id2
+                if adb_info.remote_id is None:
+                    adb_info.remote_id = remote_id2
+
             if local_id2 not in (0, adb_info.local_id):
                 raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
