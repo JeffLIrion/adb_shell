@@ -928,10 +928,10 @@ class AdbDevice(object):
                 if adb_info.remote_id is None:
                     adb_info.remote_id = remote_id2
 
-            if local_id2 not in (0, adb_info.local_id):
+            if adb_info.local_id is not None and local_id2 not in (0, adb_info.local_id):
                 raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
-            if remote_id2 in (0, adb_info.remote_id):
+            if adb_info.remote_id is not None and remote_id2 in (0, adb_info.remote_id):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
