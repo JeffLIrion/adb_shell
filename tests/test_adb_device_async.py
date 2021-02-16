@@ -805,6 +805,48 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.device._transport._bulk_read = b''
 
     @awaiter
+    async def test_pull_non_existant_path(self):
+        self.assertTrue(await self.device.connect())
+        self.device._transport._bulk_write = b''
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'FAIL&\x00\x00\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'open failed: No such file or directory'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        # Expected `bulk_write` values
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/does/not/exist'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+        with self.assertRaises(exceptions.AdbCommandFailureException):
+            await self.device.pull("/does/not/exist", "NOWHERE")
+        self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
+
+    @awaiter
+    async def test_pull_non_existant_path_2(self):
+        self.assertTrue(await self.device.connect())
+        self.device._transport._bulk_write = b''
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'FAIL&\x00\x00\x00open failed: No such file or directory'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        # Expected `bulk_write` values
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/does/not/exist'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+        with self.assertRaises(exceptions.AdbCommandFailureException):
+            await self.device.pull("/does/not/exist", "NOWHERE")
+        self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
+
+    @awaiter
     async def test_stat(self):
         self.assertTrue(await self.device.connect())
         self.device._transport._bulk_write = b''

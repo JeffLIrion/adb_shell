@@ -539,8 +539,10 @@ class AdbDeviceAsync(object):
 
         async with aiofiles.open(local_path, 'wb') as stream:
             await self._open(b'sync:', adb_info)
-            await self._pull(device_path, stream, progress_callback, adb_info, filesync_info)
-            await self._close(adb_info)
+            try:
+                await self._pull(device_path, stream, progress_callback, adb_info, filesync_info)
+            finally:
+                await self._close(adb_info)
 
     async def _pull(self, device_path, stream, progress_callback, adb_info, filesync_info):
         """Pull a file from the device into the file-like ``local_path``.
@@ -1069,6 +1071,8 @@ class AdbDeviceAsync(object):
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
                 reason = ''
+                if not filesync_info.recv_buffer:  # reason came later, so we need to read it.
+                    _, filesync_info.recv_buffer = await self._read_until([constants.WRTE], adb_info)
                 if filesync_info.recv_buffer:
                     reason = filesync_info.recv_buffer.decode('utf-8', errors='ignore')
 
