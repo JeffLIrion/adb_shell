@@ -4,7 +4,10 @@ import sys
 import time
 import unittest
 
-from mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
@@ -494,7 +497,7 @@ class TestAdbDevice(unittest.TestCase):
 
         with patch('adb_shell.adb_device.AdbDevice._service') as patch_service:
             self.device.root()
-            patch_service.assert_called_once()
+            assert patch_service.call_count == 1
 
 
     # ======================================================================= #
