@@ -497,7 +497,7 @@ class TestAdbDevice(unittest.TestCase):
 
         with patch('adb_shell.adb_device.AdbDevice._service') as patch_service:
             self.device.root()
-            patch_service.assert_called_once()
+            assert patch_service.call_count == 1
 
 
     # ======================================================================= #
