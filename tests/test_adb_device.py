@@ -4,7 +4,10 @@ import sys
 import time
 import unittest
 
-from mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 from adb_shell import constants, exceptions
 from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile

@@ -1,7 +1,11 @@
 from contextlib import contextmanager
-from mock import patch
 import sys
 import unittest
+
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 from adb_shell import constants
 from adb_shell.adb_message import AdbMessage
