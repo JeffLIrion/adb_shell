@@ -774,8 +774,6 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.AdbCommandFailureException):
             self.device.pull("/does/not/exist", "NOWHERE")
         self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
-        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
-        self.device._transport._bulk_read = b''
 
     def test_pull_non_existant_path_2(self):
         self.assertTrue(self.device.connect())
