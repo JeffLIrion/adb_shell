@@ -847,8 +847,6 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with self.assertRaises(exceptions.AdbCommandFailureException):
             await self.device.pull("/does/not/exist", "NOWHERE")
         self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
-        # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
-        self.device._transport._bulk_read = b''
 
     @awaiter
     async def test_stat(self):
