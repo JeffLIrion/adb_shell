@@ -159,6 +159,17 @@ class AdbMessage(object):
         self.arg1 = arg1
         self.data = data
 
+    def __str__(self):
+        """A string containing info about this object.
+
+        Returns
+        -------
+        str
+            A description of this object
+
+        """
+        return "AdbMessage(command = {} = {}, arg0 = {}, arg1 = {}, data = {}, magic = {})".format(self.command, constants.WIRE_TO_ID[self.command], self.arg0, self.arg1, self.data, self.magic)
+
     def pack(self):
         """Returns this message in an over-the-wire format.
 

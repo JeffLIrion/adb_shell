@@ -815,8 +815,17 @@ class AdbDeviceAsync(object):
         start = time.time()
 
         while True:
-            msg = await self._transport.bulk_read(constants.MESSAGE_SIZE, adb_info.transport_timeout_s)
-            _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
+            # Read until `constants.MESSAGE_SIZE` bytes are received
+            msg = bytearray()
+            msg_length = constants.MESSAGE_SIZE
+            while msg_length > 0:
+                msg += await self._transport.bulk_read(msg_length, adb_info.transport_timeout_s)
+                _LOGGER.debug("bulk_read(%d): %s", msg_length, repr(msg))
+                msg_length -= len(msg)
+
+                if time.time() - start > adb_info.read_timeout_s:
+                    raise exceptions.AdbTimeoutError("Took longer than %f seconds to read %d bytes" % (adb_info.read_timeout_s, constants.MESSAGE_SIZE))
+
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
 

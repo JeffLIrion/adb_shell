@@ -138,6 +138,17 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         self.read_timeout_s = read_timeout_s if self.timeout_s is None else min(read_timeout_s, self.timeout_s)
         self.transport_timeout_s = self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
 
+    def __str__(self):
+        """A string containing info about this object.
+
+        Returns
+        -------
+        str
+            A description of this object
+
+        """
+        return "_AdbTransactionInfo(local_id = {}, remote_id = {}, timeout_s = {}, read_timeout_s = {}, transport_timeout_s = {})".format(self.local_id, self.remote_id, self.timeout_s, self.read_timeout_s, self.transport_timeout_s)
+
 
 class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-methods
     """A class for storing info used during a single FileSync "transaction."
@@ -174,6 +185,17 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
         self.recv_message_size = struct.calcsize(recv_message_format)
 
         self._maxdata = maxdata
+
+    def __str__(self):
+        """A string containing info about this object.
+
+        Returns
+        -------
+        str
+            A description of this object
+
+        """
+        return "_FileSyncTransactionInfo(send_idx = {}, recv_message_format = {}, recv_message_size = {}, _maxdata = {})".format(self.send_idx, self.recv_message_format, self.recv_message_size, self._maxdata)
 
     def can_add_to_send_buffer(self, data_len):
         """Determine whether ``data_len`` bytes of data can be added to the send buffer without exceeding :const:`constants.MAX_ADB_DATA`.
