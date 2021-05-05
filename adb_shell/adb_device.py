@@ -779,7 +779,7 @@ class AdbDevice(object):
 
         if adb_info.local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
-        
+
     def _read_length(self, data_length, data_checksum, adb_info):
         """Receive a response from the device.
 
@@ -806,7 +806,6 @@ class AdbDevice(object):
         ------
         adb_shell.exceptions.InvalidChecksumError
             Received checksum does not match the expected checksum.
-
         """
         data = bytearray()
         if data_length > 0:

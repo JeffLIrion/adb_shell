@@ -774,7 +774,7 @@ class AdbDeviceAsync(object):
 
         if adb_info.local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
-        
+
     async def _read_length(self, data_length, data_checksum, adb_info):
         """Receive a response from the device.
 
