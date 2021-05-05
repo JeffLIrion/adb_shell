@@ -868,9 +868,8 @@ class AdbDevice(object):
 
             if not command:
                 raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), arg0, arg1, msg))
-            
+
             data = self._read_length(data_length, data_checksum, adb_info)
-            
             if command in expected_cmds:
                 break
 
