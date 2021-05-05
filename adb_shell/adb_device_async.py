@@ -774,6 +774,48 @@ class AdbDeviceAsync(object):
 
         if adb_info.local_id != their_local_id:
             raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
+        
+    async def _read_length(self, data_length, data_checksum, adb_info):
+        """Receive a response from the device.
+
+        1. Read a message's data from the device
+        2. If the checksum of the read data does not match ``data_checksum``, raise an exception
+        3. Return ``bytes(data)``
+
+
+        Parameters
+        ----------
+        data_length : int
+            We will read packets until we get this length of data
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
+        data_checksum: int
+            Data checksum
+
+        Returns
+        -------
+        bytes
+            The data that was read
+
+        Raises
+        ------
+        adb_shell.exceptions.InvalidChecksumError
+            Received checksum does not match the expected checksum.
+
+        """
+        data = bytearray()
+        if data_length > 0:
+            while data_length > 0:
+                temp = await self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
+                _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
+
+                data += temp
+                data_length -= len(temp)
+
+            actual_checksum = checksum(data)
+            if actual_checksum != data_checksum:
+                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+        return data
 
     async def _read(self, expected_cmds, adb_info):
         """Receive a response from the device.
@@ -823,25 +865,12 @@ class AdbDeviceAsync(object):
             if not command:
                 raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), arg0, arg1, msg))
 
+            data = await self._read_length(data_length, data_checksum, adb_info)
             if command in expected_cmds:
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
                 raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
-
-        data = bytearray()
-
-        if data_length > 0:
-            while data_length > 0:
-                temp = await self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
-                _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
-
-                data += temp
-                data_length -= len(temp)
-
-            actual_checksum = checksum(data)
-            if actual_checksum != data_checksum:
-                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
 
         return command, arg0, arg1, bytes(data)
 
