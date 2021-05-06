@@ -34,6 +34,7 @@
     * :meth:`AdbDeviceAsync._pull`
     * :meth:`AdbDeviceAsync._push`
     * :meth:`AdbDeviceAsync._read`
+    * :meth:`AdbDeviceAsync._read_length`
     * :meth:`AdbDeviceAsync._read_until`
     * :meth:`AdbDeviceAsync._read_until_close`
     * :meth:`AdbDeviceAsync._send`
@@ -787,14 +788,14 @@ class AdbDeviceAsync(object):
         ----------
         data_length : int
             We will read packets until we get this length of data
-        adb_info : _AdbTransactionInfo
-            Info and settings for this ADB transaction
         data_checksum: int
             Data checksum
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Returns
         -------
-        bytes
+        bytearray
             The data that was read
 
         Raises
@@ -804,6 +805,7 @@ class AdbDeviceAsync(object):
 
         """
         data = bytearray()
+
         if data_length > 0:
             while data_length > 0:
                 temp = await self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
@@ -815,6 +817,7 @@ class AdbDeviceAsync(object):
             actual_checksum = checksum(data)
             if actual_checksum != data_checksum:
                 raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+
         return data
 
     async def _read(self, expected_cmds, adb_info):
@@ -1094,6 +1097,7 @@ class AdbDeviceAsync(object):
         # Read one filesync packet off the recv buffer.
         header_data = await self._filesync_read_buffered(filesync_info.recv_message_size, adb_info, filesync_info)
         header = struct.unpack(filesync_info.recv_message_format, header_data)
+
         # Header is (ID, ..., size).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
         size = header[-1]
@@ -1101,9 +1105,7 @@ class AdbDeviceAsync(object):
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
-                reason = data
-                if reason:
-                    reason = reason.decode('utf-8', errors='ignore')
+                reason = data.decode('utf-8', errors='ignore')
 
                 raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
 
