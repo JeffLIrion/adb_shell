@@ -813,7 +813,7 @@ class AdbDevice(object):
         if data_length > 0:
             while data_length > 0:
                 temp = self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
-                _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
+                _LOGGER.debug("bulk_read(%d): %.1000r", data_length, temp)
 
                 data += temp
                 data_length -= len(temp)
@@ -865,7 +865,7 @@ class AdbDevice(object):
 
         while True:
             msg = self._transport.bulk_read(constants.MESSAGE_SIZE, adb_info.transport_timeout_s)
-            _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
+            _LOGGER.debug("bulk_read(%d): %r", constants.MESSAGE_SIZE, msg)
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
 
@@ -989,11 +989,11 @@ class AdbDevice(object):
 
         """
         packed = msg.pack()
-        _LOGGER.debug("bulk_write(%d): %s", len(packed), repr(packed))
+        _LOGGER.debug("bulk_write(%d): %r", len(packed), packed)
         self._transport.bulk_write(packed, adb_info.transport_timeout_s)
 
         if msg.data:
-            _LOGGER.debug("bulk_write(%d): %s", len(msg.data), repr(msg.data))
+            _LOGGER.debug("bulk_write(%d): %r", len(msg.data), msg.data)
             self._transport.bulk_write(msg.data, adb_info.transport_timeout_s)
 
     def _streaming_command(self, service, command, adb_info):
