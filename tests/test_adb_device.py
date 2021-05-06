@@ -220,6 +220,18 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
+    def test_shell_return_pass_with_unexpected_packet(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA'),
+                                                          AdbMessage(command=constants.AUTH, arg0=1, arg1=1, data=b'UNEXPECTED'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'SS'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell('TEST'), 'PASS')
+
     def test_shell_dont_decode(self):
         self.assertTrue(self.device.connect())
         
