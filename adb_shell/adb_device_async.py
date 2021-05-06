@@ -1094,16 +1094,16 @@ class AdbDeviceAsync(object):
         # Read one filesync packet off the recv buffer.
         header_data = await self._filesync_read_buffered(filesync_info.recv_message_size, adb_info, filesync_info)
         header = struct.unpack(filesync_info.recv_message_format, header_data)
-        # Header is (ID, ...).
+        # Header is (ID, ..., size).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
+        size = header[-1]
+        data = await self._filesync_read_buffered(size, adb_info, filesync_info)
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
-                reason = ''
-                if not filesync_info.recv_buffer:  # reason came later, so we need to read it.
-                    _, filesync_info.recv_buffer = await self._read_until([constants.WRTE], adb_info)
-                if filesync_info.recv_buffer:
-                    reason = filesync_info.recv_buffer.decode('utf-8', errors='ignore')
+                reason = data
+                if reason:
+                    reason = reason.decode('utf-8', errors='ignore')
 
                 raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
 
@@ -1111,10 +1111,6 @@ class AdbDeviceAsync(object):
 
         if not read_data:
             return command_id, header[1:], None
-
-        # Header is (ID, ..., size).
-        size = header[-1]
-        data = await self._filesync_read_buffered(size, adb_info, filesync_info)
 
         return command_id, header[1:-1], data
 
