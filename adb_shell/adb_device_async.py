@@ -781,7 +781,6 @@ class AdbDeviceAsync(object):
 
         1. Read a message's data from the device
         2. If the checksum of the read data does not match ``data_checksum``, raise an exception
-        3. Return ``bytes(data)``
 
 
         Parameters
