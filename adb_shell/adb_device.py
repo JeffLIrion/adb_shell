@@ -806,7 +806,6 @@ class AdbDevice(object):
         ------
         adb_shell.exceptions.InvalidChecksumError
             Received checksum does not match the expected checksum.
-            
         """
         data = bytearray()
 
