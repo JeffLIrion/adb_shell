@@ -36,6 +36,7 @@
     * :meth:`AdbDevice._pull`
     * :meth:`AdbDevice._push`
     * :meth:`AdbDevice._read`
+    * :meth:`AdbDevice._read_length`
     * :meth:`AdbDevice._read_until`
     * :meth:`AdbDevice._read_until_close`
     * :meth:`AdbDevice._send`
@@ -792,14 +793,14 @@ class AdbDevice(object):
         ----------
         data_length : int
             We will read packets until we get this length of data
-        adb_info : _AdbTransactionInfo
-            Info and settings for this ADB transaction
         data_checksum: int
             Data checksum
+        adb_info : _AdbTransactionInfo
+            Info and settings for this ADB transaction
 
         Returns
         -------
-        bytes
+        bytearray
             The data that was read
 
         Raises
@@ -808,10 +809,11 @@ class AdbDevice(object):
             Received checksum does not match the expected checksum.
         """
         data = bytearray()
+
         if data_length > 0:
             while data_length > 0:
                 temp = self._transport.bulk_read(data_length, adb_info.transport_timeout_s)
-                _LOGGER.debug("bulk_read(%d): %.1000s", data_length, repr(temp))
+                _LOGGER.debug("bulk_read(%d): %.1000r", data_length, temp)
 
                 data += temp
                 data_length -= len(temp)
@@ -819,6 +821,7 @@ class AdbDevice(object):
             actual_checksum = checksum(data)
             if actual_checksum != data_checksum:
                 raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+
         return data
 
     def _read(self, expected_cmds, adb_info):
@@ -862,7 +865,7 @@ class AdbDevice(object):
 
         while True:
             msg = self._transport.bulk_read(constants.MESSAGE_SIZE, adb_info.transport_timeout_s)
-            _LOGGER.debug("bulk_read(%d): %s", constants.MESSAGE_SIZE, repr(msg))
+            _LOGGER.debug("bulk_read(%d): %r", constants.MESSAGE_SIZE, msg)
             cmd, arg0, arg1, data_length, data_checksum = unpack(msg)
             command = constants.WIRE_TO_ID.get(cmd)
 
@@ -986,11 +989,11 @@ class AdbDevice(object):
 
         """
         packed = msg.pack()
-        _LOGGER.debug("bulk_write(%d): %s", len(packed), repr(packed))
+        _LOGGER.debug("bulk_write(%d): %r", len(packed), packed)
         self._transport.bulk_write(packed, adb_info.transport_timeout_s)
 
         if msg.data:
-            _LOGGER.debug("bulk_write(%d): %s", len(msg.data), repr(msg.data))
+            _LOGGER.debug("bulk_write(%d): %r", len(msg.data), msg.data)
             self._transport.bulk_write(msg.data, adb_info.transport_timeout_s)
 
     def _streaming_command(self, service, command, adb_info):
@@ -1098,6 +1101,7 @@ class AdbDevice(object):
         # Read one filesync packet off the recv buffer.
         header_data = self._filesync_read_buffered(filesync_info.recv_message_size, adb_info, filesync_info)
         header = struct.unpack(filesync_info.recv_message_format, header_data)
+
         # Header is (ID, ..., size).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
         size = header[-1]
@@ -1105,9 +1109,7 @@ class AdbDevice(object):
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
-                reason = data
-                if reason:
-                    reason = reason.decode('utf-8', errors='ignore')
+                reason = data.decode('utf-8', errors='ignore')
 
                 raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
 
