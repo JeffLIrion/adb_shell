@@ -893,6 +893,26 @@ class TestAdbDeviceAsync(unittest.TestCase):
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.device._transport._bulk_read = b''
 
+    @awaiter
+    async def test_stat_issue155(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = b"".join([b'CLSE\n\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',
+                                                      b'OKAY\x0b\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
+                                                      b'OKAY\x0b\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',
+                                                      b'WRTE\x0b\x00\x00\x00\x01\x00\x00\x00\x10\x00\x00\x00\x96\x04\x00\x00\xa8\xad\xab\xba',
+                                                      b'STAT\xedA\x00\x00\x00\x10\x00\x00\xf0\x88[I',
+                                                      b'CLSE\x0b\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba'])
+
+        # This is where the expected values come from
+        mode = 16877
+        size = 4096
+        mtime = 1230735600
+        self.assertEqual(FileSyncStatMessage(constants.STAT, mode, size, mtime).pack(), b'STAT\xedA\x00\x00\x00\x10\x00\x00\xf0\x88[I')
+
+        self.assertEqual((mode, size, mtime), await self.device.stat('/'))
+
     # ======================================================================= #
     #                                                                         #
     #                  `filesync` hidden methods tests                        #
