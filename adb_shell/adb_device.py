@@ -1104,7 +1104,11 @@ class AdbDevice(object):
         # Header is (ID, ..., size).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
         size = header[-1]
-        data = self._filesync_read_buffered(size, adb_info, filesync_info)
+
+        if read_data:
+            data = self._filesync_read_buffered(size, adb_info, filesync_info)
+        else:
+            data = bytearray()
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
