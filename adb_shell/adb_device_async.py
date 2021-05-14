@@ -703,7 +703,7 @@ class AdbDeviceAsync(object):
 
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
         await self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_path)
-        _, (mode, size, mtime), _ = await self._filesync_read([constants.STAT], adb_info, filesync_info, read_data=False)
+        _, (mode, size, mtime), _ = await self._filesync_read([constants.STAT], adb_info, filesync_info)
         await self._close(adb_info)
 
         return mode, size, mtime
@@ -1059,7 +1059,7 @@ class AdbDeviceAsync(object):
         await self._write(filesync_info.send_buffer[:filesync_info.send_idx], adb_info)
         filesync_info.send_idx = 0
 
-    async def _filesync_read(self, expected_ids, adb_info, filesync_info, read_data=True):
+    async def _filesync_read(self, expected_ids, adb_info, filesync_info):
         """Read ADB messages and return FileSync packets.
 
         Parameters
@@ -1070,8 +1070,6 @@ class AdbDeviceAsync(object):
             Info and settings for this ADB transaction
         filesync_info : _FileSyncTransactionInfo
             Data and storage for this FileSync transaction
-        read_data : bool
-            Whether to read the received data
 
         Returns
         -------
@@ -1080,7 +1078,7 @@ class AdbDeviceAsync(object):
         tuple
             The contents of the header
         data : bytearray, None
-            The received data, or ``None`` if ``read_data`` is False
+            The received data, or ``None`` if the command ID is :const:`adb_shell.constants.STAT`
 
         Raises
         ------
@@ -1097,10 +1095,18 @@ class AdbDeviceAsync(object):
         header_data = await self._filesync_read_buffered(filesync_info.recv_message_size, adb_info, filesync_info)
         header = struct.unpack(filesync_info.recv_message_format, header_data)
 
-        # Header is (ID, ..., size).
+        # Header is (ID, ...).
         command_id = constants.FILESYNC_WIRE_TO_ID[header[0]]
-        size = header[-1]
-        data = await self._filesync_read_buffered(size, adb_info, filesync_info)
+
+        # Whether there is data to read
+        read_data = command_id != constants.STAT
+
+        if read_data:
+            # Header is (ID, ..., size) --> read the data
+            data = await self._filesync_read_buffered(header[-1], adb_info, filesync_info)
+        else:
+            # No data to be read
+            data = bytearray()
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
