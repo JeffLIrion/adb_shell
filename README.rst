@@ -72,3 +72,15 @@ Example Usage
    # Send a shell command
    response1 = device1.shell('echo TEST1')
    response2 = device2.shell('echo TEST2')
+
+
+Generate ADB Key Files
+**********************
+
+If you need to generate a key, you can do so as follows.
+
+.. code-block:: python
+
+  from adb_shell.auth.keygen import keygen
+
+  keygen('path/to/adbkey')
