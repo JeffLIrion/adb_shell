@@ -116,7 +116,7 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
 
     Attributes
     ----------
-    clse_received : False
+    clse_received : bool
         Whether a ``CLSE`` packet has been received
     local_id : int
         The ID for the sender (i.e., the device running this code)
