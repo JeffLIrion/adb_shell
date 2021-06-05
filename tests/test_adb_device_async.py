@@ -45,9 +45,20 @@ class TestAdbDeviceAsync(unittest.TestCase):
     def setUp(self):
         self.device = AdbDeviceAsync(transport=FakeTcpTransportAsync('host', 5555))
         self.device._transport._bulk_read = b''.join(patchers.BULK_READ_LIST)
+        self.progress_callback_count = 0
+
+        def _progress_callback(device_path, current, total_bytes):
+            print("device_path = {}, current = {}, total_bytes = {}".format(device_path, current, total_bytes))
+            self.progress_callback_count += 1
+
+        self.progress_callback = _progress_callback
 
     def tearDown(self):
         self.assertFalse(self.device._transport._bulk_read)
+
+    @staticmethod
+    async def fake_stat(*args, **kwargs):
+        return 1, 2, 3
 
     @awaiter
     async def test_adb_connection_error(self):
@@ -774,7 +785,11 @@ class TestAdbDeviceAsync(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('aiofiles.open', async_mock_open()) as m:
-            await self.device.pull('/data', 'TEST_FILE')
+            self.assertEqual(self.progress_callback_count, 0)
+            with patch('adb_shell.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
+                await self.device.pull('/data', 'TEST_FILE', self.progress_callback)
+
+            self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(m.written, filedata)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
@@ -800,7 +815,11 @@ class TestAdbDeviceAsync(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('aiofiles.open', async_mock_open()) as m:
-            await self.device.pull('/data', 'TEST_FILE')
+            self.assertEqual(self.progress_callback_count, 0)
+            with patch('adb_shell.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
+                await self.device.pull('/data', 'TEST_FILE', self.progress_callback)
+
+            self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(m.written, filedata)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 

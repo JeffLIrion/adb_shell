@@ -563,7 +563,7 @@ class AdbDeviceAsync(object):
 
         """
         if progress_callback:
-            total_bytes = await self.stat(device_path)[1]
+            total_bytes = (await self.stat(device_path))[1]
             progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
