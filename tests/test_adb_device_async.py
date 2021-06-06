@@ -1,4 +1,5 @@
 import asyncio
+from collections import namedtuple
 import logging
 from io import BytesIO
 import sys
@@ -22,6 +23,8 @@ from .keygen_stub import open_priv_pub
 _LOGGER = logging.getLogger('adb_shell.adb_device_async')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
+
+StSize = namedtuple("StSize", ["st_size"])
 
 
 def to_int(cmd):
@@ -658,7 +661,10 @@ class TestAdbDeviceAsync(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         with patch('aiofiles.open', async_mock_open(read_data=filedata)):
-            await self.device.push('TEST_FILE', '/data', mtime=mtime)
+            self.assertEqual(self.progress_callback_count, 0)
+            with patch("adb_shell.adb_device_async.os.fstat", return_value=StSize(12345)):
+                await self.device.push('TEST_FILE', '/data', progress_callback=self.progress_callback, mtime=mtime)
+            self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(self.device._transport._bulk_write, expected_bulk_write)
 
     @patchers.ASYNC_SKIPPER

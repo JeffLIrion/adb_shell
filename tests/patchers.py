@@ -49,6 +49,8 @@ def mock_open(read_data=""):
                 _mock_open.written += b
             else:
                 _mock_open.written = b
+        def fileno(self):
+            return 123
 
     @contextmanager
     def _mock_open(*args, **kwargs):
