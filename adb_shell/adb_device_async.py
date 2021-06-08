@@ -563,7 +563,7 @@ class AdbDeviceAsync(object):
 
         """
         if progress_callback:
-            total_bytes = await self.stat(device_path)[1]
+            total_bytes = (await self.stat(device_path))[1]
             progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 
@@ -646,7 +646,7 @@ class AdbDeviceAsync(object):
         await self._filesync_send(constants.SEND, adb_info, filesync_info, data=fileinfo)
 
         if progress_callback:
-            total_bytes = (await get_running_loop().run_in_executor(os.fstat, stream.fileno())).st_size
+            total_bytes = (await get_running_loop().run_in_executor(None, os.fstat, stream.fileno())).st_size
             progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
             next(progress)
 

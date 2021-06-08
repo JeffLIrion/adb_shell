@@ -1,3 +1,4 @@
+from collections import namedtuple
 from contextlib import contextmanager
 import sys
 import unittest
@@ -26,6 +27,8 @@ BULK_READ_LIST_WITH_AUTH_INVALID = [MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CO
 BULK_READ_LIST_WITH_AUTH = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH2.pack(), MSG_CONNECT_WITH_AUTH2.data]
 BULK_READ_LIST_WITH_AUTH_NEW_KEY = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH_NEW_KEY2.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY2.data, MSG_CONNECT_WITH_AUTH_NEW_KEY3.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY3.data]
 
+StSize = namedtuple("StSize", ["st_size"])
+
 
 def mock_open(read_data=""):
     class MockFile:
@@ -49,6 +52,8 @@ def mock_open(read_data=""):
                 _mock_open.written += b
             else:
                 _mock_open.written = b
+        def fileno(self):
+            return 123
 
     @contextmanager
     def _mock_open(*args, **kwargs):

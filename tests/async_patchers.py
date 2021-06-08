@@ -42,6 +42,9 @@ def async_mock_open(read_data=""):
             else:
                 _async_mock_open.written = b
 
+        def fileno(self):
+            return 123
+
     @asynccontextmanager
     async def _async_mock_open(*args, **kwargs):
         try:
