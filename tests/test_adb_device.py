@@ -629,6 +629,36 @@ class TestAdbDevice(unittest.TestCase):
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
 
+    def test_push_file_exception(self):
+        self.assertTrue(self.device.connect())
+        self.device._transport._bulk_write = b''
+
+        mtime = 100
+        filedata = b'Ohayou sekai.\nGood morning world!'
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        # Expected `bulk_write` values
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime, data=b''))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
+            # Set self.progress_callback_count to None so that an exception occurs when self.progress_callback tries to increment it
+            self.progress_callback_count = None
+            with patch("adb_shell.adb_device.os.fstat", return_value=patchers.StSize(12345)):
+                self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
+            
+            self.assertIsNone(self.progress_callback_count)
+            self.assertEqual(expected_bulk_write, self.device._transport._bulk_write)
+
     def test_push_file_mtime0(self):
         self.assertTrue(self.device.connect())
         self.device._transport._bulk_write = b''

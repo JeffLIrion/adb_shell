@@ -30,7 +30,6 @@
     * :meth:`AdbDevice._filesync_read_buffered`
     * :meth:`AdbDevice._filesync_read_until`
     * :meth:`AdbDevice._filesync_send`
-    * :meth:`AdbDevice._transport_progress`
     * :meth:`AdbDevice._okay`
     * :meth:`AdbDevice._open`
     * :meth:`AdbDevice._pull`
@@ -569,8 +568,6 @@ class AdbDevice(object):
         """
         if progress_callback:
             total_bytes = self.stat(device_path)[1]
-            progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
-            next(progress)
 
         self._filesync_send(constants.RECV, adb_info, filesync_info, data=device_path)
         for cmd_id, _, data in self._filesync_read_until([constants.DATA], [constants.DONE], adb_info, filesync_info):
@@ -579,7 +576,10 @@ class AdbDevice(object):
 
             stream.write(data)
             if progress_callback:
-                progress.send(len(data))
+                try:
+                    progress_callback(device_path, len(data), total_bytes)
+                except:  # noqa pylint: disable=bare-except
+                    pass
 
     def push(self, local_path, device_path, st_mode=constants.DEFAULT_PUSH_MODE, mtime=0, progress_callback=None, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Push a file or directory to the device.
@@ -652,8 +652,6 @@ class AdbDevice(object):
 
         if progress_callback:
             total_bytes = os.fstat(stream.fileno()).st_size
-            progress = self._transport_progress(lambda current: progress_callback(device_path, current, total_bytes))
-            next(progress)
 
         while True:
             data = stream.read(self.max_chunk_size)
@@ -661,7 +659,10 @@ class AdbDevice(object):
                 self._filesync_send(constants.DATA, adb_info, filesync_info, data=data)
 
                 if progress_callback:
-                    progress.send(len(data))
+                    try:
+                        progress_callback(device_path, len(data), total_bytes)
+                    except:  # noqa pylint: disable=bare-except
+                        pass
             else:
                 break
 
@@ -1216,24 +1217,6 @@ class AdbDevice(object):
         buf = struct.pack(b'<2I', constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
         filesync_info.send_buffer[filesync_info.send_idx:filesync_info.send_idx + len(buf)] = buf
         filesync_info.send_idx += len(buf)
-
-    @staticmethod
-    def _transport_progress(progress_callback):
-        """Calls the callback with the current progress and total bytes written/received.
-
-        Parameters
-        ----------
-        progress_callback : function
-            Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
-
-        """
-        current = 0
-        while True:
-            current += yield
-            try:
-                progress_callback(current)
-            except Exception:  # pylint: disable=broad-except
-                continue
 
 
 class AdbDeviceTcp(AdbDevice):
