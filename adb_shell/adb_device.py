@@ -471,6 +471,115 @@ class AdbDevice(object):
         for line in self._streaming_service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode):
             yield line
 
+
+    def parallel_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        """Send an ADB shell command to the device, return _AdbTransactionInfo as adb_info for recognizing, iterate the streaming_parallel_shell_result for output
+
+        Parameters
+        ----------
+        command : str
+            The shell command that will be sent
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+
+        Returns
+        -------
+        adb_shell.hidden_helpers._AdbTransactionInfo
+            the adb_info for recognizing specific repsonse when run multiple shells parallel
+
+        """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+        if not hasattr(self, 'adb_info_list'):
+            setattr(self, 'adb_info_list', [])
+        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
+        self._open(b'%s:%s' % (b'shell', command.encode('utf8')), adb_info)
+        self.adb_info_list.append(adb_info)
+        _LOGGER.debug("Adding adb_info to list with local_id:[%i] remote_id:[%i]" %(adb_info.local_id, adb_info.remote_id))
+        return adb_info
+
+    def streaming_parallel_shell_result(self, transport_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
+        """yileding output from parallel_shell method
+
+        Parameters
+        ----------
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        decode : bool
+            Whether to decode the output to utf8 before returning
+
+        Yields
+        -------
+        target_adb_info: adb_shell.hidden_helpers._AdbTransactionInfo
+            for recognizing specific repsonse
+        data: bytes, str
+            The line-by-line output of the ADB shell command as a string if ``decode`` is True, otherwise as bytes.
+
+        Raises
+        -------
+        adb_shell.exceptions.InvalidCommandError
+            Unknown command *or* never got one of the expected responses.
+        adb_shell.exceptions.InvalidChecksumError
+            Received checksum does not match the expected checksum.
+        """
+        expected_cmds = [constants.CLSE, constants.WRTE]
+        while True:
+            if (not hasattr(self, 'adb_info_list')) or len(self.adb_info_list) == 0:
+                return
+            start = time.time()
+            while True:
+                msg = self._transport.bulk_read(constants.MESSAGE_SIZE, transport_timeout_s)
+                _LOGGER.debug("bulk_read(%d): %r", constants.MESSAGE_SIZE, msg)
+                cmd, remote_id, local_id, data_length, data_checksum = unpack(msg)
+                command = constants.WIRE_TO_ID.get(cmd)
+                if not command:
+                    raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), arg0, arg1, msg))
+
+                data = bytearray()
+                while data_length > 0:
+                    temp = self._transport.bulk_read(data_length, transport_timeout_s)
+                    _LOGGER.debug("bulk_read(%d): %.1000r", data_length, temp)
+                    data += temp
+                    data_length -= len(temp)
+                actual_checksum = checksum(data)
+                if actual_checksum != data_checksum:
+                    raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+
+                if command in expected_cmds:
+                    break
+
+                if time.time() - start > transport_timeout_s:
+                    raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+
+            _LOGGER.debug("current adb info of current message: local_id:[%i], remote_id:[%i]" %(local_id, remote_id))
+            target_adb_info = None
+            for adb_info in self.adb_info_list:
+                if adb_info.local_id == local_id and adb_info.remote_id == remote_id:
+                    target_adb_info = adb_info
+                    break
+            if target_adb_info is None:
+                _LOGGER.debug("got message with logcal_id[%i] remote_id[%i] which isn't in held adb_info_list, ignoring..." %(local_id, remote_id))
+                _LOGGER.debug("current adb info list:%r" % [(info.local_id, info.remote_id) for info in self.adb_info_list])
+                continue
+
+            if command == constants.WRTE:
+                msg = AdbMessage(constants.OKAY, target_adb_info.local_id, target_adb_info.remote_id)
+                self._send(msg, target_adb_info)
+            elif command == constants.CLSE:
+                msg = AdbMessage(constants.CLSE, target_adb_info.local_id, target_adb_info.remote_id)
+                self._send(msg, target_adb_info)
+                self.adb_info_list.remove(target_adb_info)
+                _LOGGER.debug("remove adb info of current message: local_id:[%i], remote_id:[%i]" %(local_id, remote_id))
+
+            if decode:
+                yield target_adb_info, data.decode('utf8')
+            else:
+                yield target_adb_info, data
+
     # ======================================================================= #
     #                                                                         #
     #                                 FileSync                                #
