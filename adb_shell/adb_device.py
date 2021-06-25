@@ -528,7 +528,7 @@ class AdbDevice(object):
         expected_cmds = [constants.CLSE, constants.WRTE]
         while True:
             adb_info_list = getattr(self, 'adb_info_list', [])
-            if len(adb_info_list) == 0:
+            if not adb_info_list:
                 return
             start = time.time()
             while True:
