@@ -471,8 +471,7 @@ class AdbDevice(object):
         for line in self._streaming_service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode):
             yield line
 
-
-    def parallel_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+    def multi_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
         """Send an ADB shell command to the device, return _AdbTransactionInfo as adb_info for recognizing, iterate the streaming_parallel_shell_result for output
 
         Parameters
@@ -497,11 +496,11 @@ class AdbDevice(object):
             setattr(self, 'adb_info_list', [])
         adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
         self._open(b'%s:%s' % (b'shell', command.encode('utf8')), adb_info)
-        self.adb_info_list.append(adb_info)
-        _LOGGER.debug("Adding adb_info to list with local_id:[%i] remote_id:[%i]" %(adb_info.local_id, adb_info.remote_id))
+        getattr(self, 'adb_info_list').append(adb_info)
+        _LOGGER.debug("Adding adb_info to list with local_id:[%i] remote_id:[%i]", adb_info.local_id, adb_info.remote_id)
         return adb_info
 
-    def streaming_parallel_shell_result(self, transport_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
+    def streaming_multi_shell_result(self, transport_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """yileding output from parallel_shell method
 
         Parameters
@@ -528,7 +527,8 @@ class AdbDevice(object):
         """
         expected_cmds = [constants.CLSE, constants.WRTE]
         while True:
-            if (not hasattr(self, 'adb_info_list')) or len(self.adb_info_list) == 0:
+            adb_info_list = getattr(self, 'adb_info_list', [])
+            if len(adb_info_list) == 0:
                 return
             start = time.time()
             while True:
@@ -537,7 +537,7 @@ class AdbDevice(object):
                 cmd, remote_id, local_id, data_length, data_checksum = unpack(msg)
                 command = constants.WIRE_TO_ID.get(cmd)
                 if not command:
-                    raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), arg0, arg1, msg))
+                    raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), remote_id, local_id, msg))
 
                 data = bytearray()
                 while data_length > 0:
@@ -553,17 +553,16 @@ class AdbDevice(object):
                     break
 
                 if time.time() - start > transport_timeout_s:
-                    raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                    raise exceptions.InvalidCommandError("Never got one of the expected responses: %s " % expected_cmds)
 
-            _LOGGER.debug("current adb info of current message: local_id:[%i], remote_id:[%i]" %(local_id, remote_id))
+            _LOGGER.debug("current adb info of current message: local_id:[%i], remote_id:[%i]", local_id, remote_id)
             target_adb_info = None
-            for adb_info in self.adb_info_list:
+            for adb_info in adb_info_list:
                 if adb_info.local_id == local_id and adb_info.remote_id == remote_id:
                     target_adb_info = adb_info
                     break
             if target_adb_info is None:
-                _LOGGER.debug("got message with logcal_id[%i] remote_id[%i] which isn't in held adb_info_list, ignoring..." %(local_id, remote_id))
-                _LOGGER.debug("current adb info list:%r" % [(info.local_id, info.remote_id) for info in self.adb_info_list])
+                _LOGGER.debug("got message with logcal_id[%i] remote_id[%i] which isn't in held adb_info_list, ignoring...", local_id, remote_id)
                 continue
 
             if command == constants.WRTE:
@@ -572,8 +571,8 @@ class AdbDevice(object):
             elif command == constants.CLSE:
                 msg = AdbMessage(constants.CLSE, target_adb_info.local_id, target_adb_info.remote_id)
                 self._send(msg, target_adb_info)
-                self.adb_info_list.remove(target_adb_info)
-                _LOGGER.debug("remove adb info of current message: local_id:[%i], remote_id:[%i]" %(local_id, remote_id))
+                adb_info_list.remove(target_adb_info)
+                _LOGGER.debug("remove adb info of current message: local_id:[%i], remote_id:[%i]", local_id, remote_id)
 
             if decode:
                 yield target_adb_info, data.decode('utf8')
