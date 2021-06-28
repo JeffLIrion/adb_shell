@@ -730,14 +730,14 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                           AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.OKAY))),
-                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.OKAY))),
-                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+                                                          AdbMessage(command=constants.OKAY, arg0=2, arg1=2, data=b'\x00'),
+                                                          AdbMessage(command=constants.OKAY, arg0=2, arg1=2, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=2, arg1=2, data=join_messages(FileSyncMessage(constants.OKAY))),
+                                                          AdbMessage(command=constants.CLSE, arg0=2, arg1=2, data=b''),
+                                                          AdbMessage(command=constants.OKAY, arg0=3, arg1=3, data=b'\x00'),
+                                                          AdbMessage(command=constants.OKAY, arg0=3, arg1=3, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=3, arg1=3, data=join_messages(FileSyncMessage(constants.OKAY))),
+                                                          AdbMessage(command=constants.CLSE, arg0=3, arg1=3, data=b''))
 
         # Expected `bulk_write` values
         #TODO
