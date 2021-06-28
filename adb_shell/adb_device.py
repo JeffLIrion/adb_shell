@@ -116,6 +116,7 @@ class AdbDevice(object):
     """
 
     def __init__(self, transport, default_transport_timeout_s=None, banner=None):
+        self._local_id = 0
         if banner and not isinstance(banner, (bytes, bytearray)):
             self._banner = bytearray(banner, 'utf-8')
         else:
@@ -774,7 +775,10 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
-        adb_info.local_id = 1
+        # Need to handle wraparound. Is 0 a valid local ID?
+        self._local_id += 1
+        adb_info.local_id = self._local_id
+
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         self._send(msg, adb_info)
         _, adb_info.remote_id, their_local_id, _ = self._read([constants.OKAY], adb_info)
