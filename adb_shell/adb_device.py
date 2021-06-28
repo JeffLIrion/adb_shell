@@ -65,6 +65,7 @@ import logging
 import os
 import struct
 import time
+import queue
 
 from . import constants
 from . import exceptions
@@ -471,8 +472,10 @@ class AdbDevice(object):
         for line in self._streaming_service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode):
             yield line
 
-    def multi_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
-        """Send an ADB shell command to the device, return _AdbTransactionInfo as adb_info for recognizing, iterate the streaming_parallel_shell_result for output
+    def multi_shell(self, command, transport_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S):
+        """store an ADB shell command to local variable, return _AdbTransactionInfo as adb_info for recognizing, iterate the streaming_multi_shell_result for output,
+        this method won't communicate with device, communication will start in method streaming_multi_shell_result
+        use 2 for local_id at minimum, because previous CLSE response may mess up multi shell result
 
         Parameters
         ----------
@@ -487,21 +490,29 @@ class AdbDevice(object):
         Returns
         -------
         adb_shell.hidden_helpers._AdbTransactionInfo
-            the adb_info for recognizing specific repsonse when run multiple shells parallel
+            the adb_info for recognizing specific repsonse when run multiple shells
 
         """
-        if not self.available:
-            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+        if not hasattr(self, 'command_queue'):
+            setattr(self, 'command_queue', queue.Queue())
         if not hasattr(self, 'adb_info_list'):
             setattr(self, 'adb_info_list', [])
-        adb_info = _AdbTransactionInfo(None, None, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
-        self._open(b'%s:%s' % (b'shell', command.encode('utf8')), adb_info)
+        adb_info_list = getattr(self, 'adb_info_list')
+        local_id_list: list = [info.local_id for info in adb_info_list]
+        local_id = 2
+        while True:
+            if not local_id in local_id_list:
+                break
+            local_id += 1
+        adb_info = _AdbTransactionInfo(local_id, 0, self._get_transport_timeout_s(transport_timeout_s), read_timeout_s)
+        getattr(self, 'command_queue').put((command, adb_info))
+        _LOGGER.debug("add command [%s] to command queue with adb_info: local_id[%i], remote_id[%i]", command, local_id, 0)
         getattr(self, 'adb_info_list').append(adb_info)
-        _LOGGER.debug("Adding adb_info to list with local_id:[%i] remote_id:[%i]", adb_info.local_id, adb_info.remote_id)
         return adb_info
 
     def streaming_multi_shell_result(self, transport_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
-        """yileding output from parallel_shell method
+        """yileding output from multi_shell method
+        each output: adb_info, msg. msg will be None if command is CLSE
 
         Parameters
         ----------
@@ -525,59 +536,84 @@ class AdbDevice(object):
         adb_shell.exceptions.InvalidChecksumError
             Received checksum does not match the expected checksum.
         """
-        expected_cmds = [constants.CLSE, constants.WRTE]
+        command_queue: queue.Queue = getattr(self, 'command_queue', None)
+        if not command_queue and command_queue.empty:
+            return
+        expected_cmds = [constants.OKAY, constants.CLSE, constants.WRTE]
         while True:
-            adb_info_list = getattr(self, 'adb_info_list', [])
-            if not adb_info_list:
+            # just return if adb_info_list is empty
+            if (not hasattr(self, 'adb_info_list')) or len(getattr(self, 'adb_info_list')) == 0:
                 return
+            # try open a new shell streams before accept one message
+            while command_queue and not command_queue.empty():
+                command, adb_info = command_queue.get()
+                destination = b'%s:%s\0' % (b'shell', command.encode('utf8'))
+                msg = AdbMessage(constants.OPEN, adb_info.local_id, adb_info.remote_id, destination)
+                self._send(msg, adb_info)
+                _LOGGER.debug("Open command [%s] with local_id[%i], remote_id[%i]", command, adb_info.local_id, adb_info.remote_id)
+
+            # try to read a message header
             start = time.time()
-            while True:
-                msg = self._transport.bulk_read(constants.MESSAGE_SIZE, transport_timeout_s)
-                _LOGGER.debug("bulk_read(%d): %r", constants.MESSAGE_SIZE, msg)
-                cmd, remote_id, local_id, data_length, data_checksum = unpack(msg)
-                command = constants.WIRE_TO_ID.get(cmd)
-                if not command:
-                    raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), remote_id, local_id, msg))
+            msg = self._transport.bulk_read(constants.MESSAGE_SIZE, transport_timeout_s)
+            cmd, remote_id, local_id, data_length, data_checksum = unpack(msg)
+            command = constants.WIRE_TO_ID.get(cmd)
+            if not command:
+                raise exceptions.InvalidCommandError("Unknown command: %d = '%s' (arg0 = %d, arg1 = %d, msg = '%s')" % (cmd, int_to_cmd(cmd), remote_id, local_id, msg))
+            _LOGGER.debug(
+                'bulk_read(%d): %s(cmd), %s(local_id), %s(remote_id), %s(data_length), %s(data_checksum)',
+                constants.MESSAGE_SIZE,
+                command,
+                local_id,
+                remote_id,
+                data_length,
+                data_checksum
+            )
 
-                data = bytearray()
-                while data_length > 0:
-                    temp = self._transport.bulk_read(data_length, transport_timeout_s)
-                    _LOGGER.debug("bulk_read(%d): %.1000r", data_length, temp)
-                    data += temp
-                    data_length -= len(temp)
-                actual_checksum = checksum(data)
-                if actual_checksum != data_checksum:
-                    raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+            # try to read a message body
+            data = bytearray()
+            while data_length > 0:
+                temp = self._transport.bulk_read(data_length, transport_timeout_s)
+                _LOGGER.debug("bulk_read(%d): %.1000r", data_length, temp)
+                data += temp
+                data_length -= len(temp)
+            actual_checksum = checksum(data)
+            if actual_checksum != data_checksum:
+                raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
 
-                if command in expected_cmds:
-                    break
+            # check the cmd is expected cmds or not
+            if not command in expected_cmds:
+                raise exceptions.InvalidCommandError("Not a expected command msg: %s", int_to_cmd(cmd))
 
-                if time.time() - start > transport_timeout_s:
-                    raise exceptions.InvalidCommandError("Never got one of the expected responses: %s " % expected_cmds)
-
-            _LOGGER.debug("current adb info of current message: local_id:[%i], remote_id:[%i]", local_id, remote_id)
+            adb_info_list = getattr(self, 'adb_info_list')
+            # find target_adb_info
             target_adb_info = None
-            for adb_info in adb_info_list:
-                if adb_info.local_id == local_id and adb_info.remote_id == remote_id:
-                    target_adb_info = adb_info
+            for info in adb_info_list:
+                if info.local_id == int(local_id):
+                    target_adb_info = info
                     break
-            if target_adb_info is None:
-                _LOGGER.debug("got message with logcal_id[%i] remote_id[%i] which isn't in held adb_info_list, ignoring...", local_id, remote_id)
-                continue
+            _LOGGER.debug("Current adb_info_list: %r", [(info.local_id, info.remote_id) for info in adb_info_list])
 
-            if command == constants.WRTE:
-                msg = AdbMessage(constants.OKAY, target_adb_info.local_id, target_adb_info.remote_id)
-                self._send(msg, target_adb_info)
+            # handle OKAY, CLSE, WRTE response
+            if command == constants.OKAY:
+                # open shell success
+                pass
             elif command == constants.CLSE:
-                msg = AdbMessage(constants.CLSE, target_adb_info.local_id, target_adb_info.remote_id)
+                # close shell stream
+                if target_adb_info is None:
+                    # ignoreing previous CLSE response
+                    continue
+                msg = AdbMessage(constants.CLSE, local_id, remote_id)
                 self._send(msg, target_adb_info)
                 adb_info_list.remove(target_adb_info)
-                _LOGGER.debug("remove adb info of current message: local_id:[%i], remote_id:[%i]", local_id, remote_id)
-
-            if decode:
-                yield target_adb_info, data.decode('utf8')
-            else:
-                yield target_adb_info, data
+                yield target_adb_info, None
+            elif command == constants.WRTE:
+                # read message and yiled it
+                msg = AdbMessage(constants.OKAY, local_id, remote_id)
+                self._send(msg, target_adb_info)
+                if decode:
+                    yield target_adb_info, data.decode('utf8')
+                else:
+                    yield target_adb_info, data
 
     # ======================================================================= #
     #                                                                         #
