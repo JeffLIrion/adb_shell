@@ -108,6 +108,8 @@ class AdbDevice(object):
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
         Default timeout in seconds for transport packets, or ``None``
+    _local_id : int
+        The local ID that is used for ADB transactions; thevalue is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransport
@@ -116,7 +118,6 @@ class AdbDevice(object):
     """
 
     def __init__(self, transport, default_transport_timeout_s=None, banner=None):
-        self._local_id = 0
         if banner and not isinstance(banner, (bytes, bytearray)):
             self._banner = bytearray(banner, 'utf-8')
         else:
@@ -129,6 +130,7 @@ class AdbDevice(object):
 
         self._available = False
         self._default_transport_timeout_s = default_transport_timeout_s
+        self._local_id = 0
         self._maxdata = constants.MAX_PUSH_DATA
 
     # ======================================================================= #
@@ -775,8 +777,9 @@ class AdbDevice(object):
             Wrong local_id sent to us.
 
         """
-        # Need to handle wraparound. Is 0 a valid local ID?
         self._local_id += 1
+        if self._local_id == 2**32:
+            self._local_id = 1
         adb_info.local_id = self._local_id
 
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
@@ -1246,6 +1249,8 @@ class AdbDeviceTcp(AdbDevice):
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
+    _local_id : int
+        The local ID that is used for ADB transactions; thevalue is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : TcpTransport
@@ -1286,6 +1291,8 @@ class AdbDeviceUsb(AdbDevice):
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
         Default timeout in seconds for USB packets, or ``None``
+    _local_id : int
+        The local ID that is used for ADB transactions; thevalue is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : UsbTransport
