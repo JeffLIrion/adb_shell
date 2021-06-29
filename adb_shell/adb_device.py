@@ -922,7 +922,7 @@ class AdbDevice(object):
         while True:
             cmd, remote_id2, local_id2, data = self._read(expected_cmds, adb_info)
 
-            if local_id2 not in (0, adb_info.local_id):
+            if local_id2 not in (0, adb_info.local_id) and cmd != constants.CLSE:
                 raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
             if remote_id2 in (0, adb_info.remote_id):

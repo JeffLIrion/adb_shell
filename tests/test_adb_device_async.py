@@ -418,7 +418,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with self.assertRaises(exceptions.InterleavedDataError):
             await self.device.shell('TEST')
-            await self.device.shell('TEST')
+            # await self.device.shell('TEST')
 
     @awaiter
     async def test_shell_error_remote_id2(self):
