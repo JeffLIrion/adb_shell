@@ -246,6 +246,22 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.assertEqual(await self.device.shell('TEST'), 'PASS')
 
     @awaiter
+    async def test_shell_local_id_wraparound(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.device._transport._bulk_read = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=2**32 - 1, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=2**32 - 1, data=b'PASS1'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=2**32 - 1, data=b''),
+                                                          AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                          AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS2'),
+                                                          AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.device._local_id = 2**32 - 2
+        self.assertEqual(await self.device.shell('TEST'), 'PASS1')
+        self.assertEqual(await self.device.shell('TEST'), 'PASS2')
+
+    @awaiter
     async def test_shell_return_pass_with_unexpected_packet(self):
         self.assertTrue(await self.device.connect())
 
