@@ -404,14 +404,18 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
 
-    def _test_issue29(self):
+    def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
-        msg1 = AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00')
-        msg2 = AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b'')
+        okay3 = AdbMessage(command=constants.OKAY, arg0=1, arg1=3, data=b'\x00')
+        clse3 = AdbMessage(command=constants.CLSE, arg0=1, arg1=3, data=b'')
+        okay5 = AdbMessage(command=constants.OKAY, arg0=1, arg1=5, data=b'\x00')
+        clse5 = AdbMessage(command=constants.CLSE, arg0=1, arg1=5, data=b'')
+        okay7 = AdbMessage(command=constants.OKAY, arg0=1, arg1=7, data=b'\x00')
+        clse7 = AdbMessage(command=constants.CLSE, arg0=1, arg1=7, data=b'')
 
         self.device._transport._bulk_read = b''.join([b'AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00\xc5\n\x00\x00\xbe\xaa\xab\xb7',  # Line 22
                                                       b"\x17\xbf\xbf\xff\xc7\xa2eo'Sh\xdf\x8e\xf5\xff\xe0\tJ6H",  # Line 23
@@ -439,29 +443,29 @@ class TestAdbDevice(unittest.TestCase):
                                                       b'P\xa5\x86\x97\xe8\x01\xb09\x8c>F\x9d\xc6\xbd\xc0J\x80!\xbb\x1a',  # Line 298
                                                       b"CNXN\x00\x00\x00\x01\x00\x10\x00\x00i\x00\x00\x00.'\x00\x00\xbc\xb1\xa7\xb1",  # Line 301
                                                       b'device::ro.product.name=once;ro.product.model=MIBOX3;ro.product.device=once;features=stat_v2,cmd,shell_v2',  # Line 302
-                                                      b'OKAY\xa5\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',  # Line 305
-                                                      b'CLSE\xa5\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',  # Line 306
-                                                      msg1.pack(),
-                                                      msg1.data,
-                                                      msg2.pack(),
+                                                      b'OKAY\xa5\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',  # Line 305
+                                                      b'CLSE\xa5\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',  # Line 306
+                                                      okay3.pack(),
+                                                      okay3.data,
+                                                      clse3.pack(),
                                                       b'AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00e\x0c\x00\x00\xbe\xaa\xab\xb7',  # Line 315
                                                       b'\xd3\xef\x7f_\xa6\xc0`b\x19\\z\xe4\xf3\xe2\xed\x8d\xe1W\xfbH',  # Line 316
                                                       b"CNXN\x00\x00\x00\x01\x00\x10\x00\x00i\x00\x00\x00.'\x00\x00\xbc\xb1\xa7\xb1",  # Line 319
                                                       b'device::ro.product.name=once;ro.product.model=MIBOX3;ro.product.device=once;features=stat_v2,cmd,shell_v2',  # Line 320
-                                                      b'OKAY\xa7\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',  # Line 323
-                                                      b'CLSE\xa7\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',  # Line 324
-                                                      msg1.pack(),
-                                                      msg1.data,
-                                                      msg2.pack(),
+                                                      b'OKAY\xa7\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',  # Line 323
+                                                      b'CLSE\xa7\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',  # Line 324
+                                                      okay5.pack(),
+                                                      okay5.data,
+                                                      clse5.pack(),
                                                       b'AUTH\x01\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00\x93\x08\x00\x00\xbe\xaa\xab\xb7',  # Line 333
                                                       b's\xd4_e\xa4s\x02\x95\x0f\x1e\xec\n\x95Y9[`\x8e\xe1f',  # Line 334
                                                       b"CNXN\x00\x00\x00\x01\x00\x10\x00\x00i\x00\x00\x00.'\x00\x00\xbc\xb1\xa7\xb1",  # Line 337
                                                       b'device::ro.product.name=once;ro.product.model=MIBOX3;ro.product.device=once;features=stat_v2,cmd,shell_v2',  # Line 338
-                                                      b'OKAY\xa9\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',  # Line 341
-                                                      b'CLSE\xa9\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',  # Line 342
-                                                      msg1.pack(),
-                                                      msg1.data,
-                                                      msg2.pack()])
+                                                      b'OKAY\xa9\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb0\xb4\xbe\xa6',  # Line 341
+                                                      b'CLSE\xa9\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbc\xb3\xac\xba',  # Line 342
+                                                      okay7.pack(),
+                                                      okay7.data,
+                                                      clse7.pack()])
 
         self.assertTrue(self.device.connect([signer]))
 
