@@ -24,7 +24,7 @@
 
 * :class:`AdbDevice`
 
-    * :meth:`AdbDevice._close`
+    * :meth:`AdbDevice._clse`
     * :meth:`AdbDevice._filesync_flush`
     * :meth:`AdbDevice._filesync_read`
     * :meth:`AdbDevice._filesync_read_buffered`
@@ -42,7 +42,6 @@
     * :meth:`AdbDevice._service`
     * :meth:`AdbDevice._streaming_command`
     * :meth:`AdbDevice._streaming_service`
-    * :meth:`AdbDevice._write`
     * :attr:`AdbDevice.available`
     * :meth:`AdbDevice.close`
     * :meth:`AdbDevice.connect`
@@ -513,7 +512,7 @@ class AdbDevice(object):
             mode, size, mtime = header
             files.append(DeviceFile(filename, mode, size, mtime))
 
-        self._close(adb_info)
+        self._clse(adb_info)
 
         return files
 
@@ -547,7 +546,7 @@ class AdbDevice(object):
             try:
                 self._pull(device_path, stream, progress_callback, adb_info, filesync_info)
             finally:
-                self._close(adb_info)
+                self._clse(adb_info)
 
     def _pull(self, device_path, stream, progress_callback, adb_info, filesync_info):
         """Pull a file from the device into the file-like ``local_path``.
@@ -620,7 +619,7 @@ class AdbDevice(object):
                 self._open(b'sync:', adb_info)
                 self._push(stream, _device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
-            self._close(adb_info)
+            self._clse(adb_info)
 
     def _push(self, stream, device_path, st_mode, mtime, progress_callback, adb_info, filesync_info):
         """Push a file-like object to the device.
@@ -710,17 +709,17 @@ class AdbDevice(object):
         filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_STAT_FORMAT, maxdata=self._maxdata)
         self._filesync_send(constants.STAT, adb_info, filesync_info, data=device_path)
         _, (mode, size, mtime), _ = self._filesync_read([constants.STAT], adb_info, filesync_info)
-        self._close(adb_info)
+        self._clse(adb_info)
 
         return mode, size, mtime
 
     # ======================================================================= #
     #                                                                         #
-    #                              Hidden Methods                             #
+    #                       Hidden Methods: send packets                      #
     #                                                                         #
     # ======================================================================= #
-    def _close(self, adb_info):
-        """Send a ``b'CLSE'`` message.
+    def _clse(self, adb_info):
+        """Send a ``b'CLSE'`` message and then read a ``b'CLSE'`` message.
 
         .. warning::
 
@@ -749,6 +748,11 @@ class AdbDevice(object):
         msg = AdbMessage(constants.OKAY, adb_info.local_id, adb_info.remote_id)
         self._send(msg, adb_info)
 
+    # ======================================================================= #
+    #                                                                         #
+    #                              Hidden Methods                             #
+    #                                                                         #
+    # ======================================================================= #
     def _open(self, destination, adb_info):
         """Opens a new connection to the device via an ``b'OPEN'`` message.
 
@@ -1028,23 +1032,6 @@ class AdbDevice(object):
         for data in self._read_until_close(adb_info):
             yield data
 
-    def _write(self, data, adb_info):
-        """Write a packet and expect an Ack.
-
-        Parameters
-        ----------
-        data : bytes
-            The data that will be sent
-        adb_info : _AdbTransactionInfo
-            Info and settings for this ADB transaction
-
-        """
-        msg = AdbMessage(constants.WRTE, adb_info.local_id, adb_info.remote_id, data)
-        self._send(msg, adb_info)
-
-        # Expect an ack in response.
-        self._read_until([constants.OKAY], adb_info)
-
     # ======================================================================= #
     #                                                                         #
     #                         FileSync Hidden Methods                         #
@@ -1061,7 +1048,14 @@ class AdbDevice(object):
             Data and storage for this FileSync transaction
 
         """
-        self._write(filesync_info.send_buffer[:filesync_info.send_idx], adb_info)
+        # Send the buffer
+        msg = AdbMessage(constants.WRTE, adb_info.local_id, adb_info.remote_id, filesync_info.send_buffer[:filesync_info.send_idx])
+        self._send(msg, adb_info)
+
+        # Expect an 'OKAY' in response
+        self._read_until([constants.OKAY], adb_info)
+
+        # Reset the send index
         filesync_info.send_idx = 0
 
     def _filesync_read(self, expected_ids, adb_info, filesync_info):
