@@ -109,7 +109,7 @@ class AdbDevice(object):
     _default_transport_timeout_s : float, None
         Default timeout in seconds for transport packets, or ``None``
     _local_id : int
-        The local ID that is used for ADB transactions; thevalue is incremented each time and is always in the range ``[1, 2^32)``
+        The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransport
@@ -1250,7 +1250,7 @@ class AdbDeviceTcp(AdbDevice):
     _default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
     _local_id : int
-        The local ID that is used for ADB transactions; thevalue is incremented each time and is always in the range ``[1, 2^32)``
+        The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : TcpTransport
@@ -1292,7 +1292,7 @@ class AdbDeviceUsb(AdbDevice):
     _default_transport_timeout_s : float, None
         Default timeout in seconds for USB packets, or ``None``
     _local_id : int
-        The local ID that is used for ADB transactions; thevalue is incremented each time and is always in the range ``[1, 2^32)``
+        The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : UsbTransport
