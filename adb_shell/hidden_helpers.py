@@ -38,6 +38,11 @@ import os
 import socket
 import struct
 
+try:
+    from queue import Queue
+except ImportError:  # pragma: no cover
+    from Queue import Queue
+
 from . import constants
 
 
@@ -191,3 +196,158 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
         """
         added_len = self.recv_message_size + data_len
         return self.send_idx + added_len < self._maxdata
+
+
+class _AdbPacketStore(object):
+    """A class for storing ADB packets.
+
+    This class is used to support multiple streams.
+
+    Attributes
+    ----------
+    _dict : dict[int: dict[int: Queue]]
+        A dictionary of dictionaries of queues.  The first (outer) dictionary keys are the ``arg1`` return values from
+        the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`
+        methods.  The second (inner) dictionary keys are the ``arg0`` return values from those methods.  And the values
+        of this inner dictionary are queues of ``(cmd, data)`` tuples.
+
+    """
+
+    def __init__(self):
+        self._dict = {}
+
+    def __contains__(self, value):
+        """Check if there are any entries in a queue for the specified value.
+
+        Note that ``None`` is used as a wildcard.
+
+        Parameters
+        ----------
+        value : tuple[int, int]
+            An ``(arg0, arg1)`` pair; either or both values can be ``None``
+
+        Returns
+        -------
+        bool
+            Whether the ``(arg0, arg1)`` tuple has any corresponding queue entries
+
+        """
+        if not self._dict:
+            return False
+
+        if value[1] is None:
+            if value[0] is None:
+                # `value = (None, None)` -> search for any non-empty queue
+                return any(not val0.empty() for val1 in self._dict.values() for val0 in val1.values())
+
+            # Search for a non-empty queue with a key of `arg0 == value[0]`
+            return any(key0 == value[0] and not val0.empty() for val1 in self._dict.values() for key0, val0 in val1.items())
+
+        if value[1] not in self._dict:
+            return False
+
+        if value[0] is None:
+            # Look for a non-empty queue in the `self._dict[value[1]]` dictionary
+            return any(not val0.empty() for val0 in self._dict[value[1]].values())
+
+        return value[0] in self._dict[value[1]] and not self._dict[value[1]][value[0]].empty()
+
+    def __len__(self):
+        """Get the number of non-empty queues.
+
+        Returns
+        -------
+        int
+            The number of non-empty queues
+
+        """
+        return sum(not val0.empty() for val1 in self._dict.values() for val0 in val1.values())
+
+    def clear(self, arg0, arg1):
+        """Delete the entry for ``(arg0, arg1)``, if it exists.
+
+        Parameters
+        ----------
+        arg0 : int
+            The ``arg0`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+        arg1 : int
+            The ``arg1`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+
+        """
+        if arg1 in self._dict and arg0 in self._dict[arg1]:
+            del self._dict[arg1][arg0]
+
+    def clear_all(self):
+        """Clear all the entries."""
+        self._dict = {}
+
+    def get(self, arg0, arg1):
+        """Get the next entry from the queue for ``arg0`` and ``arg1``.
+
+        Parameters
+        ----------
+        arg0 : int, None
+            The ``arg0`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods; ``None`` serves as a wildcard
+        arg1 : int, None
+            The ``arg1`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods; ``None`` serves as a wildcard
+
+        Returns
+        -------
+        arg0 : int
+            The ``arg0`` value from the returned packet
+        arg1 : int
+            The ``arg1`` value from the returned packet
+        cmd : bytes
+            The ADB packet's command
+        data : bytes
+            The ADB packet's data
+
+        """
+        # NOTE: While dictionaries don't necessarily have an order, this should only be called with `None` when there is only one corresponding key
+        if arg1 is None:
+            if arg0 is None:
+                arg0 = next(key0 for key1, val1 in self._dict.items() for key0, val0 in val1.items() if not val0.empty())
+
+            arg1 = next(key1 for key1, val1 in self._dict.items() if arg0 in val1 and not val1[arg0].empty())
+
+        if arg0 is None:
+            arg0 = next(key0 for key0, val0 in self._dict[arg1].items() if not val0.empty())
+
+        # Get the data from the queue
+        cmd, data = self._dict[arg1][arg0].get()
+
+        return arg0, arg1, cmd, data
+
+    def put(self, arg0, arg1, cmd, data):
+        """Add an entry to the queue for ``arg0`` and ``arg1``.
+
+        Note that a new dictionary entry will not be created if ``cmd == constants.CLSE``.
+
+        Parameters
+        ----------
+        arg0 : int
+            The ``arg0`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+        arg1 : int
+            The ``arg1`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+        cmd : bytes
+            The ADB packet's command
+        data : bytes
+            The ADB packet's data
+
+        """
+        if arg1 in self._dict:
+            if arg0 not in self._dict[arg1]:
+                if cmd == constants.CLSE:
+                    return
+
+                # Create the `arg0` entry in the `arg1` dict
+                self._dict[arg1][arg0] = Queue()
+        else:
+            if cmd == constants.CLSE:
+                return
+
+            # Create the `arg1` entry with a new dict
+            self._dict[arg1] = {arg0: Queue()}
+
+        # Put the data into the queue
+        self._dict[arg1][arg0].put((cmd, data))
