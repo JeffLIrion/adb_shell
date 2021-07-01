@@ -102,6 +102,8 @@ class AdbDeviceAsync(object):
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
         Default timeout in seconds for transport packets, or ``None``
+     _local_id : int
+        The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransportAsync
@@ -122,6 +124,7 @@ class AdbDeviceAsync(object):
 
         self._available = False
         self._default_transport_timeout_s = default_transport_timeout_s
+        self._local_id = 0
         self._maxdata = constants.MAX_PUSH_DATA
 
     # ======================================================================= #
@@ -773,7 +776,11 @@ class AdbDeviceAsync(object):
             Wrong local_id sent to us.
 
         """
-        adb_info.local_id = 1
+        self._local_id += 1
+        if self._local_id == 2**32:
+            self._local_id = 1
+        adb_info.local_id = self._local_id
+
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         await self._send(msg, adb_info)
         _, adb_info.remote_id, their_local_id, _ = await self._read([constants.OKAY], adb_info)
@@ -918,7 +925,7 @@ class AdbDeviceAsync(object):
         while True:
             cmd, remote_id2, local_id2, data = await self._read(expected_cmds, adb_info)
 
-            if local_id2 not in (0, adb_info.local_id):
+            if local_id2 not in (0, adb_info.local_id) and cmd != constants.CLSE:
                 raise exceptions.InterleavedDataError("We don't support multiple streams...")
 
             if remote_id2 in (0, adb_info.remote_id):
@@ -1232,6 +1239,8 @@ class AdbDeviceTcpAsync(AdbDeviceAsync):
         The hostname of the machine where the Python interpreter is currently running
     _default_transport_timeout_s : float, None
         Default timeout in seconds for TCP packets, or ``None``
+    _local_id : int
+        The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
     _maxdata : int
         Maximum amount of data in an ADB packet
     _transport : TcpTransportAsync
