@@ -997,7 +997,7 @@ class AdbDeviceAsync(object):
             await self._transport.bulk_write(msg.data, adb_info.transport_timeout_s)
 
     async def _streaming_command(self, service, command, adb_info):
-        """One complete set of USB packets for a single command.
+        """One complete set of packets for a single command.
 
         1. :meth:`~AdbDeviceAsync._open` a new connection to the device, where the ``destination`` parameter is ``service:command``
         2. Read the response data via :meth:`AdbDeviceAsync._read_until_close`
