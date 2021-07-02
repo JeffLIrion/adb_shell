@@ -146,7 +146,7 @@ class _AdbIOManagerAsync(object):
         bool
             Whether the connection was established
         maxdata : int
-            TODO
+            Maximum amount of data in an ADB packet
 
         Raises
         ------
