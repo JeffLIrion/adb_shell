@@ -189,7 +189,7 @@ class _AdbIOManagerAsync(object):
                 raise exceptions.InvalidResponseError('Unknown AUTH response: %s %s %s' % (arg0, maxdata, banner2))
 
             # 6.2. Sign the last ``banner2`` and send it in an ``b'AUTH'`` message
-            signed_token = rsa_key.Sign(banner)
+            signed_token = rsa_key.Sign(banner2)
             msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
             await self._send(msg, adb_info)
 
