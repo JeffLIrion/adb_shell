@@ -53,9 +53,12 @@ import socket
 import struct
 
 try:
-    from queue import Queue
+    from asyncio import Queue
 except ImportError:  # pragma: no cover
-    from Queue import Queue
+    try:
+        from queue import Queue
+    except ImportError:
+        from Queue import Queue
 
 from . import constants
 
@@ -395,7 +398,7 @@ class _AdbPacketStore(object):
             arg0, arg1 = self.find(arg0, arg1)
 
         # Get the data from the queue
-        cmd, data = self._dict[arg1][arg0].get()
+        cmd, data = self._dict[arg1][arg0].get_nowait()
 
         # If this is a `CLSE` packet, then clear the entry in the store
         if cmd == constants.CLSE:
@@ -435,4 +438,4 @@ class _AdbPacketStore(object):
             self._dict[arg1] = {arg0: Queue()}
 
         # Put the data into the queue
-        self._dict[arg1][arg0].put((cmd, data))
+        self._dict[arg1][arg0].put_nowait((cmd, data))
