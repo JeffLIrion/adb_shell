@@ -1155,9 +1155,6 @@ class AdbDevice(object):
         self._io_manager.send(msg, adb_info)
         _, adb_info.remote_id, their_local_id, _ = self._io_manager.read([constants.OKAY], adb_info)
 
-        if adb_info.local_id != their_local_id:
-            raise exceptions.InvalidResponseError('Expected the local_id to be {}, got {}'.format(adb_info.local_id, their_local_id))
-
     def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
 
