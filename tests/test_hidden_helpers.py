@@ -1,7 +1,7 @@
 import unittest
 
 from adb_shell import constants
-from adb_shell.hidden_helpers import _AdbPacketStore
+from adb_shell.hidden_helpers import _AdbPacketStore, _AdbTransactionInfo
 
 
 class TestAdbPacketStore(unittest.TestCase):
@@ -59,7 +59,7 @@ class TestAdbPacketStore(unittest.TestCase):
         packet_store.put(arg0=4, arg1=5, cmd=b"cmd6", data=b"data6")
 
         self.assertTrue((0, 1) in packet_store)
-        arg0, arg1, cmd1, data1 = packet_store.get(arg0=0, arg1=1)
+        cmd1, arg0, arg1, data1 = packet_store.get(arg0=0, arg1=1)
         self.assertEqual(arg0, 0)
         self.assertEqual(arg1, 1)
         self.assertEqual(cmd1, b"cmd1")
@@ -68,7 +68,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(packet_store), 5)
 
         self.assertTrue((0, 1) in packet_store)
-        arg0, arg1, cmd2, data2 = packet_store.get(arg0=0, arg1=1)
+        cmd2, arg0, arg1, data2 = packet_store.get(arg0=0, arg1=1)
         self.assertEqual(arg0, 0)
         self.assertEqual(arg1, 1)
         self.assertEqual(cmd2, b"cmd2")
@@ -77,7 +77,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(packet_store), 4)
 
         self.assertTrue((1, 0) in packet_store)
-        arg0, arg1, cmd3, data3 = packet_store.get(arg0=1, arg1=0)
+        cmd3, arg0, arg1, data3 = packet_store.get(arg0=1, arg1=0)
         self.assertEqual(arg0, 1)
         self.assertEqual(arg1, 0)
         self.assertEqual(cmd3, b"cmd3")
@@ -85,7 +85,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(packet_store), 3)
 
         self.assertTrue((1, None) in packet_store)
-        arg0, arg1, cmd4, data4 = packet_store.get(arg0=1, arg1=None)
+        cmd4, arg0, arg1, data4 = packet_store.get(arg0=1, arg1=None)
         self.assertEqual(arg0, 1)
         self.assertEqual(arg1, 1)
         self.assertEqual(cmd4, b"cmd4")
@@ -93,7 +93,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(packet_store), 2)
 
         self.assertTrue((None, 3) in packet_store)
-        arg0, arg1, cmd5, data5 = packet_store.get(arg0=None, arg1=3)
+        cmd5, arg0, arg1, data5 = packet_store.get(arg0=None, arg1=3)
         self.assertEqual(arg0, 2)
         self.assertEqual(arg1, 3)
         self.assertEqual(cmd5, b"cmd5")
@@ -101,7 +101,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(packet_store), 1)
 
         self.assertTrue((None, None) in packet_store)
-        arg0, arg1, cmd6, data6 = packet_store.get(arg0=None, arg1=None)
+        cmd6, arg0, arg1, data6 = packet_store.get(arg0=None, arg1=None)
         self.assertEqual(arg0, 4)
         self.assertEqual(arg1, 5)
         self.assertEqual(cmd6, b"cmd6")
@@ -114,19 +114,50 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(packet_store._dict[3]), 1)
         self.assertEqual(len(packet_store._dict[5]), 1)
         
+    def test_get_clse(self):
+        packet_store = _AdbPacketStore()
+        packet_store.put(arg0=0, arg1=1, cmd=b"cmd1", data=b"data1")
+        packet_store.put(arg0=0, arg1=1, cmd=constants.CLSE, data=b"data2")
+        packet_store.put(arg0=0, arg1=1, cmd=b"cmd3", data=b"data3")
+
+        self.assertTrue((0, 1) in packet_store)
+        cmd1, arg0, arg1, data1 = packet_store.get(arg0=0, arg1=1)
+        self.assertEqual(arg0, 0)
+        self.assertEqual(arg1, 1)
+        self.assertEqual(cmd1, b"cmd1")
+        self.assertEqual(data1, b"data1")
+        self.assertTrue((0, 1) in packet_store)
+        self.assertEqual(len(packet_store), 1)
+
+        self.assertTrue((0, 1) in packet_store)
+        cmd2, arg0, arg1, data2 = packet_store.get(arg0=0, arg1=1)
+        self.assertEqual(arg0, 0)
+        self.assertEqual(arg1, 1)
+        self.assertEqual(cmd2, constants.CLSE)
+        self.assertEqual(data2, b"data2")
+        self.assertFalse((0, 1) in packet_store)
+        self.assertEqual(len(packet_store), 0)
+
+        self.assertEqual(len(packet_store._dict), 0)
+
     def test_clear(self):
         packet_store = _AdbPacketStore()
         packet_store.put(arg0=0, arg1=1, cmd=b"cmd1", data=b"data1")
+        packet_store.put(arg0=2, arg1=1, cmd=b"cmd2", data=b"data2")
 
         packet_store.clear(arg0=None, arg1=None)
-        self.assertEqual(len(packet_store), 1)
+        self.assertEqual(len(packet_store), 2)
 
         packet_store.clear(arg0=1, arg1=0)
-        self.assertEqual(len(packet_store), 1)
+        self.assertEqual(len(packet_store), 2)
 
         packet_store.clear(arg0=0, arg1=1)
-        self.assertEqual(len(packet_store), 0)
+        self.assertEqual(len(packet_store), 1)
         self.assertEqual(len(packet_store._dict), 1)
+
+        packet_store.clear(arg0=2, arg1=1)
+        self.assertEqual(len(packet_store), 0)
+        self.assertEqual(len(packet_store._dict), 0)
 
     def test_clear_all(self):
         packet_store = _AdbPacketStore()
@@ -136,3 +167,57 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertFalse((0, 1) in packet_store)
         self.assertEqual(len(packet_store), 0)
 
+
+class TestAdbTransactionInfo(unittest.TestCase):
+
+    def test_args_match(self):
+        adb_info_1_None = _AdbTransactionInfo(1, None)
+        adb_info_1_2 = _AdbTransactionInfo(1, 2)
+
+        # (1, None) -> exact matches
+        self.assertTrue(adb_info_1_None.args_match(6, 1))
+        self.assertTrue(adb_info_1_None.args_match(7, 1))
+        self.assertTrue(adb_info_1_None.args_match(6, 1, allow_zeros=True))
+        self.assertTrue(adb_info_1_None.args_match(7, 1, allow_zeros=True))
+
+        # (1, None) -> no match
+        self.assertFalse(adb_info_1_None.args_match(0, 0))
+        self.assertFalse(adb_info_1_None.args_match(1, 0))
+        self.assertFalse(adb_info_1_None.args_match(2, 0))
+        self.assertFalse(adb_info_1_None.args_match(3, 0))
+        self.assertFalse(adb_info_1_None.args_match(4, 5, allow_zeros=True))
+
+        # (1, None) -> zero matches
+        self.assertTrue(adb_info_1_None.args_match(0, 0, allow_zeros=True))
+        self.assertTrue(adb_info_1_None.args_match(1, 0, allow_zeros=True))
+        self.assertTrue(adb_info_1_None.args_match(2, 0, allow_zeros=True))
+        self.assertTrue(adb_info_1_None.args_match(3, 0, allow_zeros=True))
+
+        # (1, 2) -> exact matches
+        self.assertTrue(adb_info_1_2.args_match(2, 1))
+        self.assertTrue(adb_info_1_2.args_match(2, 1, allow_zeros=True))
+
+        # (1, 2) -> no match
+        self.assertFalse(adb_info_1_2.args_match(0, 0))
+        self.assertFalse(adb_info_1_2.args_match(2, 0))
+        self.assertFalse(adb_info_1_2.args_match(0, 1))
+
+        self.assertFalse(adb_info_1_2.args_match(1, 2))
+        self.assertFalse(adb_info_1_2.args_match(1, 2, allow_zeros=True))
+
+        self.assertFalse(adb_info_1_2.args_match(3, 0))
+        self.assertFalse(adb_info_1_2.args_match(0, 4))
+        self.assertFalse(adb_info_1_2.args_match(3, 4))
+        self.assertFalse(adb_info_1_2.args_match(3, 0, allow_zeros=True))
+        self.assertFalse(adb_info_1_2.args_match(0, 4, allow_zeros=True))
+        self.assertFalse(adb_info_1_2.args_match(3, 4, allow_zeros=True))
+
+        self.assertFalse(adb_info_1_2.args_match(2, 6))
+        self.assertFalse(adb_info_1_2.args_match(2, 6, allow_zeros=True))
+        self.assertFalse(adb_info_1_2.args_match(7, 1))
+        self.assertFalse(adb_info_1_2.args_match(7, 1, allow_zeros=True))
+
+        # (1, 2) -> zero matches
+        self.assertTrue(adb_info_1_2.args_match(0, 0, allow_zeros=True))
+        self.assertTrue(adb_info_1_2.args_match(2, 0, allow_zeros=True))
+        self.assertTrue(adb_info_1_2.args_match(0, 1, allow_zeros=True))
