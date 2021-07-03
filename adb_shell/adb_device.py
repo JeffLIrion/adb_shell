@@ -93,6 +93,11 @@ _LOGGER = logging.getLogger(__name__)
 class _AdbIOManager(object):
     """A class for handling all ADB I/O.
 
+    Notes
+    -----
+    The only places where the ``self._store_lock`` and ``self._transport_lock`` locks are held at the same time are :meth:`_AdbIOManager.close` and
+    :meth:`_AdbIOManager.connect`.  In both places, the ``self._transport_lock`` is acquired first.  Therefore, there is no potential for deadlock.
+
     Parameters
     ----------
     transport : BaseTransport
@@ -130,8 +135,6 @@ class _AdbIOManager(object):
 
     def connect(self, banner, rsa_keys, auth_timeout_s, auth_callback, adb_info):
         """Establish an ADB connection to the device.
-
-        Note: this function is the only place where ``self._store_lock`` and ``self._transport_lock`` are held simultaneously.
 
         1. Use the transport to establish a connection
         2. Send a ``b'CNXN'`` message
@@ -177,9 +180,13 @@ class _AdbIOManager(object):
             Invalid auth response from the device
 
         """
-        # NOTE: The connection has already been closed by `AdbDevice.connect`, which calls `_AdbIOManager.close`
-
         with self._transport_lock:
+            # 0. Close the connection and clear the store
+            self._transport.close()
+
+            with self._store_lock:
+                self._packet_store.clear_all()
+
             # 1. Use the transport to establish a connection
             self._transport.connect(adb_info.transport_timeout_s)
 
@@ -275,9 +282,9 @@ class _AdbIOManager(object):
         start = time.time()
 
         while True:
-            # Look for a match in the packet store
+            # Read packets from the store until we find a match or there are no more entries
             with self._store_lock:
-                # Continue reading entries in the store until we find what we're looking for or there are no more entries
+                # Recall that `arg0` from the device corresponds to `adb_info.remote_id` and `arg1` from the device corresponds to `adb_info.local_id`
                 arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
                 while arg0_arg1:
                     cmd, arg0, arg1, data = self._packet_store.get(arg0_arg1[0], arg0_arg1[1])
@@ -310,9 +317,9 @@ class _AdbIOManager(object):
             if time.time() - start > adb_info.read_timeout_s:
                 break
 
-        # Try one last time to read from the store before throwing a timeout exception
+        # Try one last time to read packets from the store before throwing a timeout exception
         with self._store_lock:
-            # Continue reading entries in the store until we find what we're looking for or there are no more entries
+            # Recall that `arg0` from the device corresponds to `adb_info.remote_id` and `arg1` from the device corresponds to `adb_info.local_id`
             arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
             while arg0_arg1:
                 cmd, arg0, arg1, data = self._packet_store.get(arg0_arg1[0], arg0_arg1[1])
