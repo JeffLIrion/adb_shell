@@ -327,7 +327,7 @@ class TestAdbDevice(unittest.TestCase):
     #                           `shell` error tests                           #
     #                                                                         #
     # ======================================================================= #
-    def test_shell_error_local_id(self):
+    def _test_shell_error_local_id(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
