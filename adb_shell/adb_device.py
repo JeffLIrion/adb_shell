@@ -408,7 +408,9 @@ class _AdbIOManager(object):
 
         while length > 0:
             temp = self._transport.bulk_read(length, adb_info.transport_timeout_s)
-            _LOGGER.debug("bulk_read(%d): %.1000r", length, temp)
+            if temp:
+                # Only log if `temp` is not empty
+                _LOGGER.debug("bulk_read(%d): %.1000r", length, temp)
 
             data += temp
             length -= len(temp)
