@@ -22,7 +22,21 @@
 
 .. rubric:: Contents
 
+* :class:`_AdbPacketStore`
+
+    * :meth:`_AdbPacketStore.__contains__`
+    * :meth:`_AdbPacketStore.__len__`
+    * :meth:`_AdbPacketStore.clear`
+    * :meth:`_AdbPacketStore.clear_all`
+    * :meth:`_AdbPacketStore.find`
+    * :meth:`_AdbPacketStore.find_allow_zeros`
+    * :meth:`_AdbPacketStore.get`
+    * :meth:`_AdbPacketStore.put`
+
 * :class:`_AdbTransactionInfo`
+
+    * :meth:`_AdbTransactionInfo.args_match`
+
 * :class:`_FileSyncTransactionInfo`
 
     * :meth:`_FileSyncTransactionInfo.can_add_to_send_buffer`
@@ -143,6 +157,30 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         self.read_timeout_s = read_timeout_s if self.timeout_s is None else min(read_timeout_s, self.timeout_s)
         self.transport_timeout_s = self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
 
+    def args_match(self, arg0, arg1, allow_zeros=False):
+        """Check
+
+        Parameters
+        ----------
+        arg0 : int
+            The ``arg0`` value from an ADB packet, which will be compared to this object's ``remote_id`` attribute
+        arg1 : int
+            The ``arg1`` value from an ADB packet, which will be compared to this object's ``local_id`` attribute
+        allow_zeros : bool
+            Whether to check if ``arg0`` and ``arg1`` match 0, in addition to this object's ``local_id`` and ``remote_id`` attributes
+
+        Returns
+        -------
+        bool
+            Whether ``arg0`` and ``arg1`` match this object's ``local_id`` and ``remote_id`` attributes
+
+        """
+        if not allow_zeros:
+            return arg1 == self.local_id and (self.remote_id is None or arg0 == self.remote_id)
+
+        # https://github.com/JeffLIrion/adb_shell/blob/17540be9b3b84637aca9b994ae3e0b35d02b1a03/adb_shell/adb_device.py#L923-L929
+        return arg1 in (0, self.local_id) and (self.remote_id is None or arg0 in (0, self.remote_id))
+
 
 class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-methods
     """A class for storing info used during a single FileSync "transaction."
@@ -232,25 +270,7 @@ class _AdbPacketStore(object):
             Whether the ``(arg0, arg1)`` tuple has any corresponding queue entries
 
         """
-        if not self._dict:
-            return False
-
-        if value[1] is None:
-            if value[0] is None:
-                # `value = (None, None)` -> search for any non-empty queue
-                return any(not val0.empty() for val1 in self._dict.values() for val0 in val1.values())
-
-            # Search for a non-empty queue with a key of `arg0 == value[0]`
-            return any(key0 == value[0] and not val0.empty() for val1 in self._dict.values() for key0, val0 in val1.items())
-
-        if value[1] not in self._dict:
-            return False
-
-        if value[0] is None:
-            # Look for a non-empty queue in the `self._dict[value[1]]` dictionary
-            return any(not val0.empty() for val0 in self._dict[value[1]].values())
-
-        return value[0] in self._dict[value[1]] and not self._dict[value[1]][value[0]].empty()
+        return bool(self.find(value[0], value[1]))
 
     def __len__(self):
         """Get the number of non-empty queues.
@@ -277,12 +297,80 @@ class _AdbPacketStore(object):
         if arg1 in self._dict and arg0 in self._dict[arg1]:
             del self._dict[arg1][arg0]
 
+            if not self._dict[arg1]:
+                # `self._dict[arg1]` is an empty dictionary now, so delete it
+                del self._dict[arg1]
+
     def clear_all(self):
         """Clear all the entries."""
         self._dict = {}
 
+    def find(self, arg0, arg1):
+        """Find the entry corresponding to ``arg0`` and ``arg1``.
+
+        Parameters
+        ----------
+        arg0 : int, None
+            The ``arg0`` value that we are looking for; ``None`` serves as a wildcard
+        arg1 : int, None
+            The ``arg1`` value that we are looking for; ``None`` serves as a wildcard
+
+        Returns
+        -------
+        tuple[int, int], None
+            The ``(arg0, arg1)`` pair that was found in the dictionary of dictionaries, or ``None`` if no match was found
+
+        """
+        if not self._dict:
+            return None
+
+        if arg1 is None:
+            if arg0 is None:
+                # `value = (None, None)` -> search for any non-empty queue
+                return next(((key0, key1) for key1, val1 in self._dict.items() for key0, val0 in val1.items() if not val0.empty()), None)
+
+            # Search for a non-empty queue with a key of `arg0 == value[0]`
+            return next(((arg0, key1) for key1, val1 in self._dict.items() for key0, val0 in val1.items() if key0 == arg0 and not val0.empty()), None)
+
+        if arg1 not in self._dict:
+            return None
+
+        if arg0 is None:
+            # Look for a non-empty queue in the `self._dict[value[1]]` dictionary
+            return next(((key0, arg1) for key0, val0 in self._dict[arg1].items() if not val0.empty()), None)
+
+        if arg0 in self._dict[arg1] and not self._dict[arg1][arg0].empty():
+            return (arg0, arg1)
+
+        return None
+
+    def find_allow_zeros(self, arg0, arg1):
+        """Find the entry corresponding to (``arg0`` or 0) and (``arg1`` or 0).
+
+        Parameters
+        ----------
+        arg0 : int, None
+            The ``arg0`` value that we are looking for; ``None`` serves as a wildcard
+        arg1 : int, None
+            The ``arg1`` value that we are looking for; ``None`` serves as a wildcard
+
+        Returns
+        -------
+        tuple[int, int], None
+            The first matching ``(arg0, arg1)`` pair that was found in the dictionary of dictionaries, or ``None`` if no match was found
+
+        """
+        for arg0_, arg1_ in ((arg0, arg1), (arg0, 0), (0, arg1), (0, 0)):
+            arg0_arg1 = self.find(arg0_, arg1_)
+            if arg0_arg1:
+                return arg0_arg1
+
+        return None
+
     def get(self, arg0, arg1):
         """Get the next entry from the queue for ``arg0`` and ``arg1``.
+
+        This function assumes you have already checked that ``(arg0, arg1) in self``.
 
         Parameters
         ----------
@@ -293,30 +381,27 @@ class _AdbPacketStore(object):
 
         Returns
         -------
+        cmd : bytes
+            The ADB packet's command
         arg0 : int
             The ``arg0`` value from the returned packet
         arg1 : int
             The ``arg1`` value from the returned packet
-        cmd : bytes
-            The ADB packet's command
         data : bytes
             The ADB packet's data
 
         """
-        # NOTE: While dictionaries don't necessarily have an order, this should only be called with `None` when there is only one corresponding key
-        if arg1 is None:
-            if arg0 is None:
-                arg0 = next(key0 for key1, val1 in self._dict.items() for key0, val0 in val1.items() if not val0.empty())
-
-            arg1 = next(key1 for key1, val1 in self._dict.items() if arg0 in val1 and not val1[arg0].empty())
-
-        if arg0 is None:
-            arg0 = next(key0 for key0, val0 in self._dict[arg1].items() if not val0.empty())
+        if arg0 is None or arg1 is None:
+            arg0, arg1 = self.find(arg0, arg1)
 
         # Get the data from the queue
         cmd, data = self._dict[arg1][arg0].get()
 
-        return arg0, arg1, cmd, data
+        # If this is a `CLSE` packet, then clear the entry in the store
+        if cmd == constants.CLSE:
+            self.clear(arg0, arg1)
+
+        return cmd, arg0, arg1, data
 
     def put(self, arg0, arg1, cmd, data):
         """Add an entry to the queue for ``arg0`` and ``arg1``.
