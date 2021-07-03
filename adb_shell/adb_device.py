@@ -1153,7 +1153,7 @@ class AdbDevice(object):
 
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         self._io_manager.send(msg, adb_info)
-        _, adb_info.remote_id, their_local_id, _ = self._io_manager.read([constants.OKAY], adb_info)
+        _, adb_info.remote_id, _, _ = self._io_manager.read([constants.OKAY], adb_info)
 
     def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
