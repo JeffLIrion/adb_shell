@@ -131,6 +131,8 @@ class _AdbIOManager(object):
     def connect(self, banner, rsa_keys, auth_timeout_s, auth_callback, adb_info):
         """Establish an ADB connection to the device.
 
+        Note: this function is the only place where ``self._store_lock`` and ``self._transport_lock`` are held simultaneously.
+
         1. Use the transport to establish a connection
         2. Send a ``b'CNXN'`` message
         3. Read the response from the device
@@ -291,11 +293,7 @@ class _AdbIOManager(object):
             if not adb_info.args_match(arg0, arg1, allow_zeros):
                 # The packet is not a match -> put it in the store
                 with self._store_lock:
-                    if cmd == constants.CLSE and False:
-                        # Clear the entry in the store
-                        self._packet_store.clear(arg0, arg1)
-                    else:
-                        self._packet_store.put(arg0, arg1, cmd, data)
+                    self._packet_store.put(arg0, arg1, cmd, data)
 
             else:
                 # The packet is a match for this `(adb_info.local_id, adb_info.remote_id)` pair
