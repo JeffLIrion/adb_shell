@@ -58,6 +58,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def tearDown(self):
         self.assertFalse(self.transport.bulk_read_list)
+        self.assertEqual(len(self.device._io_manager._packet_store._dict), 0)
 
     @staticmethod
     def fake_stat(*args, **kwargs):
@@ -335,6 +336,9 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidResponseError):
             self.device.shell('TEST')
 
+        # Close the connection so that the packet store gets cleared
+        self.device.close()
+
     def test_shell_error_unknown_command(self):
         self.assertTrue(self.device.connect())
 
@@ -399,21 +403,34 @@ class TestAdbDevice(unittest.TestCase):
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS'))
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=2, data=b''))
 
-        with self.assertRaises(exceptions.InterleavedDataError):
-            self.device.shell('TEST')
-            # self.device.shell('TEST')
+        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
 
     def test_shell_error_remote_id2(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                      AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS'))
+                                                      AdbMessage(command=constants.OKAY, arg0=2, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=2, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=2, arg1=2, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.shell('TEST')
+        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
+
+        #self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+        #                                              AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS'))
+
+        #with self.assertRaises(exceptions.InvalidResponseError):
+        #    self.device.shell('TEST')
 
     def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
