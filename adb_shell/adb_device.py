@@ -24,9 +24,9 @@
 
 * :class:`_AdbIOManager`
 
-    * :meth:`_AdbIOManager._read`
-    * :meth:`_AdbIOManager._read_bytes`
-    * :meth:`_AdbIOManager._read_packet`
+    * :meth:`_AdbIOManager._read_bytes_from_device`
+    * :meth:`_AdbIOManager._read_expected_packet_from_device`
+    * :meth:`_AdbIOManager._read_packet_from_device`
     * :meth:`_AdbIOManager._send`
     * :meth:`_AdbIOManager.close`
     * :meth:`_AdbIOManager.connect`
@@ -195,7 +195,7 @@ class _AdbIOManager(object):
             self._send(msg, adb_info)
 
             # 3. Read the response from the device
-            cmd, arg0, maxdata, banner2 = self._read_from_device([constants.AUTH, constants.CNXN], adb_info)
+            cmd, arg0, maxdata, banner2 = self._read_expected_packet_from_device([constants.AUTH, constants.CNXN], adb_info)
 
             # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
             if cmd != constants.AUTH:
@@ -219,7 +219,7 @@ class _AdbIOManager(object):
                 self._send(msg, adb_info)
 
                 # 6.3. Read the response from the device
-                cmd, arg0, maxdata, banner2 = self._read_from_device([constants.CNXN, constants.AUTH], adb_info)
+                cmd, arg0, maxdata, banner2 = self._read_expected_packet_from_device([constants.CNXN, constants.AUTH], adb_info)
 
                 # 6.4. If ``cmd`` is ``b'CNXN'``, we are done
                 if cmd == constants.CNXN:
@@ -237,7 +237,7 @@ class _AdbIOManager(object):
             self._send(msg, adb_info)
 
             adb_info.transport_timeout_s = auth_timeout_s
-            _, _, maxdata, _ = self._read_from_device([constants.CNXN], adb_info)
+            _, _, maxdata, _ = self._read_expected_packet_from_device([constants.CNXN], adb_info)
             return True, maxdata
 
     def read(self, expected_cmds, adb_info, allow_zeros=False):
@@ -349,7 +349,7 @@ class _AdbIOManager(object):
         with self._transport_lock:
             self._send(msg, adb_info)
 
-    def _read_from_device(self, expected_cmds, adb_info):
+    def _read_expected_packet_from_device(self, expected_cmds, adb_info):
         """Read packets from the device until we get an expected packet type.
 
         Parameters
