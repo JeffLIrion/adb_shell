@@ -322,6 +322,23 @@ class TestAdbDevice(unittest.TestCase):
         self.device.shell("dumpsys power | grep 'Display Power' | grep -q 'state=ON' && echo -e '1\\c' && dumpsys power | grep mWakefulness | grep -q Awake && echo -e '1\\c' && dumpsys audio | grep paused | grep -qv 'Buffer Queue' && echo -e '1\\c' || (dumpsys audio | grep started | grep -qv 'Buffer Queue' && echo '2\\c' || echo '0\\c') && dumpsys power | grep Locks | grep 'size=' && CURRENT_APP=$(dumpsys window windows | grep mCurrentFocus) && CURRENT_APP=${CURRENT_APP#*{* * } && CURRENT_APP=${CURRENT_APP%%/*} && echo $CURRENT_APP && (dumpsys media_session | grep -A 100 'Sessions Stack' | grep -A 100 $CURRENT_APP | grep -m 1 'state=PlaybackState {' || echo) && dumpsys audio | grep '\\- STREAM_MUSIC:' -A 12")
         self.assertEqual(self.device.shell('TEST'), 'PASS')
 
+    def test_shell_multiple_streams(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=2, data=b''))
+
+        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
+
+
     # ======================================================================= #
     #                                                                         #
     #                           `shell` error tests                           #
