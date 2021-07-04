@@ -328,7 +328,7 @@ class _AdbIOManager(object):
 
                 arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
 
-        # Timeout
+        # TODO: Change this to a timeout exception
         raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
     def send(self, msg, adb_info):
@@ -385,6 +385,7 @@ class _AdbIOManager(object):
                 return cmd, arg0, arg1, data
 
             if time.time() - start > adb_info.read_timeout_s:
+                # TODO: Change this to a timeout exception
                 raise exceptions.InvalidCommandError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
     def _read_bytes_from_device(self, length, adb_info):
@@ -424,6 +425,7 @@ class _AdbIOManager(object):
                 break
 
             if time.time() - start > adb_info.read_timeout_s:
+                # TODO: Change this to a timeout exception
                 raise exceptions.InvalidCommandError("Timeout... (transport_timeout_s = %f, read_timeout_s = %f)" % (adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
         return bytes(data)
