@@ -354,7 +354,7 @@ class TestAdbDevice(unittest.TestCase):
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''))
 
-        with self.assertRaises(exceptions.InvalidCommandError):
+        with self.assertRaises(exceptions.AdbTimeoutError):
             self.device.shell('TEST', read_timeout_s=-1)
 
     def test_shell_error_read_timeout_multiple_clse(self):
@@ -364,7 +364,7 @@ class TestAdbDevice(unittest.TestCase):
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                                       AdbMessage(command=constants.CLSE, arg0=2, arg1=1, data=b''))
 
-        with self.assertRaises(exceptions.InvalidCommandError):
+        with self.assertRaises(exceptions.AdbTimeoutError):
             self.device.shell('TEST', read_timeout_s=-1)
 
     def test_shell_error_timeout(self):
