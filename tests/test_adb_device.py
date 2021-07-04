@@ -327,14 +327,15 @@ class TestAdbDevice(unittest.TestCase):
     #                           `shell` error tests                           #
     #                                                                         #
     # ======================================================================= #
-    def _test_shell_error_local_id(self):
+    def test_shell_error_local_id_timeout(self):
         self.assertTrue(self.device.connect())
 
         # Provide the `bulk_read` return values
-        self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'))
+        self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'))
 
-        with self.assertRaises(exceptions.InvalidResponseError):
-            self.device.shell('TEST')
+        with self.assertRaises(exceptions.AdbTimeoutError):
+            self.device.shell('TEST', read_timeout_s=1)
 
         # Close the connection so that the packet store gets cleared
         self.device.close()
