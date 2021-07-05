@@ -344,6 +344,25 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(self.device.shell('TEST1'), 'PASS1')
         self.assertEqual(self.device.shell('TEST2'), 'PASS2')
 
+    def test_shell_multiple_streams2(self):
+        self.assertTrue(self.device.connect())
+
+        def fake_read_packet_from_device(*args, **kwargs):
+            # TODO
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.WRTE, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.OKAY, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.OKAY, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.OKAY, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.WRTE, data=b'PASS2')
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.WRTE, data=b"PASS1")
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.CLSE, data=b"")
+            self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.CLSE, data=b"")
+
+            return constants.OKAY, 2, 2, b"\x00"
+
+        with patch.object(self.device._io_manager, "_read_packet_from_device", fake_read_packet_from_device):
+            self.assertEqual(self.device.shell('TEST1', read_timeout_s=-1), 'PASS1')
+            self.assertEqual(self.device.shell('TEST2', read_timeout_s=-1), 'PASS2')
 
     # ======================================================================= #
     #                                                                         #
