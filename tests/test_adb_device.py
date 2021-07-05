@@ -203,6 +203,12 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect([signer], auth_callback=auth_callback))
         self.assertTrue(self._callback_invoked)
 
+    def test_connect_timeout(self):
+        self.transport.bulk_read_list = AdbMessage(command=constants.CLSE, arg0=1, arg1=1).pack()
+
+        with self.assertRaises(exceptions.AdbTimeoutError):
+            # Use a negative timeout to ensure that only one packet gets read
+            self.device.connect([], read_timeout_s=-1)
 
     # ======================================================================= #
     #                                                                         #
