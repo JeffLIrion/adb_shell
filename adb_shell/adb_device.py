@@ -427,7 +427,7 @@ class _AdbIOManager(object):
 
             if time.time() - start > adb_info.read_timeout_s:
                 # Timeout
-                raise exceptions.AdbTimeoutError("Timeout: read {} of {} bytes (transport_timeout_s = {}, read_timeout_s = {})".format(len(data), len(data) + length,  adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.AdbTimeoutError("Timeout: read {} of {} bytes (transport_timeout_s = {}, read_timeout_s = {})".format(len(data), len(data) + length, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
         return bytes(data)
 
