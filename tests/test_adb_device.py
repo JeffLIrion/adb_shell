@@ -625,7 +625,7 @@ class TestAdbDevice(unittest.TestCase):
     # ======================================================================= #
     def test_list(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -645,7 +645,7 @@ class TestAdbDevice(unittest.TestCase):
                            DeviceFile(filename=bytearray(b'file2'), mode=4, size=5, mtime=6)]
 
         self.assertEqual(expected_result, self.device.list('/dir'))
-        self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+        self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_list_empty_path(self):
         with self.assertRaises(exceptions.DevicePathInvalidError):
@@ -661,7 +661,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_push_fail(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         mtime = 100
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -676,7 +676,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_push_file(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         mtime = 100
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -700,11 +700,11 @@ class TestAdbDevice(unittest.TestCase):
             with patch("adb_shell.adb_device.os.fstat", return_value=patchers.StSize(12345)):
                 self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             self.assertEqual(self.progress_callback_count, 1)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_push_file_exception(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         mtime = 100
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -730,11 +730,11 @@ class TestAdbDevice(unittest.TestCase):
                 self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             
             self.assertIsNone(self.progress_callback_count)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_push_file_mtime0(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         mtime = 0
         filedata = b'Ohayou sekai.\nGood morning world!'
@@ -755,11 +755,11 @@ class TestAdbDevice(unittest.TestCase):
 
         with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('time.time', return_value=mtime):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_push_big_file(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         mtime = 100
         filedata = b'0' * int(3.5 * self.device.max_chunk_size)
@@ -792,7 +792,7 @@ class TestAdbDevice(unittest.TestCase):
             with patch("adb_shell.adb_device.os.fstat", return_value=patchers.StSize(12345)):
                 self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             self.assertEqual(self.progress_callback_count, 4)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_push_dir(self):
         self.assertTrue(self.device.connect())
@@ -832,7 +832,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_pull_file(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         filedata = b'Ohayou sekai.\nGood morning world!'
 
@@ -856,11 +856,11 @@ class TestAdbDevice(unittest.TestCase):
 
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(m.written, filedata)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_pull_file_exception(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         filedata = b'Ohayou sekai.\nGood morning world!'
 
@@ -885,11 +885,11 @@ class TestAdbDevice(unittest.TestCase):
 
             self.assertIsNone(self.progress_callback_count)
             self.assertEqual(m.written, filedata)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_pull_big_file(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         filedata = b'0' * int(1.5 * constants.MAX_ADB_DATA)
 
@@ -913,7 +913,7 @@ class TestAdbDevice(unittest.TestCase):
             
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(m.written, filedata)
-            self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+            self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_pull_empty_path(self):
         with self.assertRaises(exceptions.DevicePathInvalidError):
@@ -929,7 +929,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_pull_non_existant_path(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
@@ -946,11 +946,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
         with self.assertRaises(exceptions.AdbCommandFailureException):
             self.device.pull("/does/not/exist", "NOWHERE")
-        self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+        self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_pull_non_existant_path_2(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
@@ -965,11 +965,11 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
         with self.assertRaises(exceptions.AdbCommandFailureException):
             self.device.pull("/does/not/exist", "NOWHERE")
-        self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+        self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_stat(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -985,7 +985,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
         self.assertEqual((1, 2, 3), self.device.stat('/data'))
-        self.assertEqual(expected_bulk_write, self.transport.bulk_write_list)
+        self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
     def test_stat_empty_path(self):
         with self.assertRaises(exceptions.DevicePathInvalidError):
@@ -1025,7 +1025,7 @@ class TestAdbDevice(unittest.TestCase):
     # ======================================================================= #
     def test_filesync_read_adb_command_failure_exceptions(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
@@ -1038,7 +1038,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_filesync_read_invalid_response_error(self):
         self.assertTrue(self.device.connect())
-        self.transport.bulk_write_list = b''
+        self.transport.bulk_write_data = b''
 
         # Provide the `bulk_read` return values
         self.transport.bulk_read_list = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
