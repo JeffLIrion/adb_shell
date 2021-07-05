@@ -243,14 +243,13 @@ class _AdbIOManager(object):
     def read(self, expected_cmds, adb_info, allow_zeros=False):
         """Read packets from the device until we get an expected packet type.
 
-        TODO: Update this description
+        1. While the time limit has not been exceeded:
 
-        1. Read a message from the device and unpack the ``cmd``, ``arg0``, ``arg1``, ``data_length``, and ``data_checksum`` fields
-        2. If ``cmd`` is not a recognized command in :const:`adb_shell.constants.WIRE_TO_ID`, raise an exception
-        3. If the time has exceeded ``read_timeout_s``, raise an exception
-        4. Read ``data_length`` bytes from the device
-        5. If the checksum of the read data does not match ``data_checksum``, raise an exception
-        6. Return ``command``, ``arg0``, ``arg1``, and ``bytes(data)``
+            1. See if the expected packet is in the packet store
+            2. Read a packet from the device.  If it matches what we are looking for, we are done.  If it corresponds to a different stream, add it to the store.
+
+        2. After time has expired, check the store again.  If the expected packet is found, return it.
+        3. Raise a timeout exception
 
 
         Parameters
@@ -264,24 +263,26 @@ class _AdbIOManager(object):
 
         Returns
         -------
-        command : bytes
+        cmd : bytes
             The received command, which is in :const:`adb_shell.constants.WIRE_TO_ID` and must be in ``expected_cmds``
         arg0 : int
             TODO
         arg1 : int
             TODO
-        bytes
+        data : bytes
             The data that was read
 
         Raises
         ------
-        adb_shell.exceptions.InvalidCommandError
+        adb_shell.exceptions.AdbTimeoutError
             Never got one of the expected responses
 
         """
         start = time.time()
 
         while True:
+            # Should both locks be held here?
+
             # Read packets from the store until we find a match or there are no more entries
             with self._store_lock:
                 # Recall that `arg0` from the device corresponds to `adb_info.remote_id` and `arg1` from the device corresponds to `adb_info.local_id`
@@ -329,7 +330,7 @@ class _AdbIOManager(object):
                 arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
 
         # Timeout
-        raise exceptions.AdbTimeoutError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+        raise exceptions.AdbTimeoutError("Never got one of the expected responses: {} (transport_timeout_s = {}, read_timeout_s = {})".format(expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
     def send(self, msg, adb_info):
         """Send a message to the device.
@@ -367,12 +368,12 @@ class _AdbIOManager(object):
             TODO
         arg1 : int
             TODO
-        bytes
+        data : bytes
             The data that was read
 
         Raises
         ------
-        adb_shell.exceptions.InvalidCommandError
+        adb_shell.exceptions.AdbTimeoutError
             Never got one of the expected responses
 
         """
@@ -386,7 +387,7 @@ class _AdbIOManager(object):
 
             if time.time() - start > adb_info.read_timeout_s:
                 # Timeout
-                raise exceptions.AdbTimeoutError("Never got one of the expected responses: %s (transport_timeout_s = %f, read_timeout_s = %f)" % (expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.AdbTimeoutError("Never got one of the expected responses: {} (transport_timeout_s = {}, read_timeout_s = {})".format(expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
     def _read_bytes_from_device(self, length, adb_info):
         """Read ``length`` bytes from the device.
@@ -405,7 +406,7 @@ class _AdbIOManager(object):
 
         Raises
         ------
-        adb_shell.exceptions.InvalidCommandError
+        adb_shell.exceptions.AdbTimeoutError
             Did not read ``length`` bytes in time
 
         """
@@ -426,7 +427,7 @@ class _AdbIOManager(object):
 
             if time.time() - start > adb_info.read_timeout_s:
                 # Timeout
-                raise exceptions.AdbTimeoutError("Timeout... (transport_timeout_s = %f, read_timeout_s = %f)" % (adb_info.transport_timeout_s, adb_info.read_timeout_s))
+                raise exceptions.AdbTimeoutError("Timeout: read {} of {} bytes (transport_timeout_s = {}, read_timeout_s = {})".format(len(data), len(data) + length,  adb_info.transport_timeout_s, adb_info.read_timeout_s))
 
         return bytes(data)
 
@@ -470,7 +471,7 @@ class _AdbIOManager(object):
         data = self._read_bytes_from_device(data_length, adb_info)
         actual_checksum = checksum(data)
         if actual_checksum != data_checksum:
-            raise exceptions.InvalidChecksumError('Received checksum {0} != {1}'.format(actual_checksum, data_checksum))
+            raise exceptions.InvalidChecksumError("Received checksum {} != {}".format(actual_checksum, data_checksum))
 
         return command, arg0, arg1, data
 
