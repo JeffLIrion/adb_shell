@@ -95,8 +95,8 @@ class _AdbIOManager(object):
 
     Notes
     -----
-    The only places where the ``self._store_lock`` and ``self._transport_lock`` locks are held at the same time are :meth:`_AdbIOManager.close` and
-    :meth:`_AdbIOManager.connect`.  In both places, the ``self._transport_lock`` is acquired first.  Therefore, there is no potential for deadlock.
+    When the ``self._store_lock`` and ``self._transport_lock`` locks are held at the same time, it must always be the
+    case that the ``self._transport_lock`` is acquired first.  This ensures that  there is no potential for deadlock.
 
     Parameters
     ----------
@@ -185,6 +185,7 @@ class _AdbIOManager(object):
             self._transport.close()
 
             with self._store_lock:
+                # We can release this lock because packets are only added to the store when the transport lock is held
                 self._packet_store.clear_all()
 
             # 1. Use the transport to establish a connection
@@ -278,47 +279,7 @@ class _AdbIOManager(object):
             Never got one of the expected responses
 
         """
-        start = time.time()
-
-        while True:
-            # Should both locks be held here?
-
-            # Read packets from the store until we find a match or there are no more entries
-            with self._store_lock:
-                # Recall that `arg0` from the device corresponds to `adb_info.remote_id` and `arg1` from the device corresponds to `adb_info.local_id`
-                arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
-                while arg0_arg1:
-                    cmd, arg0, arg1, data = self._packet_store.get(arg0_arg1[0], arg0_arg1[1])
-                    if cmd in expected_cmds:
-                        return cmd, arg0, arg1, data
-
-                    arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
-
-            # Read from the device
-            with self._transport_lock:
-                cmd, arg0, arg1, data = self._read_packet_from_device(adb_info)
-
-            if not adb_info.args_match(arg0, arg1, allow_zeros):
-                # The packet is not a match -> put it in the store
-                with self._store_lock:
-                    self._packet_store.put(arg0, arg1, cmd, data)
-
-            else:
-                # The packet is a match for this `(adb_info.local_id, adb_info.remote_id)` pair
-                if cmd == constants.CLSE:
-                    # Clear the entry in the store
-                    with self._store_lock:
-                        self._packet_store.clear(arg0, arg1)
-
-                # If `cmd` is a match, then we are done
-                if cmd in expected_cmds:
-                    return cmd, arg0, arg1, data
-
-            # Check if time is up
-            if time.time() - start > adb_info.read_timeout_s:
-                break
-
-        # Try one last time to read packets from the store before throwing a timeout exception
+        # First, try reading from the store. This way, you won't be waiting for the transport if it isn't needed
         with self._store_lock:
             # Recall that `arg0` from the device corresponds to `adb_info.remote_id` and `arg1` from the device corresponds to `adb_info.local_id`
             arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
@@ -328,6 +289,45 @@ class _AdbIOManager(object):
                     return cmd, arg0, arg1, data
 
                 arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
+
+        # Start the timer
+        start = time.time()
+
+        while True:
+            with self._transport_lock:
+                # Try reading from the store (again) in case a packet got added while waiting to acquire the transport lock
+                with self._store_lock:
+                    # Recall that `arg0` from the device corresponds to `adb_info.remote_id` and `arg1` from the device corresponds to `adb_info.local_id`
+                    arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
+                    while arg0_arg1:
+                        cmd, arg0, arg1, data = self._packet_store.get(arg0_arg1[0], arg0_arg1[1])
+                        if cmd in expected_cmds:
+                            return cmd, arg0, arg1, data
+
+                        arg0_arg1 = self._packet_store.find(adb_info.remote_id, adb_info.local_id) if not allow_zeros else self._packet_store.find_allow_zeros(adb_info.remote_id, adb_info.local_id)
+
+                # Read from the device
+                cmd, arg0, arg1, data = self._read_packet_from_device(adb_info)
+
+                if not adb_info.args_match(arg0, arg1, allow_zeros):
+                    # The packet is not a match -> put it in the store
+                    with self._store_lock:
+                        self._packet_store.put(arg0, arg1, cmd, data)
+
+                else:
+                    # The packet is a match for this `(adb_info.local_id, adb_info.remote_id)` pair
+                    if cmd == constants.CLSE:
+                        # Clear the entry in the store
+                        with self._store_lock:
+                            self._packet_store.clear(arg0, arg1)
+
+                    # If `cmd` is a match, then we are done
+                    if cmd in expected_cmds:
+                        return cmd, arg0, arg1, data
+
+            # Check if time is up
+            if time.time() - start > adb_info.read_timeout_s:
+                break
 
         # Timeout
         raise exceptions.AdbTimeoutError("Never got one of the expected responses: {} (transport_timeout_s = {}, read_timeout_s = {})".format(expected_cmds, adb_info.transport_timeout_s, adb_info.read_timeout_s))

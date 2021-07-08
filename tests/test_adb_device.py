@@ -348,7 +348,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect())
 
         def fake_read_packet_from_device(*args, **kwargs):
-            # Mimic the scenario that this stream's packets get read by another stream after checking the store and while waiting to acquire the transport lock
+            # Mimic the scenario that this stream's packets get read by another stream after the first attempt to read the packet from the device
             self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.WRTE, data=b'\x00')
             self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.OKAY, data=b'\x00')
             self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.OKAY, data=b'\x00')
@@ -361,10 +361,9 @@ class TestAdbDevice(unittest.TestCase):
             return constants.OKAY, 2, 2, b"\x00"
 
         with patch.object(self.device._io_manager, "_read_packet_from_device", fake_read_packet_from_device):
-            # Use a negative timeout in order to only allow one attempt to read a packet from the device
-            # (All subsequent packets will be retrieved from the store)
-            self.assertEqual(self.device.shell('TEST1', read_timeout_s=-1), 'PASS1')
-            self.assertEqual(self.device.shell('TEST2', read_timeout_s=-1), 'PASS2')
+            # The patch function will only be called once, all subsequent packets will be retrieved from the store
+            self.assertEqual(self.device.shell('TEST1'), 'PASS1')
+            self.assertEqual(self.device.shell('TEST2'), 'PASS2')
 
     # ======================================================================= #
     #                                                                         #
