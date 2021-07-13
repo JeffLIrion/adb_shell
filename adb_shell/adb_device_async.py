@@ -95,7 +95,7 @@ class _AdbIOManagerAsync(object):
     Parameters
     ----------
     transport : BaseTransportAsync
-        A transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport.BaseTransport`
+        A transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport_async.BaseTransportAsync`
 
     Attributes
     ----------
@@ -103,7 +103,7 @@ class _AdbIOManagerAsync(object):
         A store for holding packets that correspond to different ADB streams
     _store_lock : Lock
         A lock for protecting ``self._packet_store`` (this lock is never held for long)
-    _transport : BaseTransport
+    _transport : BaseTransportAsync
         A transport for communicating with the device; must be an instance of a subclass of :class:`~adb_shell.transport.base_transport_async.BaseTransportAsync`
     _transport_lock : Lock
         A lock for protecting ``self._transport``
