@@ -1143,11 +1143,6 @@ class AdbDevice(object):
         adb_info : _AdbTransactionInfo
             Info and settings for this ADB transaction
 
-        Raises
-        ------
-        adb_shell.exceptions.InvalidResponseError
-            Wrong local_id sent to us.
-
         """
         self._local_id += 1
         if self._local_id == 2**32:

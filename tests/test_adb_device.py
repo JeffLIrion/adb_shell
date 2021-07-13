@@ -365,6 +365,34 @@ class TestAdbDevice(unittest.TestCase):
             self.assertEqual(self.device.shell('TEST1'), 'PASS1')
             self.assertEqual(self.device.shell('TEST2'), 'PASS2')
 
+    def test_shell_local_id2(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=2, data=b''))
+
+        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
+
+    def test_shell_remote_id2(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=2, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=2, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=2, arg1=2, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
+
     # ======================================================================= #
     #                                                                         #
     #                           `shell` error tests                           #
@@ -441,40 +469,6 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidChecksumError):
             self.device.shell('TEST')
-
-    def test_shell_error_local_id2(self):
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
-                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS2'),
-                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
-                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
-                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=2, data=b''))
-
-        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
-        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
-
-    def test_shell_error_remote_id2(self):
-        self.assertTrue(self.device.connect())
-
-        # Provide the `bulk_read` return values
-        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                      AdbMessage(command=constants.OKAY, arg0=2, arg1=2, data=b'\x00'),
-                                                      AdbMessage(command=constants.WRTE, arg0=2, arg1=2, data=b'PASS2'),
-                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
-                                                      AdbMessage(command=constants.CLSE, arg0=2, arg1=2, data=b''),
-                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
-
-        self.assertEqual(self.device.shell('TEST1'), 'PASS1')
-        self.assertEqual(self.device.shell('TEST2'), 'PASS2')
-
-        #self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-        #                                              AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS'))
-
-        #with self.assertRaises(exceptions.InvalidResponseError):
-        #    self.device.shell('TEST')
 
     def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
