@@ -521,6 +521,8 @@ class AdbDeviceAsync(object):
         Default timeout in seconds for transport packets, or ``None``
      _local_id : int
         The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
+    _local_id_lock : Lock
+        A lock for protecting ``_local_id``; this is never held for long
     _maxdata: int
         Maximum amount of data in an ADB packet
     _transport : BaseTransportAsync
@@ -542,6 +544,7 @@ class AdbDeviceAsync(object):
         self._available = False
         self._default_transport_timeout_s = default_transport_timeout_s
         self._local_id = 0
+        self._local_id_lock = Lock()
         self._maxdata = constants.MAX_PUSH_DATA
 
     # ======================================================================= #
@@ -1138,10 +1141,11 @@ class AdbDeviceAsync(object):
             Info and settings for this ADB transaction
 
         """
-        self._local_id += 1
-        if self._local_id == 2**32:
-            self._local_id = 1
-        adb_info.local_id = self._local_id
+        async with self._local_id_lock:
+            self._local_id += 1
+            if self._local_id == 2**32:
+                self._local_id = 1
+            adb_info.local_id = self._local_id
 
         msg = AdbMessage(constants.OPEN, adb_info.local_id, 0, destination + b'\0')
         await self._io_manager.send(msg, adb_info)
