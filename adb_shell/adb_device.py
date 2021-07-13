@@ -1147,7 +1147,7 @@ class AdbDevice(object):
             Info and settings for this ADB transaction
 
         """
-        with self?_local_id_lock:
+        with self._local_id_lock:
             self._local_id += 1
             if self._local_id == 2**32:
                 self._local_id = 1
