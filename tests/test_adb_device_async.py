@@ -56,6 +56,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     def tearDown(self):
         self.assertFalse(self.transport.bulk_read_data)
+        self.assertEqual(len(self.device._io_manager._packet_store._dict), 0)
 
     @staticmethod
     async def fake_stat(*args, **kwargs):
@@ -105,7 +106,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         # Clear the `_bulk_read` buffer so that `self.tearDown()` passes
         self.transport.bulk_read_data = b''
-        
+
 
     @awaiter
     async def test_init_banner(self):
@@ -214,6 +215,13 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.assertTrue(await self.device.connect([signer], auth_callback=auth_callback))
         self.assertTrue(self._callback_invoked)
 
+    @awaiter
+    async def test_connect_timeout(self):
+        self.transport.bulk_read_data = AdbMessage(command=constants.CLSE, arg0=1, arg1=1).pack()
+
+        with self.assertRaises(exceptions.AdbTimeoutError):
+            # Use a negative timeout to ensure that only one packet gets read
+            await self.device.connect([], read_timeout_s=-1)
 
     # ======================================================================= #
     #                                                                         #
@@ -274,7 +282,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     @awaiter
     async def test_shell_dont_decode(self):
         self.assertTrue(await self.device.connect())
-        
+
         # Provide the `bulk_read` return values
         self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PA'),
@@ -342,20 +350,94 @@ class TestAdbDeviceAsync(unittest.TestCase):
         await self.device.shell("dumpsys power | grep 'Display Power' | grep -q 'state=ON' && echo -e '1\\c' && dumpsys power | grep mWakefulness | grep -q Awake && echo -e '1\\c' && dumpsys audio | grep paused | grep -qv 'Buffer Queue' && echo -e '1\\c' || (dumpsys audio | grep started | grep -qv 'Buffer Queue' && echo '2\\c' || echo '0\\c') && dumpsys power | grep Locks | grep 'size=' && CURRENT_APP=$(dumpsys window windows | grep mCurrentFocus) && CURRENT_APP=${CURRENT_APP#*{* * } && CURRENT_APP=${CURRENT_APP%%/*} && echo $CURRENT_APP && (dumpsys media_session | grep -A 100 'Sessions Stack' | grep -A 100 $CURRENT_APP | grep -m 1 'state=PlaybackState {' || echo) && dumpsys audio | grep '\\- STREAM_MUSIC:' -A 12")
         self.assertEqual(await self.device.shell('TEST'), 'PASS')
 
+    @awaiter
+    async def test_shell_multiple_streams(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=2, data=b''))
+
+        self.assertEqual(await self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(await self.device.shell('TEST2'), 'PASS2')
+
+    @awaiter
+    async def test_shell_multiple_streams2(self):
+        self.assertTrue(await self.device.connect())
+
+        async def fake_read_packet_from_device(*args, **kwargs):
+            # Mimic the scenario that this stream's packets get read by another stream after the first attempt to read the packet from the device
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.WRTE, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.OKAY, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.OKAY, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.OKAY, data=b'\x00')
+            self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.WRTE, data=b'PASS2')
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.WRTE, data=b"PASS1")
+            self.device._io_manager._packet_store.put(arg0=1, arg1=1, cmd=constants.CLSE, data=b"")
+            self.device._io_manager._packet_store.put(arg0=2, arg1=2, cmd=constants.CLSE, data=b"")
+
+            return constants.OKAY, 2, 2, b"\x00"
+
+        with patch.object(self.device._io_manager, "_read_packet_from_device", fake_read_packet_from_device):
+            # The patch function will only be called once, all subsequent packets will be retrieved from the store
+            self.assertEqual(await self.device.shell('TEST1'), 'PASS1')
+            self.assertEqual(await self.device.shell('TEST2'), 'PASS2')
+
+    @awaiter
+    async def test_shell_local_id2(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=2, data=b''))
+
+        self.assertEqual(await self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(await self.device.shell('TEST2'), 'PASS2')
+
+    @awaiter
+    async def test_shell_remote_id2(self):
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=2, arg1=2, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=2, arg1=2, data=b'PASS2'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'PASS1'),
+                                                      AdbMessage(command=constants.CLSE, arg0=2, arg1=2, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(await self.device.shell('TEST1'), 'PASS1')
+        self.assertEqual(await self.device.shell('TEST2'), 'PASS2')
+
+
     # ======================================================================= #
     #                                                                         #
     #                           `shell` error tests                           #
     #                                                                         #
     # ======================================================================= #
     @awaiter
-    async def test_shell_error_local_id(self):
+    async def test_shell_error_local_id_timeout(self):
         self.assertTrue(await self.device.connect())
 
         # Provide the `bulk_read` return values
-        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'))
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=1234, data=b'\x00'))
 
-        with self.assertRaises(exceptions.InvalidResponseError):
-            await self.device.shell('TEST')
+        with self.assertRaises(exceptions.AdbTimeoutError):
+            await self.device.shell('TEST', read_timeout_s=1)
+
+        # Close the connection so that the packet store gets cleared
+        await self.device.close()
 
     @awaiter
     async def test_shell_error_unknown_command(self):
@@ -374,7 +456,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         # Provide the `bulk_read` return values
         self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''))
 
-        with self.assertRaises(exceptions.InvalidCommandError):
+        with self.assertRaises(exceptions.AdbTimeoutError):
             await self.device.shell('TEST', read_timeout_s=-1)
 
     @awaiter
@@ -385,7 +467,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                                       AdbMessage(command=constants.CLSE, arg0=2, arg1=1, data=b''))
 
-        with self.assertRaises(exceptions.InvalidCommandError):
+        with self.assertRaises(exceptions.AdbTimeoutError):
             await self.device.shell('TEST', read_timeout_s=-1)
 
     @awaiter
@@ -419,29 +501,6 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.transport.bulk_read_data = b''.join([msg1.pack(), msg1.data, msg2.pack(), msg2.data[:-1] + b'0'])
 
         with self.assertRaises(exceptions.InvalidChecksumError):
-            await self.device.shell('TEST')
-
-    @awaiter
-    async def test_shell_error_local_id2(self):
-        self.assertTrue(await self.device.connect())
-
-        # Provide the `bulk_read` return values
-        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=2, data=b'PASS'))
-
-        with self.assertRaises(exceptions.InterleavedDataError):
-            await self.device.shell('TEST')
-            # await self.device.shell('TEST')
-
-    @awaiter
-    async def test_shell_error_remote_id2(self):
-        self.assertTrue(await self.device.connect())
-
-        # Provide the `bulk_read` return values
-        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
-                                                      AdbMessage(command=constants.WRTE, arg0=2, arg1=1, data=b'PASS'))
-
-        with self.assertRaises(exceptions.InvalidResponseError):
             await self.device.shell('TEST')
 
     @awaiter
@@ -511,7 +570,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.assertTrue(await self.device.connect([signer]))
 
         await self.device.shell('Android TV update command')
-        
+
         self.assertTrue(await self.device.connect([signer]))
         await self.device.shell('Android TV update command')
         await self.device.shell('Android TV update command')
@@ -709,7 +768,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             self.progress_callback_count = None
             with patch("adb_shell.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
                 await self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
-            
+
             self.assertIsNone(self.progress_callback_count)
             self.assertEqual(self.transport.bulk_write_data, expected_bulk_write)
 
