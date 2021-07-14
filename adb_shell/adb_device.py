@@ -985,6 +985,7 @@ class AdbDevice(object):
             with open(_local_path, 'rb') as stream:
                 adb_info = self._open(b'sync:', transport_timeout_s, read_timeout_s, None)
                 filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
+
                 self._push(stream, _device_path, st_mode, mtime, progress_callback, adb_info, filesync_info)
 
             self._clse(adb_info)
