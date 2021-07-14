@@ -161,7 +161,7 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         self.transport_timeout_s = self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
 
     def args_match(self, arg0, arg1, allow_zeros=False):
-        """Check
+        """Check if ``arg0`` and ``arg1`` match this object's ``remote_id`` and ``local_id`` attributes, respectively.
 
         Parameters
         ----------
