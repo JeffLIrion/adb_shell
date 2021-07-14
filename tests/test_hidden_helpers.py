@@ -172,8 +172,8 @@ class TestAdbPacketStore(unittest.TestCase):
 class TestAdbTransactionInfo(unittest.TestCase):
 
     def test_args_match(self):
-        adb_info_1_None = _AdbTransactionInfo(1, None)
-        adb_info_1_2 = _AdbTransactionInfo(1, 2)
+        adb_info_1_None = _AdbTransactionInfo(1, None, 123, 456, 789)
+        adb_info_1_2 = _AdbTransactionInfo(1, 2, 123, 456, 789)
 
         # (1, None) -> exact matches
         self.assertTrue(adb_info_1_None.args_match(6, 1))
