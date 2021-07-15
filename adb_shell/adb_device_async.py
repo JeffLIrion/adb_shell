@@ -329,10 +329,6 @@ class _AdbIOManagerAsync(object):
     async def send(self, msg, adb_info):
         """Send a message to the device.
 
-        1. Send the message header (:meth:`adb_shell.adb_message.AdbMessage.pack <AdbMessage.pack>`)
-        2. Send the message data
-
-
         Parameters
         ----------
         msg : AdbMessage
@@ -607,21 +603,6 @@ class AdbDeviceAsync(object):
     async def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
         """Establish an ADB connection to the device.
 
-        1. Use the transport to establish a connection
-        2. Send a ``b'CNXN'`` message
-        3. Unpack the ``cmd``, ``arg0``, ``arg1``, and ``banner`` fields from the response
-        4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
-        5. If no ``rsa_keys`` are provided, raise an exception
-        6. Loop through our keys, signing the last ``banner`` that we received
-
-            1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
-            2. Sign the last ``banner`` and send it in an ``b'AUTH'`` message
-            3. Unpack the ``cmd``, ``arg0``, and ``banner`` fields from the response via :func:`adb_shell.adb_message.unpack`
-            4. If ``cmd`` is ``b'CNXN'``, set transfer maxdata size and return ``True``
-
-        7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
-
-
         Parameters
         ----------
         rsa_keys : list, None
@@ -633,7 +614,7 @@ class AdbDeviceAsync(object):
         auth_timeout_s : float, None
             The time in seconds to wait for a ``b'CNXN'`` authentication response
         read_timeout_s : float
-            The total time in seconds to wait for expected commands in :meth:`AdbDeviceAsync._read`
+            The total time in seconds to wait for expected commands in :meth:`_AdbIOManagerAsync._read_expected_packet_from_device`
         auth_callback : function, None
             Function callback invoked when the connection needs to be accepted on the device
 
@@ -641,13 +622,6 @@ class AdbDeviceAsync(object):
         -------
         bool
             Whether the connection was established (:attr:`AdbDeviceAsync.available`)
-
-        Raises
-        ------
-        adb_shell.exceptions.DeviceAuthError
-            Device authentication required, no keys available
-        adb_shell.exceptions.InvalidResponseError
-            Invalid auth response from the device
 
         """
         # Get `self._banner` if it was not provided in the constructor
