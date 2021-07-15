@@ -244,12 +244,12 @@ class _AdbIOManager(object):
     def read(self, expected_cmds, adb_info, allow_zeros=False):
         """Read packets from the device until we get an expected packet type.
 
-        1. While the time limit has not been exceeded:
+        1. See if the expected packet is in the packet store
+        2. While the time limit has not been exceeded:
 
             1. See if the expected packet is in the packet store
             2. Read a packet from the device.  If it matches what we are looking for, we are done.  If it corresponds to a different stream, add it to the store.
 
-        2. After time has expired, check the store again.  If the expected packet is found, return it.
         3. Raise a timeout exception
 
 
