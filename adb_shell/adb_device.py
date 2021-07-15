@@ -609,6 +609,8 @@ class AdbDevice(object):
     def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
         """Establish an ADB connection to the device.
 
+        See :meth:`_AdbIOManager.connect`.
+
         Parameters
         ----------
         rsa_keys : list, None
