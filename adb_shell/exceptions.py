@@ -50,12 +50,6 @@ class DeviceAuthError(Exception):
         super(DeviceAuthError, self).__init__(message, *args)
 
 
-class InterleavedDataError(Exception):
-    """We only support command sent serially.
-
-    """
-
-
 class InvalidChecksumError(Exception):
     """Checksum of data didn't match expected checksum.
 
