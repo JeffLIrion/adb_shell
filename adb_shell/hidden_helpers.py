@@ -127,12 +127,12 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     remote_id : int
         The ID for the recipient
     transport_timeout_s : float, None
-        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`,
+        Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`,
         :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`,
         :meth:`BaseTransportAsync.bulk_read() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_read>`, and
         :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
     read_timeout_s : float
-        The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read` and :meth:`AdbDeviceAsync._read`
+        The total time in seconds to wait for data and packets from the device
     timeout_s : float, None
         The total time in seconds to wait for the ADB command to finish
 
@@ -141,13 +141,13 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
     local_id : int
         The ID for the sender (i.e., the device running this code)
     read_timeout_s : float
-        The total time in seconds to wait for a command in ``expected_cmds`` in :meth:`AdbDevice._read` and :meth:`AdbDeviceAsync._read`
+        The total time in seconds to wait for data and packets from the device
     remote_id : int
         The ID for the recipient
     timeout_s : float, None
         The total time in seconds to wait for the ADB command to finish
     transport_timeout_s : float, None
-        Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`,
+        Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`,
         :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`,
         :meth:`BaseTransportAsync.bulk_read() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_read>`, and
         :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
@@ -248,9 +248,10 @@ class _AdbPacketStore(object):
     ----------
     _dict : dict[int: dict[int: Queue]]
         A dictionary of dictionaries of queues.  The first (outer) dictionary keys are the ``arg1`` return values from
-        the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`
-        methods.  The second (inner) dictionary keys are the ``arg0`` return values from those methods.  And the values
-        of this inner dictionary are queues of ``(cmd, data)`` tuples.
+        the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and
+        :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods.  The second (inner)
+        dictionary keys are the ``arg0`` return values from those methods.  And the values of this inner dictionary are
+        queues of ``(cmd, data)`` tuples.
 
     """
 
@@ -292,9 +293,9 @@ class _AdbPacketStore(object):
         Parameters
         ----------
         arg0 : int
-            The ``arg0`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+            The ``arg0`` return value from the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods
         arg1 : int
-            The ``arg1`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+            The ``arg1`` return value from the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods
 
         """
         if arg1 in self._dict and arg0 in self._dict[arg1]:
@@ -378,9 +379,9 @@ class _AdbPacketStore(object):
         Parameters
         ----------
         arg0 : int, None
-            The ``arg0`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods; ``None`` serves as a wildcard
+            The ``arg0`` return value from the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods; ``None`` serves as a wildcard
         arg1 : int, None
-            The ``arg1`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods; ``None`` serves as a wildcard
+            The ``arg1`` return value from the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods; ``None`` serves as a wildcard
 
         Returns
         -------
@@ -414,9 +415,9 @@ class _AdbPacketStore(object):
         Parameters
         ----------
         arg0 : int
-            The ``arg0`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+            The ``arg0`` return value from the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods
         arg1 : int
-            The ``arg1`` return value from the :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read` methods
+            The ``arg1`` return value from the :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device` methods
         cmd : bytes
             The ADB packet's command
         data : bytes

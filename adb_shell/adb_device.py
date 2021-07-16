@@ -525,7 +525,7 @@ class AdbDevice(object):
         Used for handling all ADB I/O
     _local_id : int
         The local ID that is used for ADB transactions; the value is incremented each time and is always in the range ``[1, 2^32)``
-     _local_id_lock : Lock
+    _local_id_lock : Lock
         A lock for protecting ``_local_id``; this is never held for long
     _maxdata: int
         Maximum amount of data in an ADB packet
@@ -617,7 +617,7 @@ class AdbDevice(object):
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`~adb_shell.auth.sign_pythonrsa.PythonRSASigner`
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         auth_timeout_s : float, None
             The time in seconds to wait for a ``b'CNXN'`` authentication response
@@ -662,10 +662,10 @@ class AdbDevice(object):
         command : bytes
             The command that will be sent
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         timeout_s : float, None
             The total time in seconds to wait for the ADB command to finish
         decode : bool
@@ -691,10 +691,10 @@ class AdbDevice(object):
         command : bytes
             The command that will be sent
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         decode : bool
             Whether to decode the output to utf8 before returning
 
@@ -722,10 +722,10 @@ class AdbDevice(object):
         command : str
             The exec-out command that will be sent
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         timeout_s : float, None
             The total time in seconds to wait for the ADB command to finish
         decode : bool
@@ -750,10 +750,10 @@ class AdbDevice(object):
         Parameters
         ----------
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         timeout_s : float, None
             The total time in seconds to wait for the ADB command to finish
 
@@ -771,10 +771,10 @@ class AdbDevice(object):
         command : str
             The shell command that will be sent
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         timeout_s : float, None
             The total time in seconds to wait for the ADB command to finish
         decode : bool
@@ -799,10 +799,10 @@ class AdbDevice(object):
         command : str
             The shell command that will be sent
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         decode : bool
             Whether to decode the output to utf8 before returning
 
@@ -833,7 +833,7 @@ class AdbDevice(object):
         transport_timeout_s : float, None
             Expected timeout for any part of the pull.
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
 
         Returns
         -------
@@ -877,7 +877,7 @@ class AdbDevice(object):
         transport_timeout_s : float, None
             Expected timeout for any part of the pull.
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
 
         """
         if not device_path:
@@ -944,7 +944,7 @@ class AdbDevice(object):
         transport_timeout_s : float, None
             Expected timeout for any part of the push.
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
 
         """
         if not device_path:
@@ -1031,7 +1031,7 @@ class AdbDevice(object):
         transport_timeout_s : float, None
             Expected timeout for any part of the pull.
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
 
         Returns
         -------
@@ -1100,13 +1100,8 @@ class AdbDevice(object):
     def _open(self, destination, transport_timeout_s, read_timeout_s, timeout_s):
         """Opens a new connection to the device via an ``b'OPEN'`` message.
 
-        1. :meth:`~AdbDevice._send` an ``b'OPEN'`` command to the device that specifies the ``local_id``
-        2. :meth:`~AdbDevice._read` a response from the device that includes a command, another local ID (``their_local_id``), and ``remote_id``
-
-            * If ``local_id`` and ``their_local_id`` do not match, raise an exception.
-            * If the received command is ``b'CLSE'``, :meth:`~AdbDevice._read` another response from the device
-            * If the received command is not ``b'OKAY'``, raise an exception
-            * Set the ``adb_info.local_id`` and ``adb_info.remote_id`` attributes
+        1. :meth:`~_AdbIOManager.send` an ``b'OPEN'`` command to the device that specifies the ``local_id``
+        2. :meth:`~_AdbIOManager.read` the response from the device and fill in the ``adb_info.remote_id`` attribute
 
 
         Parameters
@@ -1114,10 +1109,10 @@ class AdbDevice(object):
         destination : bytes
             ``b'SERVICE:COMMAND'``
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         timeout_s : float, None
             The total time in seconds to wait for the ADB command to finish
 
@@ -1143,33 +1138,24 @@ class AdbDevice(object):
     def _read_until(self, expected_cmds, adb_info):
         """Read a packet, acknowledging any write packets.
 
-        1. Read data via :meth:`AdbDevice._read`
+        1. Read data via :meth:`_AdbIOManager.read`
         2. If a ``b'WRTE'`` packet is received, send an ``b'OKAY'`` packet via :meth:`AdbDevice._okay`
-        3. Return the ``cmd`` and ``data`` that were read by :meth:`AdbDevice._read`
+        3. Return the ``cmd`` and ``data`` that were read by :meth:`_AdbIOManager.read`
 
 
         Parameters
         ----------
         expected_cmds : list[bytes]
-            :meth:`AdbDevice._read` with look for a packet whose command is in ``expected_cmds``
+            :meth:`_AdbIOManager.read` will look for a packet whose command is in ``expected_cmds``
         adb_info : _AdbTransactionInfo
             Info and settings for this ADB transaction
 
         Returns
         -------
         cmd : bytes
-            The command that was received by :meth:`AdbDevice._read`, which is in :const:`adb_shell.constants.WIRE_TO_ID` and must be in ``expected_cmds``
+            The command that was received by :meth:`_AdbIOManager.read`, which is in :const:`adb_shell.constants.WIRE_TO_ID` and must be in ``expected_cmds``
         data : bytes
-            The data that was received by :meth:`AdbDevice._read`
-
-        Raises
-        ------
-        adb_shell.exceptions.InterleavedDataError
-            We don't support multiple streams...
-        adb_shell.exceptions.InvalidResponseError
-            Incorrect remote id.
-        adb_shell.exceptions.InvalidCommandError
-            Never got one of the expected responses.
+            The data that was received by :meth:`_AdbIOManager.read`
 
         """
         cmd, _, _, data = self._io_manager.read(expected_cmds, adb_info, allow_zeros=True)
@@ -1234,10 +1220,10 @@ class AdbDevice(object):
         command : bytes
             The service command
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving packets, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
             and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
         read_timeout_s : float
-            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`AdbDevice._read`
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
         timeout_s : float, None
             The total time in seconds to wait for the ADB command to finish
 

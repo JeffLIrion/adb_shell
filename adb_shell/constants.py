@@ -79,7 +79,7 @@ RECV = b'RECV'
 SEND = b'SEND'
 STAT = b'STAT'
 
-#: Commands that are recognized by :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`
+#: Commands that are recognized by :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device`
 IDS = (AUTH, CLSE, CNXN, OKAY, OPEN, SYNC, WRTE)
 
 #: A dictionary where the keys are the commands in :const:`IDS` and the values are the keys converted to integers
@@ -118,5 +118,5 @@ MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 #: Default authentication timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice.connect` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync.connect`
 DEFAULT_AUTH_TIMEOUT_S = 10.
 
-#: Default total timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice._read`, :meth:`adb_shell.adb_device.AdbDevice._read_until`, :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`, and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read_until`
+#: Default total timeout (in s) for reading data from the device
 DEFAULT_READ_TIMEOUT_S = 10.

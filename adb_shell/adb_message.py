@@ -106,9 +106,9 @@ def unpack(message):
     arg1 : int
         TODO
     data_length : int
-        The length of the data sent by the device (used by :meth:`adb_shell.adb_device.AdbDevice._read` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync._read`)
+        The length of the message's data
     data_checksum : int
-        The checksum of the data sent by the device
+        The checksum of the message's data
 
     Raises
     ------
