@@ -90,8 +90,8 @@ class FakeSocket(object):
 class FakeTcpTransport(TcpTransport):
     def __init__(self, *args, **kwargs):
         TcpTransport.__init__(self, *args, **kwargs)
-        self._bulk_read = b''
-        self._bulk_write = b''
+        self.bulk_read_data = b''
+        self.bulk_write_data = b''
 
     def close(self):
         self._connection = None
@@ -101,12 +101,12 @@ class FakeTcpTransport(TcpTransport):
 
     def bulk_read(self, numbytes, transport_timeout_s=None):
         num = min(numbytes, constants.MAX_ADB_DATA)
-        ret = self._bulk_read[:num]
-        self._bulk_read = self._bulk_read[num:]
+        ret = self.bulk_read_data[:num]
+        self.bulk_read_data = self.bulk_read_data[num:]
         return ret
 
     def bulk_write(self, data, transport_timeout_s=None):
-        self._bulk_write += data
+        self.bulk_write_data += data
         return len(data)
 
 
