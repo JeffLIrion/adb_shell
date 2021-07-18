@@ -20,7 +20,7 @@ To enable debug logging in Python:
 ```python
 import logging
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 ```
 
 To enable debug logging in Home Assistant:
