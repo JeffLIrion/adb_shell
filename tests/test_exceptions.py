@@ -1,7 +1,12 @@
 import functools
 import inspect
 import pickle
+import re
 import unittest
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import adb_shell.exceptions
 
@@ -9,6 +14,11 @@ try:
     getargspec = inspect.getfullargspec
 except AttributeError:
     getargspec = inspect.getargspec
+
+try:
+    _assertRegex = unittest.TestCase.assertRegex
+except AttributeError:
+    _assertRegex = unittest.TestCase.assertRegexpMatches
 
 
 class TestExceptionSerialization(unittest.TestCase):
@@ -35,3 +45,20 @@ class TestExceptionSerialization(unittest.TestCase):
             )
             __test_name = "test_serialize_{}".format(__obj.__name__)
             locals()[__test_name] = __test_method
+
+    # We want to confirm what the stringification and representation of
+    # `UsbReadFailedError` look like since it's a non-trivial subclass of
+    # `Exception`
+    def test_usbreadfailederror_as_str(self):
+        exc_args = (mock.sentinel.error_msg, mock.sentinel.usb1_exc_obj)
+        exc_obj = adb_shell.exceptions.UsbReadFailedError(*exc_args)
+        expected_str = "{}: {}".format(*exc_args)
+        _assertRegex(self, str(exc_obj), re.escape(expected_str))
+
+    def test_usbreadfailederror_as_repr(self):
+        exc_args = (mock.sentinel.error_msg, mock.sentinel.usb1_exc_obj)
+        exc_obj = adb_shell.exceptions.UsbReadFailedError(*exc_args)
+        expected_repr = "{}{!r}".format(
+            adb_shell.exceptions.UsbReadFailedError.__name__, exc_args
+        )
+        _assertRegex(self, repr(exc_obj), re.escape(expected_repr))
