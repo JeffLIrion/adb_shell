@@ -115,11 +115,11 @@ class UsbReadFailedError(Exception):
 
     """
     def __init__(self, msg, usb_error):
-        super(UsbReadFailedError, self).__init__(msg)
+        super(UsbReadFailedError, self).__init__(msg, usb_error)
         self.usb_error = usb_error
 
     def __str__(self):
-        return '%s: %s' % (super(UsbReadFailedError, self).__str__(), str(self.usb_error))
+        return '%s: %s' % self.args
 
 
 class UsbWriteFailedError(Exception):
