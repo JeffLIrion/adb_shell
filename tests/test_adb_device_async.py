@@ -629,9 +629,9 @@ class TestAdbDeviceAsync(unittest.TestCase):
     async def test_reboot(self):
         self.assertTrue(await self.device.connect())
 
-        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._service') as patch_service:
+        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._open') as patch_open:
             await self.device.reboot()
-            patch_service.assert_called_once()
+            patch_open.assert_called_once()
 
 
     # ======================================================================= #

@@ -592,9 +592,9 @@ class TestAdbDevice(unittest.TestCase):
     def test_reboot(self):
         self.assertTrue(self.device.connect())
 
-        with patch('adb_shell.adb_device.AdbDevice._service') as patch_service:
+        with patch('adb_shell.adb_device.AdbDevice._open') as patch_open:
             self.device.reboot()
-            assert patch_service.call_count == 1
+            assert patch_open.call_count == 1
 
 
     # ======================================================================= #
