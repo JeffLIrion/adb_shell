@@ -78,6 +78,9 @@ class TestAdbDeviceAsync(unittest.TestCase):
             await async_generator.__anext__()
 
         with self.assertRaises(exceptions.AdbConnectionError):
+            await self.device.reboot()
+
+        with self.assertRaises(exceptions.AdbConnectionError):
             await self.device.root()
 
         with self.assertRaises(exceptions.AdbConnectionError):
@@ -615,6 +618,20 @@ class TestAdbDeviceAsync(unittest.TestCase):
         async_generator = self.device.streaming_shell('TEST', decode=False)
         self.assertEqual(await async_generator.__anext__(), b'ABC')
         self.assertEqual(await async_generator.__anext__(), b'123')
+
+
+    # ======================================================================= #
+    #                                                                         #
+    #                              `reboot` test                              #
+    #                                                                         #
+    # ======================================================================= #
+    @awaiter
+    async def test_reboot(self):
+        self.assertTrue(await self.device.connect())
+
+        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._service') as patch_service:
+            await self.device.reboot()
+            patch_service.assert_called_once()
 
 
     # ======================================================================= #
