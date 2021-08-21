@@ -1,3 +1,4 @@
+import inspect
 import logging
 from io import BytesIO
 import struct
@@ -10,7 +11,7 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell import constants, exceptions
+from adb_shell import adb_device, constants, exceptions
 from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
 from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
@@ -63,6 +64,17 @@ class TestAdbDevice(unittest.TestCase):
     @staticmethod
     def fake_stat(*args, **kwargs):
         return 1, 2, 3
+
+    def test_no_async_references(self):
+        """Make sure there are no references to async code."""
+        adb_device_source = inspect.getsource(adb_device)
+        self.assertTrue("base_transport_async" not in adb_device_source)
+        self.assertTrue("BaseTransportAsync" not in adb_device_source)
+        self.assertTrue("adb_device_async" not in adb_device_source)
+        self.assertTrue("AdbDeviceAsync" not in adb_device_source)
+        self.assertTrue("async" not in adb_device_source)
+        self.assertTrue("Async" not in adb_device_source)
+        self.transport.bulk_read_data = b''
 
     def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):

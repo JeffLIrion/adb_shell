@@ -1,11 +1,12 @@
 import asyncio
+import inspect
 import logging
 from io import BytesIO
 import sys
 import unittest
 from unittest.mock import mock_open, patch
 
-from adb_shell import constants, exceptions
+from adb_shell import adb_device_async, constants, exceptions
 from adb_shell.adb_device_async import AdbDeviceAsync, AdbDeviceTcpAsync, DeviceFile
 from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
@@ -61,6 +62,15 @@ class TestAdbDeviceAsync(unittest.TestCase):
     @staticmethod
     async def fake_stat(*args, **kwargs):
         return 1, 2, 3
+
+    def test_no_sync_references(self):
+        """Make sure there are no references to sync code."""
+        adb_device_async_source = inspect.getsource(adb_device_async)
+        self.assertTrue("base_transport." not in adb_device_async_source)
+        self.assertTrue("BaseTransport." not in adb_device_async_source)
+        self.assertTrue("adb_device." not in adb_device_async_source)
+        self.assertTrue("AdbDevice." not in adb_device_async_source)
+        self.transport.bulk_read_data = b''
 
     @awaiter
     async def test_adb_connection_error(self):
