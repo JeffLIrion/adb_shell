@@ -148,7 +148,7 @@ class _AdbIOManagerAsync(object):
         Parameters
         ----------
         banner : bytearray, bytes
-            The hostname of the machine where the Python interpreter is currently running (:attr:`adb_shell.adb_device.AdbDevice._banner`)
+            The hostname of the machine where the Python interpreter is currently running (:attr:`adb_shell.adb_device_async.AdbDeviceAsync._banner`)
         rsa_keys : list, None
             A list of signers of type :class:`~adb_shell.auth.sign_cryptography.CryptographySigner`,
             :class:`~adb_shell.auth.sign_pycryptodome.PycryptodomeAuthSigner`, or :class:`~adb_shell.auth.sign_pythonrsa.PythonRSASigner`
@@ -718,8 +718,8 @@ class AdbDeviceAsync(object):
         command : str
             The exec-out command that will be sent
         transport_timeout_s : float, None
-            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
-            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransportAsync.bulk_read() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_read>`
+            and :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
         read_timeout_s : float
             The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManagerAsync.read`
         timeout_s : float, None
@@ -734,9 +734,30 @@ class AdbDeviceAsync(object):
 
         """
         if not self.available:
-            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
         return await self._service(b'exec', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, decode)
+
+    async def reboot(self, fastboot=False, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
+        """Reboot the device.
+
+        Parameters
+        ----------
+        fastboot : bool
+            Whether to reboot the device into fastboot
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransportAsync.bulk_read() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_read>`
+            and :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
+        read_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
+
+        """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
+
+        await self._open(b'reboot:bootloader' if fastboot else b'reboot:', transport_timeout_s, read_timeout_s, timeout_s)
 
     async def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
         """Gain root access.

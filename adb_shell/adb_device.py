@@ -742,6 +742,27 @@ class AdbDevice(object):
 
         return self._service(b'exec', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, decode)
 
+    def reboot(self, fastboot=False, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
+        """Reboot the device.
+
+        Parameters
+        ----------
+        fastboot : bool
+            Whether to reboot the device into fastboot
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransport.bulk_read() <adb_shell.transport.base_transport.BaseTransport.bulk_read>`
+            and :meth:`BaseTransport.bulk_write() <adb_shell.transport.base_transport.BaseTransport.bulk_write>`
+        read_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManager.read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
+
+        """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
+
+        self._open(b'reboot:bootloader' if fastboot else b'reboot:', transport_timeout_s, read_timeout_s, timeout_s)
+
     def root(self, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
         """Gain root access.
 

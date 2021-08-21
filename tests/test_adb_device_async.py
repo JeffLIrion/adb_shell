@@ -1,11 +1,12 @@
 import asyncio
+import inspect
 import logging
 from io import BytesIO
 import sys
 import unittest
 from unittest.mock import mock_open, patch
 
-from adb_shell import constants, exceptions
+from adb_shell import adb_device_async, constants, exceptions
 from adb_shell.adb_device_async import AdbDeviceAsync, AdbDeviceTcpAsync, DeviceFile
 from adb_shell.adb_message import AdbMessage
 from adb_shell.auth.keygen import keygen
@@ -62,6 +63,15 @@ class TestAdbDeviceAsync(unittest.TestCase):
     async def fake_stat(*args, **kwargs):
         return 1, 2, 3
 
+    def test_no_sync_references(self):
+        """Make sure there are no references to sync code."""
+        adb_device_async_source = inspect.getsource(adb_device_async)
+        self.assertTrue("base_transport." not in adb_device_async_source)
+        self.assertTrue("BaseTransport." not in adb_device_async_source)
+        self.assertTrue("adb_device." not in adb_device_async_source)
+        self.assertTrue("AdbDevice." not in adb_device_async_source)
+        self.transport.bulk_read_data = b''
+
     @awaiter
     async def test_adb_connection_error(self):
         with self.assertRaises(exceptions.AdbConnectionError):
@@ -76,6 +86,9 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with self.assertRaises(exceptions.AdbConnectionError):
             async_generator = self.device.streaming_shell('FAIL')
             await async_generator.__anext__()
+
+        with self.assertRaises(exceptions.AdbConnectionError):
+            await self.device.reboot()
 
         with self.assertRaises(exceptions.AdbConnectionError):
             await self.device.root()
@@ -615,6 +628,20 @@ class TestAdbDeviceAsync(unittest.TestCase):
         async_generator = self.device.streaming_shell('TEST', decode=False)
         self.assertEqual(await async_generator.__anext__(), b'ABC')
         self.assertEqual(await async_generator.__anext__(), b'123')
+
+
+    # ======================================================================= #
+    #                                                                         #
+    #                              `reboot` test                              #
+    #                                                                         #
+    # ======================================================================= #
+    @awaiter
+    async def test_reboot(self):
+        self.assertTrue(await self.device.connect())
+
+        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._open') as patch_open:
+            await self.device.reboot()
+            patch_open.assert_called_once()
 
 
     # ======================================================================= #
