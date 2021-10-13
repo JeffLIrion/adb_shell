@@ -288,6 +288,17 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertEqual(self.device.shell('TEST', decode=False), b'PASS')
 
+    def test_shell_avoid_decode_error(self):
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\x80abc'),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        expected = '\\x80abc' if sys.version_info[0] > 2 else '\ufffdabc'
+        self.assertEqual(self.device.shell('TEST'), expected)
+
     def test_shell_data_length_exceeds_max(self):
         self.assertTrue(self.device.connect())
 

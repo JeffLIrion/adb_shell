@@ -71,6 +71,7 @@
 import logging
 import os
 import struct
+import sys
 from threading import Lock
 import time
 
@@ -88,6 +89,8 @@ except (ImportError, OSError):
 
 
 _LOGGER = logging.getLogger(__name__)
+
+_DECODE_ERRORS = "backslashreplace" if sys.version_info[0] > 2 else "replace"
 
 
 class _AdbIOManager(object):
@@ -678,7 +681,7 @@ class AdbDevice(object):
 
         """
         if decode:
-            return b''.join(self._streaming_command(service, command, transport_timeout_s, read_timeout_s, timeout_s)).decode('utf8')
+            return b''.join(self._streaming_command(service, command, transport_timeout_s, read_timeout_s, timeout_s)).decode('utf8', _DECODE_ERRORS)
         return b''.join(self._streaming_command(service, command, transport_timeout_s, read_timeout_s, timeout_s))
 
     def _streaming_service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
@@ -706,7 +709,7 @@ class AdbDevice(object):
         """
         stream = self._streaming_command(service, command, transport_timeout_s, read_timeout_s, None)
         if decode:
-            for line in (stream_line.decode('utf8') for stream_line in stream):
+            for line in (stream_line.decode('utf8', _DECODE_ERRORS) for stream_line in stream):
                 yield line
         else:
             for line in stream:
@@ -1336,7 +1339,7 @@ class AdbDevice(object):
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
-                reason = data.decode('utf-8', errors='ignore')
+                reason = data.decode('utf-8', errors=_DECODE_ERRORS)
 
                 raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
 
