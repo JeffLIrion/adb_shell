@@ -674,7 +674,7 @@ class AdbDeviceAsync(object):
 
         """
         if decode:
-            return b''.join([x async for x in self._streaming_command(service, command, transport_timeout_s, read_timeout_s, timeout_s)]).decode('utf8')
+            return b''.join([x async for x in self._streaming_command(service, command, transport_timeout_s, read_timeout_s, timeout_s)]).decode('utf8', 'backslashreplace')
         return b''.join([x async for x in self._streaming_command(service, command, transport_timeout_s, read_timeout_s, timeout_s)])
 
     async def _streaming_service(self, service, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
@@ -702,7 +702,7 @@ class AdbDeviceAsync(object):
         """
         stream = self._streaming_command(service, command, transport_timeout_s, read_timeout_s, None)
         if decode:
-            async for line in (stream_line.decode('utf8') async for stream_line in stream):
+            async for line in (stream_line.decode('utf8', 'backslashreplace') async for stream_line in stream):
                 yield line
         else:
             async for line in stream:
@@ -1332,7 +1332,7 @@ class AdbDeviceAsync(object):
 
         if command_id not in expected_ids:
             if command_id == constants.FAIL:
-                reason = data.decode('utf-8', errors='ignore')
+                reason = data.decode('utf-8', errors='backslashreplace')
 
                 raise exceptions.AdbCommandFailureException('Command failed: {}'.format(reason))
 
