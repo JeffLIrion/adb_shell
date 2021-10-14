@@ -296,7 +296,7 @@ class TestAdbDevice(unittest.TestCase):
                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b'\x80abc'),
                                                       AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        expected = '\\x80abc' if sys.version_info[0] > 2 else '\ufffdabc'
+        expected = '\\x80abc' if sys.version_info[0] > 2 else '\\ufffdabc'
         self.assertEqual(self.device.shell('TEST'), expected)
 
     def test_shell_data_length_exceeds_max(self):
