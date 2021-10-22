@@ -177,6 +177,11 @@ class UsbTransport(BaseTransport):   # pragma: no cover
         TODO
 
     """
+    # We maintain an idempotent `usb1` context object to ensure that device
+    # objects we hand back to callers can be used while this class exists
+    USB1_CTX = usb1.USBContext()
+    USB1_CTX.open()
+
     _HANDLE_CACHE = weakref.WeakValueDictionary()
     _HANDLE_CACHE_LOCK = threading.Lock()
 
@@ -555,8 +560,7 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             UsbTransport instances
 
         """
-        ctx = usb1.USBContext()
-        for device in ctx.getDeviceList(skip_on_error=True):
+        for device in cls.USB1_CTX.getDeviceIterator(skip_on_error=True):
             setting = setting_matcher(device)
             if setting is None:
                 continue
