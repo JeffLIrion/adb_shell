@@ -555,15 +555,15 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             UsbTransport instances
 
         """
-        with usb1.USBContext() as ctx:
-            for device in ctx.getDeviceList(skip_on_error=True):
-                setting = setting_matcher(device)
-                if setting is None:
-                    continue
+        ctx = usb1.USBContext()
+        for device in ctx.getDeviceList(skip_on_error=True):
+            setting = setting_matcher(device)
+            if setting is None:
+                continue
 
-                transport = cls(device, setting, usb_info=usb_info, default_transport_timeout_s=default_transport_timeout_s)
-                if device_matcher is None or device_matcher(transport):
-                    yield transport
+            transport = cls(device, setting, usb_info=usb_info, default_transport_timeout_s=default_transport_timeout_s)
+            if device_matcher is None or device_matcher(transport):
+                yield transport
 
     @classmethod
     def _find_first(cls, setting_matcher, device_matcher=None, usb_info='', default_transport_timeout_s=None):
