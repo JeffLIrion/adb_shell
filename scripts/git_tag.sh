@@ -3,12 +3,8 @@
 # get the directory of this script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-# get the package name
-PACKAGE=$($DIR/get_package_name.sh)
-
 # get the current version
-VERSION=$($DIR/get_version.sh)
-
+VERSION=$(python3 $DIR/get_version.py)
 
 # Announce the tag
 echo "Creating tag v$VERSION"

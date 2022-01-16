@@ -3,7 +3,7 @@ release:
 	rm -rf dist
 	rm -rf build
 	scripts/git_tag.sh
-	python setup.py sdist bdist_wheel
+	python -m build -nwsx
 	twine upload dist/*
 
 .PHONY: docs
