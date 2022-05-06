@@ -18,7 +18,7 @@ fi
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # get the current package name
-PACKAGE=$($DIR/get_package_name.sh)
+PACKAGE=$(python3 $DIR/get_package_name.py)
 
 # Announce the renaming
 echo "Renaming from '$PACKAGE' to '$1'"
@@ -32,8 +32,8 @@ sed -i "s|$PACKAGE|$1|g" $DIR/../Doxyfile
 # Makefile
 sed -i "s|$PACKAGE|$1|g" $DIR/../Makefile
 
-# setup.py
-sed -i "s|$PACKAGE|$1|g" $DIR/../setup.py
+# pyproject.toml
+sed -i "s|$PACKAGE|$1|g" $DIR/../pyproject.toml
 
 # docs/Makefile
 sed -i "s|$PACKAGE|$1|g" $DIR/../docs/Makefile

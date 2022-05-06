@@ -12,7 +12,10 @@ addons:
       - swig
       - libusb-1.0-0-dev
 install:
-  - pip install .
+  - pip install --upgrade pip
+  - pip install --upgrade build
+  - python -m build -nwx .
+  - pip install ./dist/*.whl
   - pip install flake8 pylint coveralls cryptography libusb1>=1.0.16 pycryptodome
   - python --version 2>&1 | grep -q "Python 2" && pip install mock || true
   - if python --version 2>&1 | grep -q "Python 3.7" || python --version 2>&1 | grep -q "Python 3.8" || python --version 2>&1 | grep -q "Python 3.9"; then pip install aiofiles; fi
