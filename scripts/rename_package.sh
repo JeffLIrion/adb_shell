@@ -32,8 +32,8 @@ sed -i "s|$PACKAGE|$1|g" $DIR/../Doxyfile
 # Makefile
 sed -i "s|$PACKAGE|$1|g" $DIR/../Makefile
 
-# setup.cfg
-sed -i "s|$PACKAGE|$1|g" $DIR/../setup.cfg
+# pyproject.toml
+sed -i "s|$PACKAGE|$1|g" $DIR/../pyproject.toml
 
 # docs/Makefile
 sed -i "s|$PACKAGE|$1|g" $DIR/../docs/Makefile

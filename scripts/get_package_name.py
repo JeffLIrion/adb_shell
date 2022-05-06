@@ -19,14 +19,23 @@ For more information, please refer to <https://unlicense.org/>
 """
 
 
-def getPackageName(rootDir: Path) -> str:
-    from setuptools.config import read_configuration
+def extractFromPEP621(pyproject) -> None:
+    project = pyproject.get("project", None)
+    if isinstance(project, dict):
+        return project.get("name", None)
 
-    setupCfg = read_configuration(Path(rootDir / "setup.cfg"))
-    try:
-        return setupCfg["metadata"]["name"]
-    except KeyError:
-        return None
+    return None
+
+
+def getPackageName(rootDir: Path) -> str:
+    tomlPath = Path(rootDir / "pyproject.toml")
+
+    with tomlPath.open("rb") as f:
+        pyproject = tomli.load(f)
+
+    fromPEP621 = extractFromPEP621(pyproject)
+    if fromPEP621:
+        return fromPEP621
 
 
 def main():
