@@ -13,6 +13,8 @@ adb\_shell
 
 Documentation for this package can be found at https://adb-shell.readthedocs.io/.
 
+Prebuilt wheel can be downloaded from `nightly.link <https://nightly.link/JeffLIrion/adb_shell/workflows/python-package/master/wheel.zip>`_.
+
 This Python package implements ADB shell and FileSync functionality.  It originated from `python-adb <https://github.com/google/python-adb>`_.
 
 Installation
