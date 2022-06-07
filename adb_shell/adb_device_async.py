@@ -149,8 +149,8 @@ async def _open_bytesio(stream, *args, **kwargs):  # pylint: disable=unused-argu
 
     Yields
     ------
-    stream : BytesIO
-        The `stream` input parameter
+    _AsyncBytesIO
+        The wrapped `stream` input parameter
 
     """
     yield _AsyncBytesIO(stream)
