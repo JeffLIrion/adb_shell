@@ -31,6 +31,13 @@
     * :meth:`_AdbIOManagerAsync.read`
     * :meth:`_AdbIOManagerAsync.send`
 
+* :class:`_AsyncBytesIO`
+
+    * :meth:`_AsyncBytesIO.read`
+    * :meth:`_AsyncBytesIO.write`
+
+* :func:`_open_bytesio`
+
 * :class:`AdbDeviceAsync`
 
     * :meth:`AdbDeviceAsync._clse`
@@ -65,6 +72,8 @@
 """
 
 
+from contextlib import asynccontextmanager
+from io import BytesIO
 from asyncio import Lock, get_running_loop
 import logging
 import os
@@ -82,6 +91,69 @@ from .hidden_helpers import DeviceFile, _AdbPacketStore, _AdbTransactionInfo, _F
 
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class _AsyncBytesIO:
+    """An async wrapper for `BytesIO`.
+
+    Parameters
+    ----------
+    bytesio : BytesIO
+        The BytesIO object that is wrapped
+
+    """
+
+    def __init__(self, bytesio):
+        self._bytesio = bytesio
+
+    async def read(self, size=-1):
+        """Read data.
+
+        Parameters
+        ----------
+        size : int
+            The size of the data to be read
+
+        Returns
+        -------
+        bytes
+            The data that was read
+
+        """
+        return self._bytesio.read(size)
+
+    async def write(self, data):
+        """Write data.
+
+        Parameters
+        ----------
+        data : bytes
+            The data to be written
+
+        """
+        self._bytesio.write(data)
+
+
+@asynccontextmanager
+async def _open_bytesio(stream, *args, **kwargs):  # pylint: disable=unused-argument
+    """An async context manager for a BytesIO object that does nothing.
+
+    Parameters
+    ----------
+    stream : BytesIO
+        The BytesIO stream
+    args : list
+        Unused positional arguments
+    kwargs : dict
+        Unused keyword arguments
+
+    Yields
+    ------
+    _AsyncBytesIO
+        The wrapped `stream` input parameter
+
+    """
+    yield _AsyncBytesIO(stream)
 
 
 class _AdbIOManagerAsync(object):
@@ -887,8 +959,8 @@ class AdbDeviceAsync(object):
         ----------
         device_path : str
             The file on the device that will be pulled
-        local_path : str
-            The path to where the file will be downloaded
+        local_path : str, BytesIO
+            The path or BytesIO stream where the file will be downloaded
         progress_callback : function, None
             Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         transport_timeout_s : float, None
@@ -902,7 +974,8 @@ class AdbDeviceAsync(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
-        async with aiofiles.open(local_path, 'wb') as stream:
+        opener = _open_bytesio if isinstance(local_path, BytesIO) else aiofiles.open
+        async with opener(local_path, 'wb') as stream:
             adb_info = await self._open(b'sync:', transport_timeout_s, read_timeout_s, None)
             filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
@@ -918,7 +991,7 @@ class AdbDeviceAsync(object):
         ----------
         device_path : str
             The file on the device that will be pulled
-        stream : AsyncBufferedIOBase
+        stream : AsyncBufferedIOBase, _AsyncBytesIO
             File-like object for writing to
         progress_callback : function, None
             Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
@@ -948,8 +1021,8 @@ class AdbDeviceAsync(object):
 
         Parameters
         ----------
-        local_path : str
-            Either a filename or a directory to push to the device
+        local_path : str, BytesIO
+            A filename, directory, or BytesIO stream to push to the device
         device_path : str
             Destination on the device to write to
         st_mode : int
@@ -975,7 +1048,8 @@ class AdbDeviceAsync(object):
             await self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
 
         for _local_path, _device_path in zip(local_paths, device_paths):
-            async with aiofiles.open(_local_path, 'rb') as stream:
+            opener = _open_bytesio if isinstance(local_path, BytesIO) else aiofiles.open
+            async with opener(_local_path, 'rb') as stream:
                 adb_info = await self._open(b'sync:', transport_timeout_s, read_timeout_s, None)
                 filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
@@ -988,7 +1062,7 @@ class AdbDeviceAsync(object):
 
         Parameters
         ----------
-        stream : AsyncBufferedReader
+        stream : AsyncBufferedReader, _AsyncBytesIO
             File-like object for reading from
         device_path : str
             Destination on the device to write to

@@ -33,6 +33,8 @@
     * :meth:`_AdbIOManager.read`
     * :meth:`_AdbIOManager.send`
 
+* :func:`_open_bytesio`
+
 * :class:`AdbDevice`
 
     * :meth:`AdbDevice._clse`
@@ -68,6 +70,8 @@
 """
 
 
+from contextlib import contextmanager
+from io import BytesIO
 import logging
 import os
 import struct
@@ -91,6 +95,28 @@ except (ImportError, OSError):
 _LOGGER = logging.getLogger(__name__)
 
 _DECODE_ERRORS = "backslashreplace" if sys.version_info[0] > 2 else "replace"
+
+
+@contextmanager
+def _open_bytesio(stream, *args, **kwargs):  # pylint: disable=unused-argument
+    """A context manager for a BytesIO object that does nothing.
+
+    Parameters
+    ----------
+    stream : BytesIO
+        The BytesIO stream
+    args : list
+        Unused positional arguments
+    kwargs : dict
+        Unused keyword arguments
+
+    Yields
+    ------
+    stream : BytesIO
+        The `stream` input parameter
+
+    """
+    yield stream
 
 
 class _AdbIOManager(object):
@@ -894,8 +920,8 @@ class AdbDevice(object):
         ----------
         device_path : str
             The file on the device that will be pulled
-        local_path : str
-            The path to where the file will be downloaded
+        local_path : str, BytesIO
+            The path or BytesIO stream where the file will be downloaded
         progress_callback : function, None
             Callback method that accepts ``device_path``, ``bytes_written``, and ``total_bytes``
         transport_timeout_s : float, None
@@ -909,7 +935,8 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        with open(local_path, 'wb') as stream:
+        opener = _open_bytesio if isinstance(local_path, BytesIO) else open
+        with opener(local_path, 'wb') as stream:
             adb_info = self._open(b'sync:', transport_timeout_s, read_timeout_s, None)
             filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PULL_FORMAT, maxdata=self._maxdata)
 
@@ -955,8 +982,8 @@ class AdbDevice(object):
 
         Parameters
         ----------
-        local_path : str
-            Either a filename or a directory to push to the device.
+        local_path : str, BytesIO
+            A filename, directory, or BytesIO stream to push to the device
         device_path : str
             Destination on the device to write to.
         st_mode : int
@@ -982,7 +1009,8 @@ class AdbDevice(object):
             self.shell("mkdir " + device_path, transport_timeout_s, read_timeout_s)
 
         for _local_path, _device_path in zip(local_paths, device_paths):
-            with open(_local_path, 'rb') as stream:
+            opener = _open_bytesio if isinstance(local_path, BytesIO) else open
+            with opener(_local_path, 'rb') as stream:
                 adb_info = self._open(b'sync:', transport_timeout_s, read_timeout_s, None)
                 filesync_info = _FileSyncTransactionInfo(constants.FILESYNC_PUSH_FORMAT, maxdata=self._maxdata)
 
