@@ -734,6 +734,31 @@ class TestAdbDevice(unittest.TestCase):
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
+    def test_push_bytesio(self):
+        self.assertTrue(self.device.connect())
+        self.transport.bulk_write_data = b''
+
+        mtime = 100
+        filedata = b'Ohayou sekai.\nGood morning world!'
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=FileSyncMessage(constants.OKAY).pack()),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        # Expected `bulk_write` values
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.SEND, data=b'/data,33272'),
+                                                                                                                  FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                  FileSyncMessage(command=constants.DONE, arg0=mtime, data=b''))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        stream = BytesIO(filedata)
+        self.device.push(stream, '/data', mtime=mtime)
+        self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
+
     def test_push_file_exception(self):
         self.assertTrue(self.device.connect())
         self.transport.bulk_write_data = b''
@@ -889,6 +914,31 @@ class TestAdbDevice(unittest.TestCase):
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(m.written, filedata)
             self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
+
+    def test_pull_bytesio(self):
+        self.assertTrue(self.device.connect())
+        self.transport.bulk_write_data = b''
+
+        filedata = b'Ohayou sekai.\nGood morning world!'
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.DATA, data=filedata),
+                                                                                                                            FileSyncMessage(command=constants.DONE))),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        # Expected `bulk_write` values
+        expected_bulk_write = join_messages(AdbMessage(command=constants.OPEN, arg0=1, arg1=0, data=b'sync:\x00'),
+                                            AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(command=constants.RECV, data=b'/data'))),
+                                            AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
+                                            AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        stream = BytesIO()
+        self.device.pull('/data', stream)
+        
+        self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
+        self.assertEqual(stream.getvalue(), filedata)    
 
     def test_pull_file_exception(self):
         self.assertTrue(self.device.connect())

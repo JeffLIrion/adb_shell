@@ -48,6 +48,7 @@
 
 
 from collections import namedtuple
+from io import BytesIO
 import os
 import socket
 import struct
@@ -86,7 +87,7 @@ def get_files_to_push(local_path, device_path):
         A list of destination paths on the device that corresponds to ``local_paths``
 
     """
-    local_path_is_dir = os.path.isdir(local_path)
+    local_path_is_dir = not isinstance(local_path, BytesIO) and os.path.isdir(local_path)
     local_paths = [local_path] if not local_path_is_dir else os.listdir(local_path)
     device_paths = [device_path] if not local_path_is_dir else [device_path + '/' + f for f in local_paths]
 
