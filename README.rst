@@ -59,7 +59,7 @@ Example Usage
    adbkey = 'path/to/adbkey'
    with open(adbkey) as f:
        priv = f.read()
-    with open(adbkey + '.pub') as f:
+   with open(adbkey + '.pub') as f:
         pub = f.read()
    signer = PythonRSASigner(pub, priv)
 
