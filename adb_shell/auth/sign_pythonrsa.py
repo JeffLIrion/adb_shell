@@ -127,7 +127,7 @@ class PythonRSASigner(object):
     pub : str, None
         The contents of the public key file
     priv : str, None
-        The path to the private key
+        The contents of the private key file
 
     Attributes
     ----------
