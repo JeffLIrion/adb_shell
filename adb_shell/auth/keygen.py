@@ -64,7 +64,7 @@ if sys.version_info[0] == 2:  # pragma: no cover
 
 
 #: Size of an RSA modulus such as an encrypted block or a signature.
-ANDROID_PUBKEY_MODULUS_SIZE = (2048 // 8)
+ANDROID_PUBKEY_MODULUS_SIZE = 2048 // 8
 
 #: Python representation of "struct RSAPublicKey"
 ANDROID_RSAPUBLICKEY_STRUCT = (
@@ -78,7 +78,7 @@ ANDROID_RSAPUBLICKEY_STRUCT = (
 
 
 #: Size of the RSA modulus in words.
-ANDROID_PUBKEY_MODULUS_SIZE_WORDS = (ANDROID_PUBKEY_MODULUS_SIZE // 4)
+ANDROID_PUBKEY_MODULUS_SIZE_WORDS = ANDROID_PUBKEY_MODULUS_SIZE // 4
 
 
 def _to_bytes(n, length, endianess='big'):
