@@ -16,6 +16,8 @@
 
 import asyncio
 
+import async_timeout
+
 from .base_transport_async import BaseTransportAsync
 from ..exceptions import TcpTimeoutException
 
@@ -73,7 +75,8 @@ class TcpTransportAsync(BaseTransportAsync):
 
         """
         try:
-            self._reader, self._writer = await asyncio.wait_for(asyncio.open_connection(self._host, self._port), transport_timeout_s)
+            async with async_timeout.timeout(transport_timeout_s):
+                self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
         except asyncio.TimeoutError as exc:
             msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
@@ -100,7 +103,8 @@ class TcpTransportAsync(BaseTransportAsync):
 
         """
         try:
-            return await asyncio.wait_for(self._reader.read(numbytes), transport_timeout_s)
+            async with async_timeout.timeout(transport_timeout_s):
+                return await self._reader.read(numbytes)
         except asyncio.TimeoutError as exc:
             msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
@@ -128,8 +132,9 @@ class TcpTransportAsync(BaseTransportAsync):
         """
         try:
             self._writer.write(data)
-            await asyncio.wait_for(self._writer.drain(), transport_timeout_s)
-            return len(data)
+            async with async_timeout.timeout(transport_timeout_s):
+                await self._writer.drain()
+                return len(data)
         except asyncio.TimeoutError as exc:
             msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
