@@ -13,7 +13,7 @@ LINT_TEST_DIR := false
 export PATH := $(abspath venv)/bin:${PATH}
 
 # Whether to include "*_async.py" files
-INCLUDE_ASYNC = $(shell python --version | grep -q "Python 3.[789]" && echo "true" || echo "false")
+INCLUDE_ASYNC = $(shell python --version | grep -q "Python 3.[7891]" && echo "true" || echo "false")
 
 # Async vs. Sync files
 PACKAGE_ASYNC_FILES = $(shell ls -m $(PACKAGE_DIR)/*_async.py 2>/dev/null)
