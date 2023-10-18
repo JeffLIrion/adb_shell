@@ -1,15 +1,19 @@
+"""Tests for the `UsbTransport` class."""
+
 import unittest
 
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
+from adb_shell.exceptions import TcpTimeoutException
 
-from adb_shell.transport.usb_transport import UsbTransport
+try:
+    from adb_shell.transport.usb_transport import UsbTransport
+except (ImportError, OSError):
+    UsbTransport = None
 
 from . import patchers
 
 
+# pylint: disable=missing-class-docstring, missing-function-docstring
+@unittest.skipIf(UsbTransport is None, "UsbTransport could not be imported")
 class TestUsbTransport(unittest.TestCase):
     def setUp(self):
         """Create a ``UsbTransport`` and do something...
@@ -19,7 +23,7 @@ class TestUsbTransport(unittest.TestCase):
 
         if True:
             return
-            
+
         with patchers.PATCH_CREATE_CONNECTION:
             self.transport.connect()
 
