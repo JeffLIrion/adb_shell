@@ -1650,7 +1650,7 @@ class AdbDeviceAsync(object):
             await self._filesync_flush(adb_info, filesync_info)
 
         buf = struct.pack(b"<2I", constants.FILESYNC_ID_TO_WIRE[command_id], size) + data
-        filesync_info.send_buffer[filesync_info.send_idx : filesync_info.send_idx + len(buf)] = buf
+        filesync_info.send_buffer[filesync_info.send_idx : filesync_info.send_idx + len(buf)] = buf  # noqa
         filesync_info.send_idx += len(buf)
 
 
