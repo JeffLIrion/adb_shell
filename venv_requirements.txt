@@ -1,4 +1,5 @@
 aiofiles
+async_timeout
 coverage
 coveralls
 cryptography
