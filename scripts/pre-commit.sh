@@ -9,7 +9,7 @@ function make_pre_commit() {
   chmod a+x "$DIR/../.git/hooks/pre-commit"
   echo "pre-commit hook successfully configured"
 }
- 
+
 # if no arguments are passed, create the pre-commit hook
 if [ "$#" -eq 0 ]; then
   read -p "Do you want to setup the git pre-commit hook? [Y/n]  " -n 1 -r
@@ -49,7 +49,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
   flake8_pass=true
   if [ "$pyfiles" != "" ]; then
     echo -e "\n\033[1m2. Running flake8...\033[0m"
-    flake8 $pyfiles || flake8_pass=false
+    venv/bin/flake8 $pyfiles || flake8_pass=false
   else
     echo -e "\n\033[1m2. Skipping flake8.\033[0m"
   fi
@@ -58,7 +58,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
   pylint_pass=true
   if [ "$pyfiles" != "" ]; then
     echo -e "\n\033[1m3. Running pylint...\033[0m"
-    pylint $pyfiles || pylint_pass=false
+    venv/bin/pylint $pyfiles || pylint_pass=false
   else
     echo -e "\n\033[1m3. Skipping pylint.\033[0m\n"
   fi
