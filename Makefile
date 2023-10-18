@@ -187,5 +187,13 @@ docs: venv  ## Build the documentation
 	@cd $(DOCS_DIR) && make html && make html
 
 
+.PHONY: release
+release:  ## Make a release and upload it to pypi
+	rm -rf dist
+	scripts/git_tag.sh
+	python setup.py sdist bdist_wheel
+	twine upload dist/*
+
+
 .PHONY: all
 all: lint htmlcov  ## Run all linting checks and unit tests and produce a coverage report
