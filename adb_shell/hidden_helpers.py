@@ -64,7 +64,7 @@ except ImportError:  # pragma: no cover
 from . import constants
 
 
-DeviceFile = namedtuple('DeviceFile', ['filename', 'mode', 'size', 'mtime'])
+DeviceFile = namedtuple("DeviceFile", ["filename", "mode", "size", "mtime"])
 
 
 def get_files_to_push(local_path, device_path):
@@ -89,7 +89,7 @@ def get_files_to_push(local_path, device_path):
     """
     local_path_is_dir = not isinstance(local_path, BytesIO) and os.path.isdir(local_path)
     local_paths = [local_path] if not local_path_is_dir else os.listdir(local_path)
-    device_paths = [device_path] if not local_path_is_dir else [device_path + '/' + f for f in local_paths]
+    device_paths = [device_path] if not local_path_is_dir else [device_path + "/" + f for f in local_paths]
 
     return local_path_is_dir, local_paths, device_paths
 
@@ -104,9 +104,9 @@ def get_banner():
 
     """
     try:
-        return bytearray(socket.gethostname(), 'utf-8')
+        return bytearray(socket.gethostname(), "utf-8")
     except:  # noqa pylint: disable=bare-except
-        return bytearray('unknown', 'utf-8')
+        return bytearray("unknown", "utf-8")
 
 
 class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
@@ -154,12 +154,22 @@ class _AdbTransactionInfo(object):  # pylint: disable=too-few-public-methods
         :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
 
     """
-    def __init__(self, local_id, remote_id, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None):
+
+    def __init__(
+        self,
+        local_id,
+        remote_id,
+        transport_timeout_s=None,
+        read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S,
+        timeout_s=None,
+    ):
         self.local_id = local_id
         self.remote_id = remote_id
         self.timeout_s = timeout_s
         self.read_timeout_s = read_timeout_s if self.timeout_s is None else min(read_timeout_s, self.timeout_s)
-        self.transport_timeout_s = self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
+        self.transport_timeout_s = (
+            self.read_timeout_s if transport_timeout_s is None else min(transport_timeout_s, self.read_timeout_s)
+        )
 
     def args_match(self, arg0, arg1, allow_zeros=False):
         """Check if ``arg0`` and ``arg1`` match this object's ``remote_id`` and ``local_id`` attributes, respectively.
@@ -212,6 +222,7 @@ class _FileSyncTransactionInfo(object):  # pylint: disable=too-few-public-method
         The index in ``recv_buffer`` that will be the start of the next data packet sent
 
     """
+
     def __init__(self, recv_message_format, maxdata=constants.MAX_ADB_DATA):
         self.send_buffer = bytearray(maxdata)
         self.send_idx = 0
@@ -332,10 +343,26 @@ class _AdbPacketStore(object):
         if arg1 is None:
             if arg0 is None:
                 # `value = (None, None)` -> search for any non-empty queue
-                return next(((key0, key1) for key1, val1 in self._dict.items() for key0, val0 in val1.items() if not val0.empty()), None)
+                return next(
+                    (
+                        (key0, key1)
+                        for key1, val1 in self._dict.items()
+                        for key0, val0 in val1.items()
+                        if not val0.empty()
+                    ),
+                    None,
+                )
 
             # Search for a non-empty queue with a key of `arg0 == value[0]`
-            return next(((arg0, key1) for key1, val1 in self._dict.items() for key0, val0 in val1.items() if key0 == arg0 and not val0.empty()), None)
+            return next(
+                (
+                    (arg0, key1)
+                    for key1, val1 in self._dict.items()
+                    for key0, val0 in val1.items()
+                    if key0 == arg0 and not val0.empty()
+                ),
+                None,
+            )
 
         if arg1 not in self._dict:
             return None

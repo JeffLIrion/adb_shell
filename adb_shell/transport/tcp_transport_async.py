@@ -44,6 +44,7 @@ class TcpTransportAsync(BaseTransportAsync):
         Object for writing data to the socket
 
     """
+
     def __init__(self, host, port=5555):
         self._host = host
         self._port = port
@@ -52,9 +53,7 @@ class TcpTransportAsync(BaseTransportAsync):
         self._writer = None
 
     async def close(self):
-        """Close the socket connection.
-
-        """
+        """Close the socket connection."""
         if self._writer:
             try:
                 self._writer.close()
@@ -78,7 +77,7 @@ class TcpTransportAsync(BaseTransportAsync):
             async with async_timeout.timeout(transport_timeout_s):
                 self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
         except asyncio.TimeoutError as exc:
-            msg = 'Connecting to {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
+            msg = "Connecting to {}:{} timed out ({} seconds)".format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
 
     async def bulk_read(self, numbytes, transport_timeout_s):
@@ -106,7 +105,7 @@ class TcpTransportAsync(BaseTransportAsync):
             async with async_timeout.timeout(transport_timeout_s):
                 return await self._reader.read(numbytes)
         except asyncio.TimeoutError as exc:
-            msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
+            msg = "Reading from {}:{} timed out ({} seconds)".format(self._host, self._port, transport_timeout_s)
             raise TcpTimeoutException(msg) from exc
 
     async def bulk_write(self, data, transport_timeout_s):
@@ -136,5 +135,7 @@ class TcpTransportAsync(BaseTransportAsync):
                 await self._writer.drain()
                 return len(data)
         except asyncio.TimeoutError as exc:
-            msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, transport_timeout_s)
+            msg = "Sending data to {}:{} timed out after {} seconds. No data was sent.".format(
+                self._host, self._port, transport_timeout_s
+            )
             raise TcpTimeoutException(msg) from exc

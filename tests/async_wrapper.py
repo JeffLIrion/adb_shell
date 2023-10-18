@@ -2,7 +2,6 @@ import asyncio
 import warnings
 
 
-
 def _await(coro):
     """Create a new event loop, run the coroutine, then close the event loop."""
     loop = asyncio.new_event_loop()

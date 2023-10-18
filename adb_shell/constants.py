@@ -61,23 +61,23 @@ AUTH_SIGNATURE = 2
 #: AUTH constant for ``arg0``
 AUTH_RSAPUBLICKEY = 3
 
-AUTH = b'AUTH'
-CLSE = b'CLSE'
-CNXN = b'CNXN'
-FAIL = b'FAIL'
-OKAY = b'OKAY'
-OPEN = b'OPEN'
-SYNC = b'SYNC'
-WRTE = b'WRTE'
+AUTH = b"AUTH"
+CLSE = b"CLSE"
+CNXN = b"CNXN"
+FAIL = b"FAIL"
+OKAY = b"OKAY"
+OPEN = b"OPEN"
+SYNC = b"SYNC"
+WRTE = b"WRTE"
 
-DATA = b'DATA'
-DENT = b'DENT'
-DONE = b'DONE'
-LIST = b'LIST'
-QUIT = b'QUIT'
-RECV = b'RECV'
-SEND = b'SEND'
-STAT = b'STAT'
+DATA = b"DATA"
+DENT = b"DENT"
+DONE = b"DONE"
+LIST = b"LIST"
+QUIT = b"QUIT"
+RECV = b"RECV"
+SEND = b"SEND"
+STAT = b"STAT"
 
 #: Commands that are recognized by :meth:`adb_shell.adb_device._AdbIOManager._read_packet_from_device` and :meth:`adb_shell.adb_device_async._AdbIOManagerAsync._read_packet_from_device`
 IDS = (AUTH, CLSE, CNXN, OKAY, OPEN, SYNC, WRTE)
@@ -98,25 +98,25 @@ FILESYNC_ID_TO_WIRE = {cmd_id: sum(c << (i * 8) for i, c in enumerate(bytearray(
 FILESYNC_WIRE_TO_ID = {wire: cmd_id for cmd_id, wire in FILESYNC_ID_TO_WIRE.items()}
 
 #: An ADB message is 6 words in little-endian.
-MESSAGE_FORMAT = b'<6I'
+MESSAGE_FORMAT = b"<6I"
 
 #: The format for FileSync "list" messages
-FILESYNC_LIST_FORMAT = b'<5I'
+FILESYNC_LIST_FORMAT = b"<5I"
 
 #: The format for FileSync "pull" messages
-FILESYNC_PULL_FORMAT = b'<2I'
+FILESYNC_PULL_FORMAT = b"<2I"
 
 #: The format for FileSync "push" messages
-FILESYNC_PUSH_FORMAT = b'<2I'
+FILESYNC_PUSH_FORMAT = b"<2I"
 
 #: The format for FileSync "stat" messages
-FILESYNC_STAT_FORMAT = b'<4I'
+FILESYNC_STAT_FORMAT = b"<4I"
 
 #: The size of an ADB message
 MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
 #: Default authentication timeout (in s) for :meth:`adb_shell.adb_device.AdbDevice.connect` and :meth:`adb_shell.adb_device_async.AdbDeviceAsync.connect`
-DEFAULT_AUTH_TIMEOUT_S = 10.
+DEFAULT_AUTH_TIMEOUT_S = 10.0
 
 #: Default total timeout (in s) for reading data from the device
-DEFAULT_READ_TIMEOUT_S = 10.
+DEFAULT_READ_TIMEOUT_S = 10.0

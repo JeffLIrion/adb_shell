@@ -16,10 +16,8 @@ from . import patchers
 @unittest.skipIf(UsbTransport is None, "UsbTransport could not be imported")
 class TestUsbTransport(unittest.TestCase):
     def setUp(self):
-        """Create a ``UsbTransport`` and do something...
-
-        """
-        self.transport = UsbTransport('TODO', 'TODO')
+        """Create a ``UsbTransport`` and do something..."""
+        self.transport = UsbTransport("TODO", "TODO")
 
         if True:
             return
@@ -32,9 +30,7 @@ class TestUsbTransport(unittest.TestCase):
         self.transport.close()
 
     def test_connect_with_timeout(self):
-        """TODO
-
-        """
+        """TODO"""
         if True:
             return
 
@@ -44,33 +40,29 @@ class TestUsbTransport(unittest.TestCase):
             self.assertTrue(True)
 
     def test_bulk_read(self):
-        """TODO
-
-        """
+        """TODO"""
         if True:
             return
 
         # Provide the `recv` return values
-        self.transport._connection._recv = b'TEST1TEST2'
+        self.transport._connection._recv = b"TEST1TEST2"
 
         with patchers.PATCH_SELECT_SUCCESS:
-            self.assertEqual(self.transport.bulk_read(5), b'TEST1')
-            self.assertEqual(self.transport.bulk_read(5), b'TEST2')
+            self.assertEqual(self.transport.bulk_read(5), b"TEST1")
+            self.assertEqual(self.transport.bulk_read(5), b"TEST2")
 
         with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
                 self.transport.bulk_read(4)
 
     def test_bulk_write(self):
-        """TODO
-
-        """
+        """TODO"""
         if True:
             return
 
         with patchers.PATCH_SELECT_SUCCESS:
-            self.transport.bulk_write(b'TEST')
+            self.transport.bulk_write(b"TEST")
 
         with patchers.PATCH_SELECT_FAIL:
             with self.assertRaises(TcpTimeoutException):
-                self.transport.bulk_write(b'FAIL')
+                self.transport.bulk_write(b"FAIL")

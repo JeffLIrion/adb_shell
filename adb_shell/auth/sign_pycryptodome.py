@@ -45,14 +45,15 @@ class PycryptodomeAuthSigner(object):
         The contents of theprivate key
 
     """
+
     def __init__(self, rsa_key_path=None):
         super(PycryptodomeAuthSigner, self).__init__()
 
         if rsa_key_path:
-            with open(rsa_key_path + '.pub', 'rb') as rsa_pub_file:
+            with open(rsa_key_path + ".pub", "rb") as rsa_pub_file:
                 self.public_key = rsa_pub_file.read()
 
-            with open(rsa_key_path, 'rb') as rsa_priv_file:
+            with open(rsa_key_path, "rb") as rsa_priv_file:
                 self.rsa_key = RSA.import_key(rsa_priv_file.read())
 
     def Sign(self, data):

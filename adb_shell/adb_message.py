@@ -86,7 +86,7 @@ def int_to_cmd(n):
         The ADB command (e.g., ``'CNXN'``)
 
     """
-    return ''.join(chr((n >> (i * 8)) % 256) for i in range(4)).encode('utf-8')
+    return "".join(chr((n >> (i * 8)) % 256) for i in range(4)).encode("utf-8")
 
 
 def unpack(message):
@@ -119,7 +119,9 @@ def unpack(message):
     try:
         cmd, arg0, arg1, data_length, data_checksum, _ = struct.unpack(constants.MESSAGE_FORMAT, message)
     except struct.error as e:
-        raise ValueError('Unable to unpack ADB command. (length={})'.format(len(message)), constants.MESSAGE_FORMAT, message, e)
+        raise ValueError(
+            "Unable to unpack ADB command. (length={})".format(len(message)), constants.MESSAGE_FORMAT, message, e
+        )
 
     return cmd, arg0, arg1, data_length, data_checksum
 
@@ -152,7 +154,8 @@ class AdbMessage(object):
         ``self.command`` with its bits flipped; in other words, ``self.command + self.magic == 2**32 - 1``
 
     """
-    def __init__(self, command, arg0, arg1, data=b''):
+
+    def __init__(self, command, arg0, arg1, data=b""):
         self.command = constants.ID_TO_WIRE[command]
         self.magic = self.command ^ 0xFFFFFFFF
         self.arg0 = arg0
@@ -168,7 +171,9 @@ class AdbMessage(object):
             The message packed into the format required by ADB
 
         """
-        return struct.pack(constants.MESSAGE_FORMAT, self.command, self.arg0, self.arg1, len(self.data), self.checksum, self.magic)
+        return struct.pack(
+            constants.MESSAGE_FORMAT, self.command, self.arg0, self.arg1, len(self.data), self.checksum, self.magic
+        )
 
     @property
     def checksum(self):

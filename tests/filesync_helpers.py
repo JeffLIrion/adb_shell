@@ -25,7 +25,8 @@ class FileSyncMessage(object):  # pylint: disable=too-few-public-methods
         The data that will be sent
 
     """
-    def __init__(self, command, arg0=None, data=b''):
+
+    def __init__(self, command, arg0=None, data=b""):
         self.command = constants.FILESYNC_ID_TO_WIRE[command]
         self.arg0 = arg0 or len(data)
         self.data = data
@@ -39,7 +40,7 @@ class FileSyncMessage(object):  # pylint: disable=too-few-public-methods
             The message packed into the format required by ADB
 
         """
-        return struct.pack(b'<2I', self.command, self.arg0)
+        return struct.pack(b"<2I", self.command, self.arg0)
 
 
 class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
@@ -74,7 +75,8 @@ class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
         TODO
 
     """
-    def __init__(self, command, arg0, arg1, arg2, data=b''):
+
+    def __init__(self, command, arg0, arg1, arg2, data=b""):
         self.command = constants.FILESYNC_ID_TO_WIRE[command]
         self.arg0 = arg0
         self.arg1 = arg1
@@ -91,7 +93,7 @@ class FileSyncListMessage(object):  # pylint: disable=too-few-public-methods
             The message packed into the format required by ADB
 
         """
-        return struct.pack(b'<5I', self.command, self.arg0, self.arg1, self.arg2, self.arg3)
+        return struct.pack(b"<5I", self.command, self.arg0, self.arg1, self.arg2, self.arg3)
 
 
 class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
@@ -122,12 +124,13 @@ class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
         The data that will be sent (always empty)
 
     """
+
     def __init__(self, command, arg0, arg1, arg2):
         self.command = constants.FILESYNC_ID_TO_WIRE[command]
         self.arg0 = arg0
         self.arg1 = arg1
         self.arg2 = arg2
-        self.data = b''
+        self.data = b""
 
     def pack(self):
         """Returns this message in an over-the-wire format.
@@ -138,4 +141,4 @@ class FileSyncStatMessage(object):  # pylint: disable=too-few-public-methods
             The message packed into the format required by ADB
 
         """
-        return struct.pack(b'<4I', self.command, self.arg0, self.arg1, self.arg2)
+        return struct.pack(b"<4I", self.command, self.arg0, self.arg1, self.arg2)
