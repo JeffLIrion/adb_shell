@@ -33,7 +33,7 @@ help:  ## Show this help menu
 	awk -F ':|##' '/^[^\t].+?:.*?##/ { printf "\033[36m  make %-20s\033[0m %s\n", $$1, $$NF }' $(MAKEFILE_LIST) | grep -v "make venv/\." | sort
 	@echo ""
 	@echo "NOTES:"
-	@echo "- The 'venv/.bin' target may fail because newer Python versions include the 'venv' package.  Follow the instructions to crete the virtual environment manually."
+	@echo "- The 'venv/.bin' target may fail because newer Python versions include the 'venv' package.  Follow the instructions to create the virtual environment manually."
 ifneq ("$(wildcard scripts/pre-commit.sh)", "")
 	@echo "- To install the git pre-commit hook:\n\n    scripts/pre-commit.sh\n"
 endif

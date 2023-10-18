@@ -2,19 +2,29 @@
 
 set -e
 
+function make_pre_commit() {
+  # setup pre-commit hook
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+  echo -e "#!/bin/bash\n\n./scripts/pre-commit.sh 'placeholder_argument'" > "$DIR/../.git/hooks/pre-commit"
+  chmod a+x "$DIR/../.git/hooks/pre-commit"
+  echo "pre-commit hook successfully configured"
+}
+ 
 # if no arguments are passed, create the pre-commit hook
 if [ "$#" -eq 0 ]; then
   read -p "Do you want to setup the git pre-commit hook? [Y/n]  " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
-    # setup pre-commit hook
-    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-    echo -e "#!/bin/bash\n\n./scripts/pre-commit.sh 'placeholder_argument'" > "$DIR/../.git/hooks/pre-commit"
-    chmod a+x "$DIR/../.git/hooks/pre-commit"
-    echo "pre-commit hook successfully configured"
+    make_pre_commit
   else
     echo "pre-commit hook not configured"
   fi
+  exit 0
+fi
+
+# if the argument passed is "MAKE_PRECOMMIT_HOOK", then make the pre-commit hook
+if [[ $1 == "MAKE_PRECOMMIT_HOOK" ]]; then
+  make_pre_commit
   exit 0
 fi
 

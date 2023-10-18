@@ -5,7 +5,10 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell.transport.usb_transport import UsbTransport
+try:
+    from adb_shell.transport.usb_transport import UsbTransport
+except (ImportError, OSError):
+    UsbTransport = None
 
 
 class TestUsbImportError(unittest.TestCase):

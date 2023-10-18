@@ -1,0 +1,11 @@
+aiofiles
+coverage
+coveralls
+cryptography
+flake8
+libusb1
+pyasn1
+pycryptodome
+pylint
+pytest
+rsa
