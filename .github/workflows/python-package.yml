@@ -7,6 +7,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
+    branches: [ master ]
 
 env:
   ENV_GITHUB_ACTIONS: 'ENV_GITHUB_ACTIONS'
