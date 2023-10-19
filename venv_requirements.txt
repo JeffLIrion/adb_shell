@@ -1,12 +1,19 @@
-aiofiles
-async_timeout
+# Standard requirements
+black
 coverage
 coveralls
-cryptography
 flake8
+pylint
+pytest
+sphinx
+sphinx-rtd-theme
+twine
+
+# Specific requirements for this project
+aiofiles
+async_timeout
+cryptography
 libusb1
 pyasn1
 pycryptodome
-pylint
-pytest
 rsa
