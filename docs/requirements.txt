@@ -1,6 +1,7 @@
-sphinx==2.1.2
-adb-shell
-cryptography
+# Standard requirements
+sphinx
+sphinx-rtd-theme
+
+# Specific requirements for this project
+adb-shell[async,usb]
 pycryptodome
-libusb1
-aiofiles
