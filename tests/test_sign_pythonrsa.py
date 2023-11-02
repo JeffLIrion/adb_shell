@@ -14,19 +14,21 @@ from .keygen_stub import open_priv_pub
 
 class TestPythonRSASigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            keygen('tests/adbkey')
-            self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+        with patch("adb_shell.auth.sign_pythonrsa.open", open_priv_pub), patch(
+            "adb_shell.auth.keygen.open", open_priv_pub
+        ):
+            keygen("tests/adbkey")
+            self.signer = PythonRSASigner.FromRSAKeyPath("tests/adbkey")
 
     def test_sign(self):
         """Test that the ``Sign`` method does not raise an exception."""
-        self.signer.Sign(b'notadb')
+        self.signer.Sign(b"notadb")
         self.assertTrue(True)
 
     def test_get_public_key(self):
         """Test that the ``GetPublicKey`` method works correctly."""
-        with patch('{}.open'.format(__name__), open_priv_pub):
-            with open('tests/adbkey.pub') as f:
+        with patch("{}.open".format(__name__), open_priv_pub):
+            with open("tests/adbkey.pub") as f:
                 pub = f.read()
 
             self.assertEqual(pub, self.signer.GetPublicKey())
@@ -34,16 +36,19 @@ class TestPythonRSASigner(unittest.TestCase):
 
 class TestPythonRSASignerExceptions(unittest.TestCase):
     def test_value_error(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            with patch('adb_shell.auth.sign_pythonrsa.decoder.decode', return_value=([None, [None]], None)):
+        with patch("adb_shell.auth.sign_pythonrsa.open", open_priv_pub), patch(
+            "adb_shell.auth.keygen.open", open_priv_pub
+        ):
+            with patch("adb_shell.auth.sign_pythonrsa.decoder.decode", return_value=([None, [None]], None)):
                 with self.assertRaises(ValueError):
-                    keygen('tests/adbkey')
-                    self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
+                    keygen("tests/adbkey")
+                    self.signer = PythonRSASigner.FromRSAKeyPath("tests/adbkey")
 
     def test_index_error(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            with patch('adb_shell.auth.sign_pythonrsa.decoder.decode', side_effect=IndexError):
+        with patch("adb_shell.auth.sign_pythonrsa.open", open_priv_pub), patch(
+            "adb_shell.auth.keygen.open", open_priv_pub
+        ):
+            with patch("adb_shell.auth.sign_pythonrsa.decoder.decode", side_effect=IndexError):
                 with self.assertRaises(ValueError):
-                    keygen('tests/adbkey')
-                    self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
-                
+                    keygen("tests/adbkey")
+                    self.signer = PythonRSASigner.FromRSAKeyPath("tests/adbkey")

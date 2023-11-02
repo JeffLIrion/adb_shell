@@ -71,14 +71,14 @@ class FakeStreamWriter:
 
 class FakeStreamReader:
     async def read(self, numbytes):
-        return b'TEST'
+        return b"TEST"
 
 
 class FakeTcpTransportAsync(TcpTransportAsync):
     def __init__(self, *args, **kwargs):
         TcpTransportAsync.__init__(self, *args, **kwargs)
-        self.bulk_read_data = b''
-        self.bulk_write_data = b''
+        self.bulk_read_data = b""
+        self.bulk_write_data = b""
 
     async def close(self):
         self._reader = None
@@ -100,7 +100,7 @@ class FakeTcpTransportAsync(TcpTransportAsync):
 
 
 # `TcpTransport` patches
-PATCH_TCP_TRANSPORT_ASYNC = patch('adb_shell.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)
+PATCH_TCP_TRANSPORT_ASYNC = patch("adb_shell.adb_device_async.TcpTransportAsync", FakeTcpTransportAsync)
 
 
 def async_patch(*args, **kwargs):

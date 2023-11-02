@@ -3,6 +3,7 @@ import inspect
 import pickle
 import re
 import unittest
+
 try:
     from unittest import mock
 except ImportError:
@@ -31,7 +32,7 @@ class TestExceptionSerialization(unittest.TestCase):
             # wasn't overridden by the exception subclass - use 0 arity.
             exc_required_arity = 0
         # Don't try to provide `self` - we assume strings will be fine here
-        fake_args = ("foo", ) * (exc_required_arity - 1)
+        fake_args = ("foo",) * (exc_required_arity - 1)
         # Instantiate the exception object and then attempt a serializion cycle
         # using `pickle` - we mainly care about whether this blows up or not
         exc_obj = exc_cls(*fake_args)
@@ -40,9 +41,7 @@ class TestExceptionSerialization(unittest.TestCase):
 
     for __obj in adb_shell.exceptions.__dict__.values():
         if isinstance(__obj, type) and issubclass(__obj, BaseException):
-            __test_method = functools.partial(
-                __test_serialize_one_exc_cls, __obj
-            )
+            __test_method = functools.partial(__test_serialize_one_exc_cls, __obj)
             __test_name = "test_serialize_{}".format(__obj.__name__)
             locals()[__test_name] = __test_method
 
@@ -58,7 +57,5 @@ class TestExceptionSerialization(unittest.TestCase):
     def test_usbreadfailederror_as_repr(self):
         exc_args = (mock.sentinel.error_msg, mock.sentinel.usb1_exc_obj)
         exc_obj = adb_shell.exceptions.UsbReadFailedError(*exc_args)
-        expected_repr = "{}{!r}".format(
-            adb_shell.exceptions.UsbReadFailedError.__name__, exc_args
-        )
+        expected_repr = "{}{!r}".format(adb_shell.exceptions.UsbReadFailedError.__name__, exc_args)
         _assertRegex(self, repr(exc_obj), re.escape(expected_repr))

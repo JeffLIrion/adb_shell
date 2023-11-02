@@ -24,78 +24,55 @@
 
 
 class AdbCommandFailureException(Exception):
-    """A ``b'FAIL'`` packet was received.
-
-    """
+    """A ``b'FAIL'`` packet was received."""
 
 
 class AdbConnectionError(Exception):
-    """ADB command not sent because a connection to the device has not been established.
-
-    """
+    """ADB command not sent because a connection to the device has not been established."""
 
 
 class AdbTimeoutError(Exception):
-    """ADB command did not complete within the specified time.
-
-    """
+    """ADB command did not complete within the specified time."""
 
 
 class DeviceAuthError(Exception):
-    """Device authentication failed.
+    """Device authentication failed."""
 
-    """
     def __init__(self, message, *args):
         message %= args
         super(DeviceAuthError, self).__init__(message, *args)
 
 
 class InvalidChecksumError(Exception):
-    """Checksum of data didn't match expected checksum.
-
-    """
+    """Checksum of data didn't match expected checksum."""
 
 
 class InvalidCommandError(Exception):
-    """Got an invalid command.
-
-    """
+    """Got an invalid command."""
 
 
 class InvalidTransportError(Exception):
-    """The provided transport does not implement the necessary methods: ``close``, ``connect``, ``bulk_read``, and ``bulk_write``.
-
-    """
+    """The provided transport does not implement the necessary methods: ``close``, ``connect``, ``bulk_read``, and ``bulk_write``."""
 
 
 class InvalidResponseError(Exception):
-    """Got an invalid response to our command.
-
-    """
+    """Got an invalid response to our command."""
 
 
 class DevicePathInvalidError(Exception):
-    """A file command was passed an invalid path.
-
-    """
+    """A file command was passed an invalid path."""
 
 
 class PushFailedError(Exception):
-    """Pushing a file failed for some reason.
-
-    """
+    """Pushing a file failed for some reason."""
 
 
 class TcpTimeoutException(Exception):
-    """TCP connection timed read/write operation exceeded the allowed time.
-
-    """
+    """TCP connection timed read/write operation exceeded the allowed time."""
 
 
 class UsbDeviceNotFoundError(Exception):
-    """TODO
-
-    """
+    """TODO"""
 
 
 class UsbReadFailedError(Exception):
@@ -114,15 +91,14 @@ class UsbReadFailedError(Exception):
         An exception from ``libusb1``
 
     """
+
     def __init__(self, msg, usb_error):
         super(UsbReadFailedError, self).__init__(msg, usb_error)
         self.usb_error = usb_error
 
     def __str__(self):
-        return '%s: %s' % self.args
+        return "%s: %s" % self.args
 
 
 class UsbWriteFailedError(Exception):
-    """:meth:`adb_shell.transport.usb_transport.UsbTransport.bulk_write` failed.
-
-    """
+    """:meth:`adb_shell.transport.usb_transport.UsbTransport.bulk_write` failed."""

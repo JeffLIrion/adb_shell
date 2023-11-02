@@ -44,7 +44,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.packet_store.put(arg0=5, arg1=5, cmd=constants.CLSE, data=b"data5")
         self.assertEqual(len(self.packet_store), 3)
         self.assertFalse((5, 5) in self.packet_store)
-        
+
         self.packet_store.put(arg0=5, arg1=1, cmd=constants.CLSE, data=b"data5")
         self.assertEqual(len(self.packet_store), 3)
         self.assertFalse((5, 1) in self.packet_store)
@@ -112,7 +112,7 @@ class TestAdbPacketStore(unittest.TestCase):
         self.assertEqual(len(self.packet_store._dict[0]), 1)
         self.assertEqual(len(self.packet_store._dict[3]), 1)
         self.assertEqual(len(self.packet_store._dict[5]), 1)
-        
+
     def test_get_clse(self):
         self.packet_store.put(arg0=0, arg1=1, cmd=b"cmd1", data=b"data1")
         self.packet_store.put(arg0=0, arg1=1, cmd=constants.CLSE, data=b"data2")
@@ -170,7 +170,6 @@ class TestAdbPacketStore(unittest.TestCase):
 
 
 class TestAdbTransactionInfo(unittest.TestCase):
-
     def test_args_match(self):
         adb_info_1_None = _AdbTransactionInfo(1, None, 123, 456, 789)
         adb_info_1_2 = _AdbTransactionInfo(1, 2, 123, 456, 789)

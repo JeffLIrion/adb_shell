@@ -51,8 +51,9 @@ class _Accum(object):
         A buffer for storing data before it is signed
 
     """
+
     def __init__(self):
-        self._buf = b''
+        self._buf = b""
 
     def update(self, msg):
         """Update this hash object's state with the provided ``msg``.
@@ -77,8 +78,8 @@ class _Accum(object):
         return self._buf
 
 
-pkcs1.HASH_METHODS['SHA-1-PREHASHED'] = _Accum
-pkcs1.HASH_ASN1['SHA-1-PREHASHED'] = pkcs1.HASH_ASN1['SHA-1']
+pkcs1.HASH_METHODS["SHA-1-PREHASHED"] = _Accum
+pkcs1.HASH_ASN1["SHA-1-PREHASHED"] = pkcs1.HASH_ASN1["SHA-1"]
 
 
 def _load_rsa_private_key(pem):
@@ -105,18 +106,18 @@ def _load_rsa_private_key(pem):
 
     """
     try:
-        der = rsa.pem.load_pem(pem, 'PRIVATE KEY')
+        der = rsa.pem.load_pem(pem, "PRIVATE KEY")
         keyinfo, _ = decoder.decode(der)
 
-        if keyinfo[1][0] != univ.ObjectIdentifier('1.2.840.113549.1.1.1'):
-            raise ValueError('Not a DER-encoded OpenSSL private RSA key')
+        if keyinfo[1][0] != univ.ObjectIdentifier("1.2.840.113549.1.1.1"):
+            raise ValueError("Not a DER-encoded OpenSSL private RSA key")
 
         private_key_der = keyinfo[2].asOctets()
 
     except IndexError:
-        raise ValueError('Not a DER-encoded OpenSSL private RSA key')
+        raise ValueError("Not a DER-encoded OpenSSL private RSA key")
 
-    return rsa.PrivateKey.load_pkcs1(private_key_der, format='DER')
+    return rsa.PrivateKey.load_pkcs1(private_key_der, format="DER")
 
 
 class PythonRSASigner(object):
@@ -137,6 +138,7 @@ class PythonRSASigner(object):
         The contents of the public key file
 
     """
+
     def __init__(self, pub=None, priv=None):
         self.priv_key = _load_rsa_private_key(priv)
         self.pub_key = pub
@@ -156,7 +158,7 @@ class PythonRSASigner(object):
             A :class:`PythonRSASigner` with private key ``rsa_key_path`` and public key ``rsa_key_path + '.pub'``
 
         """
-        with open(rsa_key_path + '.pub') as f:
+        with open(rsa_key_path + ".pub") as f:
             pub = f.read()
         with open(rsa_key_path) as f:
             priv = f.read()
@@ -176,7 +178,7 @@ class PythonRSASigner(object):
             The signed ``data``
 
         """
-        return rsa.sign(data, self.priv_key, 'SHA-1-PREHASHED')
+        return rsa.sign(data, self.priv_key, "SHA-1-PREHASHED")
 
     def GetPublicKey(self):
         """Returns the public key in PEM format without headers or newlines.

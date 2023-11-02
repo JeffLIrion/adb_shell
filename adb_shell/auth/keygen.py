@@ -68,12 +68,12 @@ ANDROID_PUBKEY_MODULUS_SIZE = 2048 // 8
 
 #: Python representation of "struct RSAPublicKey"
 ANDROID_RSAPUBLICKEY_STRUCT = (
-    '<'                 # Little-endian
-    'L'                 # uint32_t modulus_size_words;
-    'L'                 # uint32_t n0inv;
-    '{modulus_size}s'   # uint8_t modulus[ANDROID_PUBKEY_MODULUS_SIZE];
-    '{modulus_size}s'   # uint8_t rr[ANDROID_PUBKEY_MODULUS_SIZE];
-    'L'                 # uint32_t exponent;
+    "<"  # Little-endian
+    "L"  # uint32_t modulus_size_words;
+    "L"  # uint32_t n0inv;
+    "{modulus_size}s"  # uint8_t modulus[ANDROID_PUBKEY_MODULUS_SIZE];
+    "{modulus_size}s"  # uint8_t rr[ANDROID_PUBKEY_MODULUS_SIZE];
+    "L"  # uint32_t exponent;
 ).format(modulus_size=ANDROID_PUBKEY_MODULUS_SIZE)
 
 
@@ -81,7 +81,7 @@ ANDROID_RSAPUBLICKEY_STRUCT = (
 ANDROID_PUBKEY_MODULUS_SIZE_WORDS = ANDROID_PUBKEY_MODULUS_SIZE // 4
 
 
-def _to_bytes(n, length, endianess='big'):
+def _to_bytes(n, length, endianess="big"):
     """Partial python2 compatibility with int.to_bytes
 
     https://stackoverflow.com/a/20793663
@@ -101,10 +101,10 @@ def _to_bytes(n, length, endianess='big'):
         TODO
 
     """
-    if not hasattr(n, 'to_bytes'):
-        h = '{:x}'.format(n)
-        s = ('0' * (len(h) % 2) + h).zfill(length * 2).decode('hex')
-        return s if endianess == 'big' else s[::-1]
+    if not hasattr(n, "to_bytes"):
+        h = "{:x}".format(n)
+        s = ("0" * (len(h) % 2) + h).zfill(length * 2).decode("hex")
+        return s if endianess == "big" else s[::-1]
     return n.to_bytes(length, endianess)
 
 
@@ -118,15 +118,17 @@ def decode_pubkey(public_key):
 
     """
     binary_key_data = base64.b64decode(public_key)
-    modulus_size_words, n0inv, modulus_bytes, rr_bytes, exponent = struct.unpack(ANDROID_RSAPUBLICKEY_STRUCT, binary_key_data)
+    modulus_size_words, n0inv, modulus_bytes, rr_bytes, exponent = struct.unpack(
+        ANDROID_RSAPUBLICKEY_STRUCT, binary_key_data
+    )
     assert modulus_size_words == ANDROID_PUBKEY_MODULUS_SIZE_WORDS
     modulus = reversed(modulus_bytes)
     rr = reversed(rr_bytes)
-    _LOGGER.debug('modulus_size_words: %s', hex(modulus_size_words))
-    _LOGGER.debug('n0inv: %s', hex(n0inv))
-    _LOGGER.debug('modulus: %s', ':'.join((hex(m) for m in modulus)))
-    _LOGGER.debug('rr: %s', ':'.join((hex(r) for r in rr)))
-    _LOGGER.debug('exponent: %s', hex(exponent))
+    _LOGGER.debug("modulus_size_words: %s", hex(modulus_size_words))
+    _LOGGER.debug("n0inv: %s", hex(n0inv))
+    _LOGGER.debug("modulus: %s", ":".join((hex(m) for m in modulus)))
+    _LOGGER.debug("rr: %s", ":".join((hex(r) for r in rr)))
+    _LOGGER.debug("exponent: %s", hex(exponent))
 
 
 def decode_pubkey_file(public_key_path):
@@ -138,7 +140,7 @@ def decode_pubkey_file(public_key_path):
         TODO
 
     """
-    with open(public_key_path, 'rb') as fd:
+    with open(public_key_path, "rb") as fd:
         decode_pubkey(fd.read())
 
 
@@ -156,8 +158,12 @@ def encode_pubkey(private_key_path):
         TODO
 
     """
-    with open(private_key_path, 'rb') as key_file:
-        key = serialization.load_pem_private_key(key_file.read(), password=None, backend=default_backend()).private_numbers().public_numbers
+    with open(private_key_path, "rb") as key_file:
+        key = (
+            serialization.load_pem_private_key(key_file.read(), password=None, backend=default_backend())
+            .private_numbers()
+            .public_numbers
+        )
 
     # Compute and store n0inv = -1 / N[0] mod 2^32.
     # BN_set_bit(r32, 32)
@@ -173,15 +179,15 @@ def encode_pubkey(private_key_path):
     # BN_set_bit(rr, ANDROID_PUBKEY_MODULUS_SIZE * 8)
     rr = 1 << (ANDROID_PUBKEY_MODULUS_SIZE * 8)
     # BN_mod_sqr(rr, rr, key->n, ctx)
-    rr = (rr ** 2) % key.n
+    rr = (rr**2) % key.n
 
     return struct.pack(
         ANDROID_RSAPUBLICKEY_STRUCT,
         ANDROID_PUBKEY_MODULUS_SIZE_WORDS,
         n0inv,
-        _to_bytes(key.n, ANDROID_PUBKEY_MODULUS_SIZE, 'little'),
-        _to_bytes(rr, ANDROID_PUBKEY_MODULUS_SIZE, 'little'),
-        key.e
+        _to_bytes(key.n, ANDROID_PUBKEY_MODULUS_SIZE, "little"),
+        _to_bytes(rr, ANDROID_PUBKEY_MODULUS_SIZE, "little"),
+        key.e,
     )
 
 
@@ -197,16 +203,16 @@ def get_user_info():
     try:
         username = os.getlogin()
     except (FileNotFoundError, OSError):
-        username = 'unknown'
+        username = "unknown"
 
     if not username:
-        username = 'unknown'
+        username = "unknown"
 
     hostname = socket.gethostname()
     if not hostname:
-        hostname = 'unknown'
+        hostname = "unknown"
 
-    return ' ' + username + '@' + hostname
+    return " " + username + "@" + hostname
 
 
 def write_public_keyfile(private_key_path, public_key_path):
@@ -224,7 +230,7 @@ def write_public_keyfile(private_key_path, public_key_path):
     public_key = encode_pubkey(private_key_path)
     assert len(public_key) == struct.calcsize(ANDROID_RSAPUBLICKEY_STRUCT)
 
-    with open(public_key_path, 'wb') as public_key_file:
+    with open(public_key_path, "wb") as public_key_file:
         public_key_file.write(base64.b64encode(public_key))
         public_key_file.write(get_user_info().encode())
 
@@ -245,7 +251,13 @@ def keygen(filepath):
     """
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
 
-    with open(filepath, 'wb') as private_key_file:
-        private_key_file.write(private_key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption()))
+    with open(filepath, "wb") as private_key_file:
+        private_key_file.write(
+            private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
 
-    write_public_keyfile(filepath, filepath + '.pub')
+    write_public_keyfile(filepath, filepath + ".pub")

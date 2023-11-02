@@ -18,15 +18,11 @@ from abc import ABC, abstractmethod
 
 
 class BaseTransportAsync(ABC):
-    """A base transport class.
-
-    """
+    """A base transport class."""
 
     @abstractmethod
     async def close(self):
-        """Close the connection.
-
-        """
+        """Close the connection."""
 
     @abstractmethod
     async def connect(self, transport_timeout_s):

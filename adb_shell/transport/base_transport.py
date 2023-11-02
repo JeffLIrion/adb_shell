@@ -20,22 +20,17 @@ except ImportError:  # pragma: no cover
     from abc import ABCMeta, abstractmethod
 
     class ABC(object):  # pylint: disable=too-few-public-methods
-        """A Python2-compatible `ABC` class.
+        """A Python2-compatible `ABC` class."""
 
-        """
         __metaclass__ = ABCMeta
 
 
 class BaseTransport(ABC):
-    """A base transport class.
-
-    """
+    """A base transport class."""
 
     @abstractmethod
     def close(self):
-        """Close the connection.
-
-        """
+        """Close the connection."""
 
     @abstractmethod
     def connect(self, transport_timeout_s):

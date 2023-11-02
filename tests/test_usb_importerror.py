@@ -23,7 +23,7 @@ class TestUsbImportError(unittest.TestCase):
         # In lieu of a real `ImportError`, I'll just set this to None
         with patch("adb_shell.adb_device.UsbTransport", None):
             with self.assertRaises(InvalidTransportError):
-                adb_device.AdbDeviceUsb('serial')
+                adb_device.AdbDeviceUsb("serial")
 
     def test_import_successful(self):
         from adb_shell import adb_device

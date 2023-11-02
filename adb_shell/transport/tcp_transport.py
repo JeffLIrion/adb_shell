@@ -57,6 +57,7 @@ class TcpTransport(BaseTransport):
         The device port to which we are connecting (default is 5555)
 
     """
+
     def __init__(self, host, port=5555):
         self._host = host
         self._port = port
@@ -64,9 +65,7 @@ class TcpTransport(BaseTransport):
         self._connection = None
 
     def close(self):
-        """Close the socket connection.
-
-        """
+        """Close the socket connection."""
         if self._connection:
             try:
                 self._connection.shutdown(socket.SHUT_RDWR)
@@ -116,7 +115,7 @@ class TcpTransport(BaseTransport):
         if readable:
             return self._connection.recv(numbytes)
 
-        msg = 'Reading from {}:{} timed out ({} seconds)'.format(self._host, self._port, transport_timeout_s)
+        msg = "Reading from {}:{} timed out ({} seconds)".format(self._host, self._port, transport_timeout_s)
         raise TcpTimeoutException(msg)
 
     def bulk_write(self, data, transport_timeout_s):
@@ -144,5 +143,7 @@ class TcpTransport(BaseTransport):
         if writeable:
             return self._connection.send(data)
 
-        msg = 'Sending data to {}:{} timed out after {} seconds. No data was sent.'.format(self._host, self._port, transport_timeout_s)
+        msg = "Sending data to {}:{} timed out after {} seconds. No data was sent.".format(
+            self._host, self._port, transport_timeout_s
+        )
         raise TcpTimeoutException(msg)

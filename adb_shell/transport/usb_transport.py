@@ -96,7 +96,7 @@ def get_interface(setting):  # pragma: no cover
     return (setting.getClass(), setting.getSubClass(), setting.getProtocol())
 
 
-def interface_matcher(clazz, subclass, protocol):   # pragma: no cover
+def interface_matcher(clazz, subclass, protocol):  # pragma: no cover
     """Returns a matcher that returns the setting with the given interface.
 
     Parameters
@@ -138,7 +138,7 @@ def interface_matcher(clazz, subclass, protocol):   # pragma: no cover
     return matcher
 
 
-class UsbTransport(BaseTransport):   # pragma: no cover
+class UsbTransport(BaseTransport):  # pragma: no cover
     """USB communication object. Not thread-safe.
 
     Handles reading and writing over USB with the proper endpoints, exceptions,
@@ -177,6 +177,7 @@ class UsbTransport(BaseTransport):   # pragma: no cover
         TODO
 
     """
+
     # We maintain an idempotent `usb1` context object to ensure that device
     # objects we hand back to callers can be used while this class exists
     USB1_CTX = usb1.USBContext()
@@ -194,21 +195,21 @@ class UsbTransport(BaseTransport):   # pragma: no cover
         self._read_endpoint = None
         self._write_endpoint = None
 
-        self._usb_info = usb_info or ''
-        self._default_transport_timeout_s = default_transport_timeout_s if default_transport_timeout_s is not None else DEFAULT_TIMEOUT_S
+        self._usb_info = usb_info or ""
+        self._default_transport_timeout_s = (
+            default_transport_timeout_s if default_transport_timeout_s is not None else DEFAULT_TIMEOUT_S
+        )
         self._max_read_packet_len = 0
 
     def close(self):
-        """Close the USB connection.
-
-        """
+        """Close the USB connection."""
         if self._transport is None:
             return
         try:
             self._transport.releaseInterface(self._interface_number)
             self._transport.close()
         except usb1.USBError:
-            _LOGGER.info('USBError while closing transport %s: ', self.usb_info, exc_info=True)
+            _LOGGER.info("USBError while closing transport %s: ", self.usb_info, exc_info=True)
         finally:
             self._transport = None
 
@@ -238,10 +239,10 @@ class UsbTransport(BaseTransport):   # pragma: no cover
         transport = self._device.open()
         iface_number = self._setting.getNumber()
         try:
-            if (platform.system() != 'Windows' and transport.kernelDriverActive(iface_number)):
+            if platform.system() != "Windows" and transport.kernelDriverActive(iface_number):
                 transport.detachKernelDriver(iface_number)
         except usb1.USBErrorNotFound:  # pylint: disable=no-member
-            warnings.warn('Kernel driver not found for interface: %s.', iface_number)
+            warnings.warn("Kernel driver not found for interface: %s.", iface_number)
 
         # # When this object is deleted, make sure it's closed.
         # weakref.ref(self, self.close)
@@ -275,14 +276,22 @@ class UsbTransport(BaseTransport):   # pragma: no cover
 
         """
         if self._transport is None:
-            raise exceptions.UsbReadFailedError('This transport has been closed, probably due to another being opened.', None)
+            raise exceptions.UsbReadFailedError(
+                "This transport has been closed, probably due to another being opened.", None
+            )
         try:
             # python-libusb1 > 1.6 exposes bytearray()s now instead of bytes/str.
             # To support older and newer versions, we ensure everything's bytearray()
             # from here on out.
-            return bytes(self._transport.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout_ms(transport_timeout_s)))
+            return bytes(
+                self._transport.bulkRead(self._read_endpoint, numbytes, timeout=self._timeout_ms(transport_timeout_s))
+            )
         except usb1.USBError as e:
-            raise exceptions.UsbReadFailedError('Could not receive data from %s (timeout %sms)' % (self.usb_info, self._timeout_ms(transport_timeout_s)), e)
+            raise exceptions.UsbReadFailedError(
+                "Could not receive data from %s (timeout %sms)"
+                % (self.usb_info, self._timeout_ms(transport_timeout_s)),
+                e,
+            )
 
     def bulk_write(self, data, transport_timeout_s=None):
         """Send data to the USB device.
@@ -308,18 +317,20 @@ class UsbTransport(BaseTransport):   # pragma: no cover
 
         """
         if self._transport is None:
-            raise exceptions.UsbWriteFailedError('This transport has been closed, probably due to another being opened.', None)
+            raise exceptions.UsbWriteFailedError(
+                "This transport has been closed, probably due to another being opened.", None
+            )
 
         try:
             return self._transport.bulkWrite(self._write_endpoint, data, timeout=self._timeout_ms(transport_timeout_s))
 
         except usb1.USBError as e:
-            raise exceptions.UsbWriteFailedError('Could not send data to %s (timeout %sms)' % (self.usb_info, self._timeout_ms(transport_timeout_s)), e)
+            raise exceptions.UsbWriteFailedError(
+                "Could not send data to %s (timeout %sms)" % (self.usb_info, self._timeout_ms(transport_timeout_s)), e
+            )
 
     def _open(self):
-        """Opens the USB device for this setting, and claims the interface.
-
-        """
+        """Opens the USB device for this setting, and claims the interface."""
         # Make sure we close any previous transport open to this usb device.
         port_path = tuple(self.port_path)
         with self._HANDLE_CACHE_LOCK:
@@ -344,10 +355,10 @@ class UsbTransport(BaseTransport):   # pragma: no cover
         transport = self._device.open()
         iface_number = self._setting.getNumber()
         try:
-            if (platform.system() != 'Windows' and transport.kernelDriverActive(iface_number)):
+            if platform.system() != "Windows" and transport.kernelDriverActive(iface_number):
                 transport.detachKernelDriver(iface_number)
         except usb1.USBErrorNotFound:  # pylint: disable=no-member
-            warnings.warn('Kernel driver not found for interface: %s.', iface_number)
+            warnings.warn("Kernel driver not found for interface: %s.", iface_number)
         transport.claimInterface(iface_number)
         self._transport = transport
         self._interface_number = iface_number
@@ -366,7 +377,9 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             TODO
 
         """
-        return int(transport_timeout_s * 1000 if transport_timeout_s is not None else self._default_transport_timeout_s * 1000)
+        return int(
+            transport_timeout_s * 1000 if transport_timeout_s is not None else self._default_transport_timeout_s * 1000
+        )
 
     def _flush_buffers(self):
         """TODO
@@ -427,9 +440,9 @@ class UsbTransport(BaseTransport):   # pragma: no cover
         try:
             sn = self.serial_number
         except usb1.USBError:
-            sn = ''
+            sn = ""
         if sn and sn != self._usb_info:
-            return '%s %s' % (self._usb_info, sn)
+            return "%s %s" % (self._usb_info, sn)
         return self._usb_info
 
     # ======================================================================= #
@@ -508,8 +521,10 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             usb_info = serial
         else:
             device_matcher = None
-            usb_info = 'first'
-        return cls._find_first(setting_matcher, device_matcher, usb_info=usb_info, default_transport_timeout_s=default_transport_timeout_s)
+            usb_info = "first"
+        return cls._find_first(
+            setting_matcher, device_matcher, usb_info=usb_info, default_transport_timeout_s=default_transport_timeout_s
+        )
 
     @classmethod
     def _find_and_open(cls, setting_matcher, port_path=None, serial=None, default_transport_timeout_s=None):
@@ -532,13 +547,15 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             TODO
 
         """
-        dev = cls._find(setting_matcher, port_path=port_path, serial=serial, default_transport_timeout_s=default_transport_timeout_s)
+        dev = cls._find(
+            setting_matcher, port_path=port_path, serial=serial, default_transport_timeout_s=default_transport_timeout_s
+        )
         dev._open()  # pylint: disable=protected-access
         dev._flush_buffers()  # pylint: disable=protected-access
         return dev
 
     @classmethod
-    def _find_devices(cls, setting_matcher, device_matcher=None, usb_info='', default_transport_timeout_s=None):
+    def _find_devices(cls, setting_matcher, device_matcher=None, usb_info="", default_transport_timeout_s=None):
         """_find and yield the devices that match.
 
         Parameters
@@ -570,7 +587,7 @@ class UsbTransport(BaseTransport):   # pragma: no cover
                 yield transport
 
     @classmethod
-    def _find_first(cls, setting_matcher, device_matcher=None, usb_info='', default_transport_timeout_s=None):
+    def _find_first(cls, setting_matcher, device_matcher=None, usb_info="", default_transport_timeout_s=None):
         """Find and return the first matching device.
 
         Parameters
@@ -598,9 +615,16 @@ class UsbTransport(BaseTransport):   # pragma: no cover
 
         """
         try:
-            return next(cls._find_devices(setting_matcher, device_matcher=device_matcher, usb_info=usb_info, default_transport_timeout_s=default_transport_timeout_s))
+            return next(
+                cls._find_devices(
+                    setting_matcher,
+                    device_matcher=device_matcher,
+                    usb_info=usb_info,
+                    default_transport_timeout_s=default_transport_timeout_s,
+                )
+            )
         except StopIteration:
-            raise exceptions.UsbDeviceNotFoundError('No device available, or it is in the wrong configuration.')
+            raise exceptions.UsbDeviceNotFoundError("No device available, or it is in the wrong configuration.")
 
     @classmethod
     def find_adb(cls, serial=None, port_path=None, default_transport_timeout_s=None):
@@ -625,7 +649,7 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             interface_matcher(CLASS, SUBCLASS, PROTOCOL),
             serial=serial,
             port_path=port_path,
-            default_transport_timeout_s=default_transport_timeout_s
+            default_transport_timeout_s=default_transport_timeout_s,
         )
 
     @classmethod
@@ -643,5 +667,7 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             A generator which yields each ADB device attached via USB.
 
         """
-        for dev in cls._find_devices(interface_matcher(CLASS, SUBCLASS, PROTOCOL), default_transport_timeout_s=default_transport_timeout_s):
+        for dev in cls._find_devices(
+            interface_matcher(CLASS, SUBCLASS, PROTOCOL), default_transport_timeout_s=default_transport_timeout_s
+        ):
             yield dev
