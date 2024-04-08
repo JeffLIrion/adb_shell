@@ -735,11 +735,9 @@ class AdbDevice(object):
         """
         stream = self._streaming_command(service, command, transport_timeout_s, read_timeout_s, None)
         if decode:
-            for line in (stream_line.decode('utf8', _DECODE_ERRORS) for stream_line in stream):
-                yield line
+            yield from (stream_line.decode('utf8', _DECODE_ERRORS) for stream_line in stream)
         else:
-            for line in stream:
-                yield line
+            yield from stream
 
     def exec_out(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
         """Send an ADB ``exec-out`` command to the device.
@@ -865,8 +863,7 @@ class AdbDevice(object):
         if not self.available:
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDevice.connect()`?)")
 
-        for line in self._streaming_service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode):
-            yield line
+        yield from self._streaming_service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, decode)
 
     # ======================================================================= #
     #                                                                         #
@@ -1287,8 +1284,7 @@ class AdbDevice(object):
         """
         adb_info = self._open(b'%s:%s' % (service, command), transport_timeout_s, read_timeout_s, timeout_s)
 
-        for data in self._read_until_close(adb_info):
-            yield data
+        yield from self._read_until_close(adb_info)
 
     # ======================================================================= #
     #                                                                         #

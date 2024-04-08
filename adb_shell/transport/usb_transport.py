@@ -643,5 +643,4 @@ class UsbTransport(BaseTransport):   # pragma: no cover
             A generator which yields each ADB device attached via USB.
 
         """
-        for dev in cls._find_devices(interface_matcher(CLASS, SUBCLASS, PROTOCOL), default_transport_timeout_s=default_transport_timeout_s):
-            yield dev
+        yield from cls._find_devices(interface_matcher(CLASS, SUBCLASS, PROTOCOL), default_transport_timeout_s=default_transport_timeout_s)
