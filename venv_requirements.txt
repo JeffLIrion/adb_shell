@@ -5,6 +5,7 @@ coveralls
 flake8
 pylint
 pytest
+setuptools
 sphinx
 sphinx-rtd-theme
 twine
