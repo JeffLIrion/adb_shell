@@ -1,5 +1,6 @@
 import asyncio
 import warnings
+import sys
 
 
 
@@ -10,6 +11,9 @@ def _await(coro):
     with warnings.catch_warnings(record=True) as warns:
         ret = loop.run_until_complete(coro)
         loop.close()
+
+        for warn in warns:
+            print(warn.message, file=sys.stderr)
 
         if warns:
             raise RuntimeError
