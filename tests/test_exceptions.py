@@ -2,11 +2,15 @@ import functools
 import inspect
 import pickle
 import re
+import sys
 import unittest
 try:
     from unittest import mock
 except ImportError:
     import mock
+
+if sys.version_info >= (3, 11):
+    from enum import member
 
 import adb_shell.exceptions
 
@@ -40,9 +44,14 @@ class TestExceptionSerialization(unittest.TestCase):
 
     for __obj in adb_shell.exceptions.__dict__.values():
         if isinstance(__obj, type) and issubclass(__obj, BaseException):
-            __test_method = functools.partial(
-                __test_serialize_one_exc_cls, __obj
-            )
+            if sys.version_info >= (3, 11):
+                __test_method = member(functools.partial(
+                    __test_serialize_one_exc_cls, __obj
+                ))
+            else:
+                __test_method = functools.partial(
+                    __test_serialize_one_exc_cls, __obj
+                )
             __test_name = "test_serialize_{}".format(__obj.__name__)
             locals()[__test_name] = __test_method
 
