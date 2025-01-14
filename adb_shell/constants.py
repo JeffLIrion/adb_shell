@@ -36,6 +36,15 @@ SUBCLASS = 0x42
 #: From adb.h
 PROTOCOL = 0x01
 
+#: From shell_service.h
+KID_STDOUT = 1
+
+#: From shell_service.h
+KID_STDERR = 2
+
+#: From shell_service.h
+KID_EXIT = 3
+
 #: ADB protocol version.
 VERSION = 0x01000000
 
@@ -60,6 +69,9 @@ AUTH_SIGNATURE = 2
 
 #: AUTH constant for ``arg0``
 AUTH_RSAPUBLICKEY = 3
+
+#: For shell_v2 calls, there is a five byte header for each data segment
+SHELL_V2_HEADER_LENGTH = 5
 
 AUTH = b'AUTH'
 CLSE = b'CLSE'
@@ -112,6 +124,9 @@ FILESYNC_PUSH_FORMAT = b'<2I'
 #: The format for FileSync "stat" messages
 FILESYNC_STAT_FORMAT = b'<4I'
 
+# The format for a "shell_v2" response
+V2_RESPONSE_FORMAT = b'<BI'
+
 #: The size of an ADB message
 MESSAGE_SIZE = struct.calcsize(MESSAGE_FORMAT)
 
@@ -120,3 +135,6 @@ DEFAULT_AUTH_TIMEOUT_S = 10.
 
 #: Default total timeout (in s) for reading data from the device
 DEFAULT_READ_TIMEOUT_S = 10.
+
+#: Feature set for devices that support the shell protocol
+SHELL_V2_FEATURE = b'shell_v2'

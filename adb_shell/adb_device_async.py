@@ -266,7 +266,8 @@ class _AdbIOManagerAsync(object):
 
             # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
             if cmd != constants.AUTH:
-                return True, maxdata
+                # TODO confirm that a rooted device will return device features here
+                return True, maxdata, True if constants.SHELL_V2_FEATURE in banner2 else False
 
             # 5. If no ``rsa_keys`` are provided, raise an exception
             if not rsa_keys:
@@ -285,12 +286,12 @@ class _AdbIOManagerAsync(object):
                 msg = AdbMessage(constants.AUTH, constants.AUTH_SIGNATURE, 0, signed_token)
                 await self._send(msg, adb_info)
 
-                # 6.3. Read the response from the device
+                # 6.3. Read the response from the device, which will include the device's feature list
                 cmd, arg0, maxdata, banner2 = await self._read_expected_packet_from_device([constants.CNXN, constants.AUTH], adb_info)
 
                 # 6.4. If ``cmd`` is ``b'CNXN'``, we are done
                 if cmd == constants.CNXN:
-                    return True, maxdata
+                    return True, maxdata, True if constants.SHELL_V2_FEATURE in banner2 else False
 
             # 7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
             pubkey = rsa_keys[0].GetPublicKey()
@@ -304,8 +305,9 @@ class _AdbIOManagerAsync(object):
             await self._send(msg, adb_info)
 
             adb_info.transport_timeout_s = auth_timeout_s
-            _, _, maxdata, _ = await self._read_expected_packet_from_device([constants.CNXN], adb_info)
-            return True, maxdata
+            # TODO confirm device features are sent during type 3 authentication
+            _, _, maxdata, banner2 = await self._read_expected_packet_from_device([constants.CNXN], adb_info)
+            return True, maxdata, True if constants.SHELL_V2_FEATURE in banner2 else False
 
     async def read(self, expected_cmds, adb_info, allow_zeros=False):
         """Read packets from the device until we get an expected packet type.
@@ -711,7 +713,7 @@ class AdbDeviceAsync(object):
         self._available = False
 
         # Use the IO manager to connect
-        self._available, self._maxdata = await self._io_manager.connect(self._banner, rsa_keys, auth_timeout_s, auth_callback, adb_info)
+        self._available, self._maxdata, self._shell_v2_supported = await self._io_manager.connect(self._banner, rsa_keys, auth_timeout_s, auth_callback, adb_info)
 
         return self._available
 
@@ -879,6 +881,72 @@ class AdbDeviceAsync(object):
             raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
 
         return await self._service(b'shell', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, decode)
+
+    async def shell_v2(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, timeout_s=None, decode=True):
+        """
+        Send an ADB shell command to the device, using the shell protocol.
+
+        The shell protocol is able to separate stdout/stderr streams, as well as provide a return code from the called process.
+
+        Parameters
+        ----------
+        command : str
+            The shell command that will be sent
+        transport_timeout_s : float, None
+            Timeout in seconds for sending and receiving data, or ``None``; see :meth:`BaseTransportAsync.bulk_read() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_read>`
+            and :meth:`BaseTransportAsync.bulk_write() <adb_shell.transport.base_transport_async.BaseTransportAsync.bulk_write>`
+        read_timeout_s : float
+            The total time in seconds to wait for a ``b'CLSE'`` or ``b'OKAY'`` command in :meth:`_AdbIOManagerAsync.read`
+        timeout_s : float, None
+            The total time in seconds to wait for the ADB command to finish
+        decode : bool
+            Whether to decode the output to utf8 before returning
+
+
+        Returns
+        -------
+        dict
+            A dict representing the result of the ADB shell command. Dictionary keys are 'stdout', 'stderr', and 'return_code'. If ``decode`` is True,
+            stdout/stderr will be returned as strings - otherwise as bytes.
+
+        """
+        if not self.available:
+            raise exceptions.AdbConnectionError("ADB command not sent because a connection to the device has not been established.  (Did you call `AdbDeviceAsync.connect()`?)")
+
+        if not self._shell_v2_supported:
+            raise exceptions.AdbCommandFailureException("ADB shell_v2 service is not supported on this device.")        # For shell_v2 calls, we force decode to be False, so that we can separate out the streams using the raw bytes
+        shell_v2_result = self._service(b'shell,v2', command.encode('utf8'), transport_timeout_s, read_timeout_s, timeout_s, False)
+
+        data = BytesIO(await shell_v2_result)
+        stdout = b''
+        stderr = b''
+        return_code: int = None
+        while True:
+            header = data.read(constants.SHELL_V2_HEADER_LENGTH)
+            if len(header) < constants.SHELL_V2_HEADER_LENGTH:
+                if len(header) != 0:
+                    _LOGGER.warning(f'ADB shell output contained unprocessed data: {header}')
+                break
+            output_fd, output_len = struct.unpack(constants.V2_RESPONSE_FORMAT, header)
+            output = data.read(output_len)
+
+            if output_fd == constants.KID_STDOUT:
+                stdout += output
+            elif output_fd == constants.KID_STDERR:
+                stderr += output
+            elif output_fd == constants.KID_EXIT:
+                if return_code is not None:
+                    _LOGGER.warning('Multiple return codes found for a single shell execution')
+                # Return code is a single byte
+                return_code = output[0]
+            else:
+                _LOGGER.warning(b'shell v2 output was not processed correctly: %s%s' % (header, output))
+
+        return {
+            'stdout': stdout.decode('utf8', 'backslashreplace') if decode else stdout,
+            'stderr': stderr.decode('utf8', 'backslashreplace') if decode else stderr,
+            'return_code': return_code
+        }
 
     async def streaming_shell(self, command, transport_timeout_s=None, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, decode=True):
         """Send an ADB shell command to the device, yielding each line of output.

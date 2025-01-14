@@ -164,6 +164,7 @@ class TestAdbDevice(unittest.TestCase):
     def test_connect(self):
         self.assertTrue(self.device.connect())
         self.assertTrue(self.device.available)
+        self.assertFalse(self.device._shell_v2_supported)
 
     def test_connect_no_keys(self):
         self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_AUTH[:2])
@@ -192,6 +193,7 @@ class TestAdbDevice(unittest.TestCase):
         self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_AUTH)
 
         self.assertTrue(self.device.connect([signer]))
+        self.assertFalse(self.device._shell_v2_supported)
 
     def test_connect_with_new_key(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
@@ -202,6 +204,7 @@ class TestAdbDevice(unittest.TestCase):
         self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
 
         self.assertTrue(self.device.connect([signer]))
+        self.assertFalse(self.device._shell_v2_supported)
 
     def test_connect_with_new_key_and_callback(self):
         with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
@@ -217,6 +220,7 @@ class TestAdbDevice(unittest.TestCase):
 
         self.assertTrue(self.device.connect([signer], auth_callback=auth_callback))
         self.assertTrue(self._callback_invoked)
+        self.assertFalse(self.device._shell_v2_supported)
 
     def test_connect_timeout(self):
         self.transport.bulk_read_data = AdbMessage(command=constants.CLSE, arg0=1, arg1=1).pack()
@@ -224,6 +228,12 @@ class TestAdbDevice(unittest.TestCase):
         with self.assertRaises(exceptions.AdbTimeoutError):
             # Use a negative timeout to ensure that only one packet gets read
             self.device.connect([], read_timeout_s=-1)
+
+    def test_connect_feature_inspection(self):
+        """Device features are checked after ADB connection established."""
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(self.device.connect())
+        self.assertTrue(self.device._shell_v2_supported)
 
     # ======================================================================= #
     #                                                                         #
@@ -419,6 +429,75 @@ class TestAdbDevice(unittest.TestCase):
         self.assertEqual(self.device.shell('TEST1'), 'PASS1')
         self.assertEqual(self.device.shell('TEST2'), 'PASS2')
 
+    def test_shell_v2_no_return(self):
+        """Test a shell v2 call that returns no data is parsed correctly."""
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=b''),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell_v2('TEST'), {'stdout': '', 'stderr': '', 'return_code': None})
+
+    def test_shell_v2_stdout(self):
+        """
+        Test a shell v2 call that returns stdout data is parsed correctly.
+
+        shell v2 calls will WRTE a byte stream consisting of segments of data in the form: {FD}{LENGTH]{BYTES}
+        Where FD is a single byte (1 for stdout, 2 for stderr, or 3 to represent a return code), and LENGTH is 4 bytes in little endian of
+        how much data follows. A complete shell v2 result can contain multiple such segments.
+        """
+        shellv2_wrte = b'\x01\x09\x00\x00\x00test data'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell_v2('TEST'), {'stdout': 'test data', 'stderr': '', 'return_code': None})
+
+    def test_shell_v2_stderr(self):
+        shellv2_wrte = b'\x02\x09\x00\x00\x00test data'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell_v2('TEST'), {'stdout': '', 'stderr': 'test data', 'return_code': None})
+
+    def test_shell_v2_return_code(self):
+        shellv2_wrte = b'\x03\x01\x00\x00\x00\xff'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell_v2('TEST'), {'stdout': '', 'stderr': '', 'return_code': 255})
+
+    def test_shell_v2_unprocessed_data(self):
+        shellv2_wrte = b'\x01\x09\x00\x00\x00test data\x03\x01\x00\x00\x00\x00AAAAAAAAAA'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
+                                                                 data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(self.device.shell_v2('TEST'), {'stdout': 'test data', 'stderr': '', 'return_code': 0})
+
+
     # ======================================================================= #
     #                                                                         #
     #                           `shell` error tests                           #
@@ -495,6 +574,11 @@ class TestAdbDevice(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidChecksumError):
             self.device.shell('TEST')
+
+    def test_shell_v2_not_supported(self):
+        self.assertTrue(self.device.connect())
+        with self.assertRaises(exceptions.AdbCommandFailureException):
+            self.device.shell_v2('TEST')
 
     def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
