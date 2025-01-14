@@ -75,6 +75,9 @@ Example Usage
    response1 = device1.shell('echo TEST1')
    response2 = device2.shell('echo TEST2')
 
+   # If the device supports the newer "shell protocol", you can also obtain individual streams
+   response3 = device1.shell_v2('echo TEST1')
+
 
 Generate ADB Key Files
 **********************

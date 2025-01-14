@@ -12,17 +12,21 @@ from adb_shell import constants
 from adb_shell.adb_message import AdbMessage
 from adb_shell.transport.tcp_transport import TcpTransport
 
+test_features = b'features=abb_exec,fixed_push_symlink_timestamp,abb,stat_v2,apex,fixed_push_mkdir,cmd'
+test_features_shellv2_supported = test_features + b',shell_v2'
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 7, "Async functionality requires Python 3.7+")
 
-MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
+MSG_CONNECT = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=constants.MAX_LEGACY_ADB_DATA, data=b'host::%s\0' % test_features)
+MSG_CONNECT_FEATURES = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=constants.MAX_LEGACY_ADB_DATA, data=b'host::%s\0' % test_features_shellv2_supported)
 MSG_CONNECT_WITH_AUTH_INVALID = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
 MSG_CONNECT_WITH_AUTH1 = AdbMessage(command=constants.AUTH, arg0=constants.AUTH_TOKEN, arg1=0, data=b'host::unknown\0')
-MSG_CONNECT_WITH_AUTH2 = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=2*constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH2 = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=2*constants.MAX_LEGACY_ADB_DATA, data=b'host::%s\0' % test_features)
 MSG_CONNECT_WITH_AUTH_NEW_KEY2 = AdbMessage(command=constants.AUTH, arg0=0, arg1=0, data=b'host::unknown\0')
-MSG_CONNECT_WITH_AUTH_NEW_KEY3 = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=3*constants.MAX_LEGACY_ADB_DATA, data=b'host::unknown\0')
+MSG_CONNECT_WITH_AUTH_NEW_KEY3 = AdbMessage(command=constants.CNXN, arg0=constants.PROTOCOL, arg1=3*constants.MAX_LEGACY_ADB_DATA, data=b'host::%s\0' % test_features)
 
 BULK_READ_LIST = [MSG_CONNECT.pack(), MSG_CONNECT.data]
+BULK_READ_LIST_WITH_SHELLV2_FEATURE = [MSG_CONNECT_FEATURES.pack(), MSG_CONNECT_FEATURES.data]
 BULK_READ_LIST_WITH_AUTH_INVALID = [MSG_CONNECT_WITH_AUTH_INVALID.pack(), MSG_CONNECT_WITH_AUTH_INVALID.data]
 BULK_READ_LIST_WITH_AUTH = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH2.pack(), MSG_CONNECT_WITH_AUTH2.data]
 BULK_READ_LIST_WITH_AUTH_NEW_KEY = [MSG_CONNECT_WITH_AUTH1.pack(), MSG_CONNECT_WITH_AUTH1.data, MSG_CONNECT_WITH_AUTH_NEW_KEY2.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY2.data, MSG_CONNECT_WITH_AUTH_NEW_KEY3.pack(), MSG_CONNECT_WITH_AUTH_NEW_KEY3.data]

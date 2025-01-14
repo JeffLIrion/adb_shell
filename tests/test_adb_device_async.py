@@ -169,6 +169,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     async def test_connect(self):
         self.assertTrue(await self.device.connect())
         self.assertTrue(self.device.available)
+        self.assertFalse(self.device._shell_v2_supported)
 
     @awaiter
     async def test_connect_no_keys(self):
@@ -200,6 +201,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_AUTH)
 
         self.assertTrue(await self.device.connect([signer]))
+        self.assertFalse(self.device._shell_v2_supported)
 
     @awaiter
     async def test_connect_with_new_key(self):
@@ -211,6 +213,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_AUTH_NEW_KEY)
 
         self.assertTrue(await self.device.connect([signer]))
+        self.assertFalse(self.device._shell_v2_supported)
 
     @awaiter
     async def test_connect_with_new_key_and_callback(self):
@@ -227,6 +230,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         self.assertTrue(await self.device.connect([signer], auth_callback=auth_callback))
         self.assertTrue(self._callback_invoked)
+        self.assertFalse(self.device._shell_v2_supported)
 
     @awaiter
     async def test_connect_timeout(self):
@@ -235,6 +239,13 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with self.assertRaises(exceptions.AdbTimeoutError):
             # Use a negative timeout to ensure that only one packet gets read
             await self.device.connect([], read_timeout_s=-1)
+
+    @awaiter
+    async def test_connect_feature_inspection(self):
+        """Device features are checked after ADB connection established."""
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(await self.device.connect())
+        self.assertTrue(self.device._shell_v2_supported)
 
     # ======================================================================= #
     #                                                                         #
@@ -443,6 +454,66 @@ class TestAdbDeviceAsync(unittest.TestCase):
         self.assertEqual(await self.device.shell('TEST1'), 'PASS1')
         self.assertEqual(await self.device.shell('TEST2'), 'PASS2')
 
+    @awaiter
+    async def test_shell_v2_stdout(self):
+        """
+        Test a shell v2 call that returns stdout data is parsed correctly.
+
+        shell v2 calls will WRTE a byte stream consisting of segments of data in the form: {FD}{LENGTH]{BYTES}
+        Where FD is a single byte (1 for stdout, 2 for stderr, or 3 to represent a return code), and LENGTH is 4 bytes in little endian of
+        how much data follows. A complete shell v2 result can contain multiple such segments.
+        """
+        shellv2_wrte = b'\x01\x09\x00\x00\x00test data'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(await self.device.shell_v2('TEST'), {'stdout': 'test data', 'stderr': '', 'return_code': None})
+
+    @awaiter
+    async def test_shell_v2_stderr(self):
+        shellv2_wrte = b'\x02\x09\x00\x00\x00test data'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(await self.device.shell_v2('TEST'), {'stdout': '', 'stderr': 'test data', 'return_code': None})
+
+    @awaiter
+    async def test_shell_v2_return_code(self):
+        shellv2_wrte = b'\x03\x01\x00\x00\x00\xff'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(await self.device.shell_v2('TEST'), {'stdout': '', 'stderr': '', 'return_code': 255})
+
+    @awaiter
+    async def test_shell_v2_unprocessed_data(self):
+        shellv2_wrte = b'\x01\x09\x00\x00\x00test data\x03\x01\x00\x00\x00\x00AAAAAAAAAA'
+        self.transport.bulk_read_data = b''.join(patchers.BULK_READ_LIST_WITH_SHELLV2_FEATURE)
+        self.assertTrue(await self.device.connect())
+
+        # Provide the `bulk_read` return values
+        self.transport.bulk_read_data = join_messages(AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b'\x00'),
+                                                      AdbMessage(command=constants.WRTE, arg0=1, arg1=1,
+                                                                 data=shellv2_wrte),
+                                                      AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
+
+        self.assertEqual(await self.device.shell_v2('TEST'), {'stdout': 'test data', 'stderr': '', 'return_code': 0})
+
 
     # ======================================================================= #
     #                                                                         #
@@ -526,6 +597,12 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with self.assertRaises(exceptions.InvalidChecksumError):
             await self.device.shell('TEST')
+
+    @awaiter
+    async def test_shell_v2_not_supported(self):
+        self.assertTrue(await self.device.connect())
+        with self.assertRaises(exceptions.AdbCommandFailureException):
+            await self.device.shell_v2('TEST')
 
     @awaiter
     async def test_issue29(self):
